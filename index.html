@@ -1,0 +1,3766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PORTOEX — Terceirizados</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK v8 compat -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<style>
+:root {
+  --navy: #0D1B3E;
+  --navy-mid: #162347;
+  --navy-light: #1E3060;
+  --yellow: #F5C518;
+  --yellow-dark: #D4A800;
+  --yellow-soft: #FFF3B0;
+  --white: #FFFFFF;
+  --gray-50: #F8F9FA;
+  --gray-100: #F0F1F3;
+  --gray-200: #E0E2E7;
+  --gray-400: #9BA3AF;
+  --gray-600: #5A6270;
+  --gray-800: #2D3340;
+  --success: #1A7F4B;
+  --success-bg: #E6F5EE;
+  --danger: #C0392B;
+  --danger-bg: #FDECEA;
+  --warning: #B45309;
+  --warning-bg: #FEF3C7;
+  --orange: #E8721C;
+  --orange-bg: #FEF0E6;
+  --info: #1565C0;
+  --info-bg: #E3F0FC;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 1px 4px rgba(0,0,0,0.10);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Sora', sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-800);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ===== HEADER ===== */
+#app-header {
+  background: var(--navy);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-box {
+  background: var(--yellow);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.header-title {
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.7);
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.user-badge {
+  background: rgba(255,255,255,0.1);
+  color: var(--white);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.btn-logout {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.8);
+  padding: 5px 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'Sora', sans-serif;
+  transition: all 0.15s;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.1); }
+
+/* ===== LOGIN ===== */
+#login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--navy);
+}
+.login-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: var(--shadow-md);
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.login-logo-box {
+  background: var(--navy);
+  color: var(--yellow);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 2px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.login-subtitle {
+  font-size: 12px;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.login-form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+  margin-bottom: 4px;
+  margin-top: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.login-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-family: 'Sora', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.15s;
+}
+.login-form input:focus { border-color: var(--navy); }
+.btn-primary {
+  background: var(--navy);
+  color: var(--white);
+  border: none;
+  padding: 11px 20px;
+  border-radius: var(--radius);
+  font-family: 'Sora', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 20px;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--navy-light); }
+.login-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: center;
+  display: none;
+}
+
+/* ===== LAYOUT ===== */
+#app-layout {
+  display: none;
+  flex-direction: column;
+  min-height: calc(100vh - 56px);
+}
+
+/* ===== NAV TABS ===== */
+.nav-tabs {
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  padding: 0 24px;
+  gap: 4px;
+}
+.nav-tab {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-400);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.nav-tab:hover { color: var(--gray-800); }
+.nav-tab.active {
+  color: var(--navy);
+  border-bottom-color: var(--yellow);
+  font-weight: 600;
+}
+
+/* ===== CONTENT ===== */
+.content-area {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+.page { display: none; }
+.page.active { display: block; }
+
+/* ===== SECTION TITLE ===== */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.section-sub {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 16px;
+  background: var(--yellow);
+  border-radius: 2px;
+}
+
+/* ===== FORM ELEMENTS ===== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.form-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 9px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  color: var(--gray-800);
+  outline: none;
+  transition: border 0.15s;
+  background: var(--white);
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--navy); }
+.form-group input[readonly],
+.form-group input[disabled] {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  cursor: not-allowed;
+}
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  align-items: center;
+}
+.btn {
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+.btn-navy { background: var(--navy); color: var(--white); }
+.btn-navy:hover { background: var(--navy-light); }
+.btn-yellow { background: var(--yellow); color: var(--navy); }
+.btn-yellow:hover { background: var(--yellow-dark); }
+.btn-ghost {
+  background: transparent;
+  color: var(--gray-600);
+  border: 1px solid var(--gray-200);
+}
+.btn-ghost:hover { background: var(--gray-50); }
+.btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid #fca5a5; }
+.btn-danger:hover { background: #fca5a5; }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-success { background: var(--success-bg); color: var(--success); border: 1px solid #6ee7a0; }
+
+/* ===== BADGES ===== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.badge-navy { background: var(--navy); color: var(--yellow); }
+.badge-func-interno { background: var(--yellow-soft); color: var(--navy); border: 1px solid var(--yellow-dark); font-weight: 700; }
+.badge-func-externo { background: var(--navy); color: var(--yellow); }
+.badge-func-conferente { background: var(--info-bg); color: var(--info); }
+.badge-yellow { background: var(--yellow-soft); color: var(--warning); }
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+.badge-orange { background: var(--orange-bg); color: var(--orange); }
+.badge-gray { background: var(--gray-100); color: var(--gray-600); }
+
+/* ===== TABLE ===== */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--white);
+  font-size: 13px;
+}
+thead th {
+  background: var(--gray-50);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
+}
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--gray-50); }
+.td-name { font-weight: 500; }
+.td-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+/* ===== MURAL ===== */
+.mural-grid {
+  display: block;
+  gap: 16px;
+}
+.mural-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.mural-card:hover { box-shadow: var(--shadow-md); }
+.mural-card-header {
+  background: var(--navy);
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.mural-op-name {
+  color: var(--yellow);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.mural-date {
+  color: rgba(255,255,255,0.6);
+  font-size: 11px;
+  margin-top: 3px;
+}
+.mural-body { padding: 14px 16px; }
+.mural-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 12px;
+}
+.mural-row:last-child { border-bottom: none; }
+.mural-label { color: var(--gray-400); }
+.mural-value { font-weight: 600; color: var(--gray-800); }
+.mural-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--gray-100);
+  background: var(--gray-50);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mural-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 4px;
+}
+.mural-progress {
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.mural-progress-bar {
+  height: 100%;
+  background: var(--yellow);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+/* ===== ACOMPANHAMENTO ===== */
+.acomp-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.acomp-header {
+  background: var(--navy);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.acomp-op { color: var(--yellow); font-size: 13px; font-weight: 700; }
+.acomp-meta { color: rgba(255,255,255,0.6); font-size: 11px; }
+.acomp-table thead th { background: #f0f4ff; }
+.horas-ok { color: var(--success); font-weight: 600; }
+.horas-warn { color: var(--orange); font-weight: 600; background: var(--orange-bg); padding: 2px 8px; border-radius: 4px; }
+.horas-over { color: var(--danger); font-weight: 600; background: var(--danger-bg); padding: 2px 8px; border-radius: 4px; }
+.horas-neg { color: var(--info); font-weight: 600; }
+
+/* ===== CHECKBOX GROUP ===== */
+.check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 12px;
+  font-weight: 500;
+}
+.check-item input { display: none; }
+.check-item:has(input:checked) {
+  background: var(--navy);
+  color: var(--yellow);
+  border-color: var(--navy);
+}
+.check-item:hover { border-color: var(--navy); }
+
+/* ===== TABS INNER ===== */
+.inner-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.inner-tab {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-400);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.inner-tab.active { color: var(--navy); border-bottom-color: var(--yellow); }
+.inner-page { display: none; }
+.inner-page.active { display: block; }
+
+/* ===== UPLOAD ===== */
+.upload-zone {
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.upload-zone:hover { border-color: var(--navy); background: var(--gray-50); }
+.upload-icon { font-size: 32px; margin-bottom: 8px; }
+.upload-text { font-size: 13px; color: var(--gray-400); }
+.upload-text strong { color: var(--navy); }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  display: none;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+}
+.modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--navy);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.modal-title { color: var(--white); font-size: 15px; font-weight: 700; }
+.modal-close {
+  color: rgba(255,255,255,0.7);
+  font-size: 20px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  line-height: 1;
+}
+.modal-body { padding: 22px; }
+.modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--gray-400);
+}
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; }
+
+/* ===== FUNCOES GRID ===== */
+.func-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+.func-box {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: var(--gray-50);
+}
+.func-box-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.func-box .form-group label { font-size: 10px; }
+
+/* ===== ESTRELAS ===== */
+.star { color: var(--gray-200); transition: color 0.1s; }
+.star.ativa { color: var(--yellow); }
+.star:hover { color: var(--yellow-dark); }
+
+/* ===== TOAST ===== */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast-msg {
+  background: var(--navy);
+  color: var(--white);
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideIn 0.2s ease;
+}
+.toast-msg.success { border-left: 3px solid var(--yellow); }
+.toast-msg.error { border-left: 3px solid var(--danger); }
+@keyframes slideIn {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .content-area { padding: 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .func-grid { grid-template-columns: 1fr; }
+  .mural-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-box">PORTOEX</div>
+      <div class="login-subtitle">Gestão de Terceirizados</div>
+    </div>
+    <div class="login-form">
+      <label>Login</label>
+      <input type="text" id="login-user" placeholder="usuário ou e-mail" autocomplete="username">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••" autocomplete="current-password">
+      <button class="btn-primary" onclick="doLogin()">Entrar</button>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--gray-600);cursor:pointer">
+        <input type="checkbox" id="login-lembrar" style="width:16px;height:16px;accent-color:var(--navy)"> Lembrar login
+      </label>
+      <div class="login-error" id="login-error">Usuário ou senha inválidos.</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-layout">
+  <header id="app-header">
+    <div class="header-logo">
+      <div class="logo-box">PORTOEX</div>
+      <span class="header-title">Terceirizados</span>
+    </div>
+    <div class="header-right">
+      <span class="user-badge" id="header-user">—</span>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </header>
+
+  <nav class="nav-tabs" id="nav-tabs"></nav>
+
+  <div class="content-area">
+
+    <!-- ===================== PÁGINA: MURAL ===================== -->
+    <div id="page-mural" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📋 Mural de Vagas</div>
+          <div class="section-sub">Vagas disponíveis para atribuição pelas empresas</div>
+        </div>
+        <div id="btn-nova-vaga-wrap" style="display:none">
+          <button class="btn btn-yellow" onclick="openModal('modal-vaga')">+ Nova Vaga</button>
+        </div>
+      </div>
+      <div class="mural-grid" id="mural-grid">
+        <div class="empty-state"><div class="empty-icon">📌</div><div class="empty-text">Nenhuma vaga publicada.</div></div>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: CADASTRAR COLABORADORES ===================== -->
+    <div id="page-colaboradores" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">👥 Meus Colaboradores</div>
+          <div class="section-sub" id="empresa-nome-sub">—</div>
+        </div>
+      </div>
+      <div class="inner-tabs">
+        <div class="inner-tab active" onclick="switchInner('col','manual')">Cadastro Manual</div>
+        <div class="inner-tab" onclick="switchInner('col','upload')">Upload</div>
+        <div class="inner-tab" onclick="switchInner('col','lista')">Listagem</div>
+      </div>
+      <div id="col-manual" class="inner-page active">
+        <div class="card">
+          <div class="card-title">Novo Colaborador</div>
+          <div class="form-grid" style="grid-template-columns:1fr 2fr">
+            <div class="form-group">
+              <label>CPF / RG *</label>
+              <input type="text" id="col-cpf" placeholder="000.000.000-00" oninput="checkColaborador()">
+            </div>
+            <div class="form-group">
+              <label>Nome *</label>
+              <input type="text" id="col-nome" placeholder="Nome completo">
+            </div>
+          </div>
+          <div id="col-aviso" style="display:none; margin-top:12px; padding:10px 14px; background:var(--warning-bg); border-radius:var(--radius); font-size:12px; color:var(--warning);">
+            ⚠️ Este CPF/RG já está cadastrado. Os dados bloqueados não serão alterados.
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-navy" onclick="saveColaborador()">Salvar Colaborador</button>
+            <button class="btn btn-ghost" onclick="clearColForm()">Limpar</button>
+          </div>
+        </div>
+      </div>
+      <div id="col-upload" class="inner-page">
+        <div class="card">
+          <div class="card-title">Upload de Colaboradores (CSV)</div>
+          <div class="upload-zone" onclick="document.getElementById('col-file').click()">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text"><strong>Clique para selecionar</strong> ou arraste um arquivo CSV</div>
+            <div class="upload-text" style="margin-top:6px; font-size:11px;">Colunas esperadas: CPF, Nome, Operação</div>
+          </div>
+          <input type="file" id="col-file" accept=".csv" style="display:none" onchange="handleCSV(event)">
+          <div id="csv-preview" style="margin-top:16px;"></div>
+        </div>
+      </div>
+      <div id="col-lista" class="inner-page">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>CPF / RG</th><th>Nome</th><th>Operação</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="col-lista-body"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador cadastrado.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: ADMIN – EMPRESAS ===================== -->
+    <div id="page-empresas" class="page">
+      <div class="section-header">
+        <div><div class="section-title">🏢 Empresas Terceirizadas</div></div>
+        <button class="btn btn-yellow" onclick="openModal('modal-empresa')">+ Nova Empresa</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Empresa</th><th>Login</th><th>Senha</th><th>Status</th><th>Colaboradores</th><th>Ações</th></tr></thead>
+          <tbody id="empresas-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhuma empresa cadastrada.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: ADMIN – OPERAÇÕES ===================== -->
+    <div id="page-operacoes" class="page">
+      <div class="section-header">
+        <div><div class="section-title">⚙️ Operações & Centro de Custo</div></div>
+        <button class="btn btn-yellow" onclick="openModal('modal-operacao')">+ Nova Operação</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Operação</th><th>Centro de Custo</th><th>Ativa</th><th>Ações</th></tr></thead>
+          <tbody id="operacoes-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: ACOMPANHAMENTO ===================== -->
+    <div id="page-acompanhamento" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">⏱️ Acompanhamento de Ponto</div>
+          <div class="section-sub">Controle de chegada, refeição e horas trabalhadas</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button id="btn-sugestoes-pendentes" class="btn btn-sm" style="display:none;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning);font-weight:700" onclick="openModal('modal-sugestoes')">
+            ⚠️ <span id="sugestoes-count">0</span> Sugestão(ões) Pendente(s)
+          </button>
+          <div class="form-group" style="margin:0">
+            <select id="filter-data-acomp" style="padding:7px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="renderAcompanhamento()">
+              <option value="">Todas as datas</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <select id="filter-op-acomp" style="padding:7px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="renderAcompanhamento()">
+              <option value="">Todas as operações</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="acomp-container"></div>
+    </div>
+
+    <!-- ===================== PÁGINA: ADMIN – VAGAS (gerenciar) ===================== -->
+    <div id="page-vagas-admin" class="page">
+      <div class="section-header">
+        <div><div class="section-title">📋 Gerenciar Vagas</div></div>
+        <button class="btn btn-yellow" onclick="openModal('modal-vaga')">+ Nova Vaga</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Operação</th><th>Data</th><th>Horário</th><th>Função</th><th>Empresas</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="vagas-admin-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: RESUMO GERAL ADMIN ===================== -->
+    <div id="page-resumo-admin" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📊 Resumo Geral</div>
+          <div class="section-sub">Visão consolidada por período — horas, colaboradores e custos</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr auto;align-items:end;gap:12px">
+          <div class="form-group">
+            <label>Data Início</label>
+            <input type="date" id="resumo-admin-inicio" onchange="renderResumoAdmin()">
+          </div>
+          <div class="form-group">
+            <label>Data Fim</label>
+            <input type="date" id="resumo-admin-fim" onchange="renderResumoAdmin()">
+          </div>
+          <div class="form-group">
+            <label>Empresa</label>
+            <select id="resumo-admin-emp" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px" onchange="renderResumoAdmin()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <button class="btn btn-yellow" onclick="exportarResumoAdmin()">⬇ CSV</button>
+            <button class="btn btn-danger" style="white-space:nowrap" onclick="openZerarPonto()">🗑 Zerar Ponto</button>
+          </div>
+        </div>
+      </div>
+      <div id="resumo-admin-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+      <div id="resumo-admin-container"></div>
+    </div>
+
+    <!-- ===================== PÁGINA: ACERTO TERCEIRIZADOS ===================== -->
+    <div id="page-resumo-terceirizados" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">💰 Modelo de Acerto</div>
+          <div class="section-sub">Resumo por período para pagamento às empresas terceirizadas</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr auto auto;align-items:end;gap:12px">
+          <div class="form-group">
+            <label>Data Início *</label>
+            <input type="date" id="acerto-inicio">
+          </div>
+          <div class="form-group">
+            <label>Data Fim *</label>
+            <input type="date" id="acerto-fim">
+          </div>
+          <div class="form-group">
+            <label>Empresa</label>
+            <select id="acerto-emp" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div>
+            <button class="btn btn-navy" onclick="gerarAcerto()">🔍 Gerar</button>
+          </div>
+          <div>
+            <button class="btn btn-yellow" onclick="exportarAcertoCSV()">⬇ CSV</button>
+          </div>
+          <div>
+            <button class="btn btn-ghost" style="border-color:var(--danger);color:var(--danger)" onclick="exportarAcertoPDF()">📄 PDF</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:8px">💡 Padrão quinzenal (1–15 e 16–fim), mas qualquer intervalo é aceito.</div>
+      </div>
+      <div id="acerto-container"></div>
+    </div>
+
+    <!-- ===================== PÁGINA: ADMIN – MOTORISTAS ===================== -->
+    <div id="page-motoristas" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🚛 Cadastro de Motoristas</div>
+          <div class="section-sub">Motoristas vinculáveis aos ajudantes de ROTA</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <a href="portoex-tv.html" target="_blank" class="btn btn-yellow" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+            📺 Abrir Tela TV
+          </a>
+          <button class="btn btn-navy" onclick="openModal('modal-motorista')">+ Novo Motorista</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Identificação / Placa</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="motoristas-tbody"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum motorista cadastrado.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- content-area -->
+</div><!-- app-layout -->
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- Modal: Sugestões Pendentes -->
+<div class="modal-overlay" id="modal-sugestoes">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-header" style="background:var(--warning)">
+      <div class="modal-title">⚠️ Sugestões de Correção Pendentes</div>
+      <button class="modal-close" onclick="closeModal('modal-sugestoes')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="sugestoes-lista"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-sugestoes')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Empresa -->
+<div class="modal-overlay" id="modal-empresa">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Nova Empresa Terceirizada</div>
+      <button class="modal-close" onclick="closeModal('modal-empresa')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nome da Empresa *</label>
+          <input type="text" id="emp-nome" placeholder="Razão social ou nome fantasia">
+        </div>
+        <div class="form-group">
+          <label>Login de Acesso *</label>
+          <input type="text" id="emp-login" placeholder="empresa@login">
+        </div>
+        <div class="form-group">
+          <label>Senha *</label>
+          <input type="text" id="emp-senha" placeholder="Senha de acesso">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="emp-status">
+            <option value="ativa">Ativa</option>
+            <option value="inativa">Inativa</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:18px;">
+        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:10px;">Tabela de Valores por Função</label>
+        <div class="func-grid">
+          <div class="func-box">
+            <div class="func-box-title">Ajudante Interno</div>
+            <div class="form-group"><label>Valor/dia (R$)</label><input type="number" id="emp-val-ai" placeholder="0,00" step="0.01"></div>
+            <div class="form-group" style="margin-top:8px"><label>Hora Extra (R$)</label><input type="number" id="emp-he-ai" placeholder="0,00" step="0.01"></div>
+          </div>
+          <div class="func-box">
+            <div class="func-box-title">Ajudante Externo</div>
+            <div class="form-group"><label>Valor/dia (R$)</label><input type="number" id="emp-val-ae" placeholder="0,00" step="0.01"></div>
+            <div class="form-group" style="margin-top:8px"><label>Hora Extra (R$)</label><input type="number" id="emp-he-ae" placeholder="0,00" step="0.01"></div>
+          </div>
+          <div class="func-box">
+            <div class="func-box-title">Conferente</div>
+            <div class="form-group"><label>Valor/dia (R$)</label><input type="number" id="emp-val-co" placeholder="0,00" step="0.01"></div>
+            <div class="form-group" style="margin-top:8px"><label>Hora Extra (R$)</label><input type="number" id="emp-he-co" placeholder="0,00" step="0.01"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-empresa')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveEmpresa()">Salvar Empresa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Operação -->
+<div class="modal-overlay" id="modal-operacao">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Nova Operação</div>
+      <button class="modal-close" onclick="closeModal('modal-operacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nome da Operação *</label>
+          <input type="text" id="op-nome" placeholder="Ex: BRAFT">
+        </div>
+        <div class="form-group">
+          <label>Centro de Custo *</label>
+          <select id="op-cc">
+            <option value="ROTA">ROTA</option>
+            <option value="EXPEDIÇÃO">EXPEDIÇÃO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Função padrão</label>
+          <select id="op-funcao">
+            <option value="">Automático pelo C. Custo</option>
+            <option value="Ajudante Interno">Ajudante Interno</option>
+            <option value="Ajudante Externo">Ajudante Externo</option>
+            <option value="Conferente">Conferente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Ativa</label>
+          <select id="op-ativa">
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-operacao')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveOperacao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Vaga -->
+<div class="modal-overlay" id="modal-vaga">
+  <div class="modal" style="max-width:860px">
+    <div class="modal-header">
+      <div class="modal-title">Publicar Mural de Vagas</div>
+      <button class="modal-close" onclick="closeModal('modal-vaga')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="grid-template-columns:auto 1fr;gap:14px;align-items:end;">
+        <div class="form-group">
+          <label>Data de Trabalho *</label>
+          <input type="date" id="vaga-data">
+        </div>
+        <div class="form-group">
+          <label>Direcionar para Empresas <span style="font-weight:400;color:var(--gray-400)">(vazio = todas)</span></label>
+          <div class="check-group" id="vaga-empresas-check" style="flex-wrap:wrap;"></div>
+        </div>
+      </div>
+      <div style="margin-top:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;">Linhas de Vaga</label>
+          <button class="btn btn-ghost btn-sm" onclick="addVagaLinha()">+ Adicionar linha</button>
+        </div>
+        <div class="table-wrap">
+          <table id="vaga-linhas-table">
+            <thead>
+              <tr>
+                <th style="width:32px">#</th>
+                <th>Operação</th>
+                <th style="width:130px">Função</th>
+                <th style="width:65px">Qtd</th>
+                <th style="width:110px">Hora Inicial</th>
+                <th>Motorista <span style="font-weight:400;color:var(--gray-400);font-size:10px">(só ROTA)</span></th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody id="vaga-linhas-body"></tbody>
+          </table>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:8px;">ROTA: cadastrado 1 por linha. Outros: use Qtd para múltiplos. Função pode ser alterada para Conferente.</div>
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label>Observações gerais</label>
+        <textarea id="vaga-obs" placeholder="Informações adicionais..." style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-vaga')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveVaga()">Publicar Mural</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Atribuir Colaboradores — painel completo da vaga -->
+<div class="modal-overlay" id="modal-atribuir">
+  <div class="modal" style="max-width:860px">
+    <div class="modal-header">
+      <div class="modal-title" id="atribuir-modal-title">Indicar Colaboradores</div>
+      <button class="modal-close" onclick="closeModal('modal-atribuir')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="atribuir-painel"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-navy" onclick="closeModal('modal-atribuir')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Avaliar Colaborador -->
+<div class="modal-overlay" id="modal-avaliacao">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Avaliar Colaborador</div>
+      <button class="modal-close" onclick="closeModal('modal-avaliacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="avaliacao-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <div class="form-group">
+        <label>Avaliação (estrelas)</label>
+        <div id="star-selector" style="display:flex;gap:6px;margin-top:6px;font-size:28px;cursor:pointer">
+          <span class="star" data-val="1" onclick="setStar(1)">☆</span>
+          <span class="star" data-val="2" onclick="setStar(2)">☆</span>
+          <span class="star" data-val="3" onclick="setStar(3)">☆</span>
+          <span class="star" data-val="4" onclick="setStar(4)">☆</span>
+          <span class="star" data-val="5" onclick="setStar(5)">☆</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label>Observações</label>
+        <textarea id="avaliacao-obs" placeholder="Comentários sobre o colaborador..." style="min-height:80px"></textarea>
+      </div>
+      <div id="avaliacao-bloqueada" style="display:none;margin-top:12px;padding:10px 14px;background:var(--warning-bg);border-radius:var(--radius);font-size:12px;color:var(--warning)">
+        ⚠️ Esta avaliação já foi finalizada e não pode ser alterada.
+      </div>
+    </div>
+    <div class="modal-footer" id="avaliacao-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-avaliacao')">Cancelar</button>
+      <button class="btn btn-navy" onclick="salvarAvaliacao()">Salvar & Bloquear</button>
+    </div>
+  </div>
+</div>
+<!-- Modal: Admin — Editar Ponto -->
+<div class="modal-overlay" id="modal-acomp-edit">
+  <div class="modal" style="max-width:660px">
+    <div class="modal-header">
+      <div class="modal-title" id="acomp-edit-title">Editar Ponto</div>
+      <button class="modal-close" onclick="closeModal('modal-acomp-edit')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Desacordo da empresa (se houver) -->
+      <div id="ae-desacordo-wrap" style="display:none;margin-bottom:16px;background:var(--warning-bg);border-radius:var(--radius);padding:12px;border-left:3px solid var(--warning)">
+        <div style="font-size:11px;font-weight:700;color:var(--warning);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">⚠️ Desacordo registrado pela empresa</div>
+        <div id="ae-desacordo-info" style="font-size:13px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-success btn-sm" onclick="aceitarDesacordo()">✓ Aceitar sugestão</button>
+          <button class="btn btn-danger btn-sm" onclick="recusarDesacordo()">✕ Recusar</button>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Horário Real de Chegada</label>
+          <input type="time" id="ae-chegada">
+        </div>
+        <div class="form-group">
+          <label>Tempo de Refeição</label>
+          <select id="ae-refeicao">
+            <option value="01:00">01h00</option>
+            <option value="01:30">01h30</option>
+            <option value="02:00">02h00</option>
+            <option value="manual">Manual...</option>
+          </select>
+        </div>
+        <div class="form-group" id="ae-ref-manual-wrap" style="display:none">
+          <label>Refeição manual (hh:mm)</label>
+          <input type="time" id="ae-ref-manual">
+        </div>
+        <div class="form-group">
+          <label>Horário de Saída Real</label>
+          <input type="time" id="ae-saida">
+        </div>
+        <div class="form-group">
+          <label>Aceitar negativo como desconto?</label>
+          <select id="ae-desconto">
+            <option value="nao">Não (só medir)</option>
+            <option value="sim">Sim (descontar)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="ae-status">
+            <option value="Em escolha">Em escolha</option>
+            <option value="Validada">Validada</option>
+            <option value="Presente">Presente</option>
+            <option value="Ausente">Ausente</option>
+            <option value="Encerrado">Encerrado</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Operação</label>
+          <select id="ae-operacao" style="width:100%" onchange="atualizarFuncaoEdit()">
+            <option value="">— Manter atual —</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>🗓️ Adicional Sábado / Domingo / Feriado</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+            <label class="check-item" style="cursor:pointer;padding:8px 16px;border-radius:var(--radius);border:1px solid var(--gray-200);font-size:13px;font-weight:500;user-select:none">
+              <input type="radio" name="ae-adicional" id="ae-adicional-nenhum" value="nenhum" style="margin-right:6px" checked> Nenhum
+            </label>
+            <label class="check-item" style="cursor:pointer;padding:8px 16px;border-radius:var(--radius);border:1px solid #FED7AA;background:#FFF7ED;color:#9A3412;font-size:13px;font-weight:600;user-select:none">
+              <input type="radio" name="ae-adicional" id="ae-adicional-50" value="50" style="margin-right:6px"> +50% (Sábado)
+            </label>
+            <label class="check-item" style="cursor:pointer;padding:8px 16px;border-radius:var(--radius);border:1px solid #FECDD3;background:#FFF1F2;color:#9F1239;font-size:13px;font-weight:600;user-select:none">
+              <input type="radio" name="ae-adicional" id="ae-adicional-100" value="100" style="margin-right:6px"> +100% (Dom/Feriado)
+            </label>
+          </div>
+          <div id="ae-adicional-preview" style="margin-top:8px;font-size:12px;color:var(--gray-400)"></div>
+        </div>
+      </div>
+      <div id="ae-preview" style="margin-top:16px;"></div>
+      <!-- Campos extras para ROTA -->
+      <div id="ae-rota-wrap" style="display:none;margin-top:16px;border-top:1px solid var(--gray-200);padding-top:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🚛 Informações de Rota</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Motorista</label>
+            <select id="ae-motorista">
+              <option value="">Selecione o motorista...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Número da MD</label>
+            <input type="text" id="ae-md" placeholder="Ex: 12345">
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:14px">
+        <div class="form-group">
+          <label>🔐 Senha Admin para confirmar alteração *</label>
+          <input type="password" id="ae-senha-confirm" placeholder="Digite a senha do administrador">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-acomp-edit')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveAcompEdit()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Empresa — Sugerir Alteração no Ponto -->
+<div class="modal-overlay" id="modal-acomp-sugestao">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header" style="background:var(--warning);border-radius:var(--radius-lg) var(--radius-lg) 0 0">
+      <div class="modal-title">Sugerir Alteração no Ponto</div>
+      <button class="modal-close" onclick="closeModal('modal-acomp-sugestao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--warning-bg);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--warning);margin-bottom:16px">
+        ⚠️ Sua sugestão será enviada ao administrador para análise. Os dados originais não serão alterados até a aprovação.
+      </div>
+      <div id="sug-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Chegada sugerida</label>
+          <input type="time" id="sug-chegada">
+        </div>
+        <div class="form-group">
+          <label>Refeição sugerida</label>
+          <select id="sug-refeicao">
+            <option value="01:00">01h00</option>
+            <option value="01:30">01h30</option>
+            <option value="02:00">02h00</option>
+            <option value="manual">Manual...</option>
+          </select>
+        </div>
+        <div class="form-group" id="sug-ref-manual-wrap" style="display:none">
+          <label>Refeição manual</label>
+          <input type="time" id="sug-ref-manual">
+        </div>
+        <div class="form-group">
+          <label>Saída sugerida</label>
+          <input type="time" id="sug-saida">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>Motivo / Observação *</label>
+        <textarea id="sug-motivo" placeholder="Explique o motivo da sugestão de alteração..." style="min-height:70px"></textarea>
+      </div>
+      <div id="sug-preview" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-acomp-sugestao')">Cancelar</button>
+      <button class="btn btn-navy" onclick="enviarSugestao()">Enviar Sugestão</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Empresa — Gerenciar Indicação -->
+<div class="modal-overlay" id="modal-gerenciar-indicacao">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">Gerenciar Indicação</div>
+      <button class="modal-close" onclick="closeModal('modal-gerenciar-indicacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="gi-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <div style="background:var(--warning-bg);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--warning);margin-bottom:14px">
+        ⚠️ Edições e exclusões serão notificadas ao administrador para validação.
+      </div>
+      <div class="form-group">
+        <label>Alterar colaborador indicado</label>
+        <select id="gi-col-novo">
+          <option value="">Manter o atual</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>Motivo da alteração / exclusão</label>
+        <textarea id="gi-motivo" placeholder="Informe o motivo..." style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-gerenciar-indicacao')">Cancelar</button>
+      <button class="btn btn-danger" onclick="solicitarExclusaoIndicacao()">Solicitar Exclusão</button>
+      <button class="btn btn-navy" onclick="solicitarEdicaoIndicacao()">Solicitar Alteração</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo Motorista -->
+<div class="modal-overlay" id="modal-motorista">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Cadastrar Motorista</div>
+      <button class="modal-close" onclick="closeModal('modal-motorista')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nome completo *</label>
+          <input type="text" id="mot-nome" placeholder="Nome do motorista">
+        </div>
+        <div class="form-group">
+          <label>Identificação / Placa / Veículo</label>
+          <input type="text" id="mot-ident" placeholder="Ex: ABC-1234 ou Truck 07">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="mot-status">
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-motorista')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveMotorista()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Zerar Ponto -->
+<div class="modal-overlay" id="modal-zerar-ponto">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header" style="background:var(--danger)">
+      <div class="modal-title">⚠️ Zerar Acompanhamento de Ponto</div>
+      <button class="modal-close" onclick="closeModal('modal-zerar-ponto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--danger-bg);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--danger);margin-bottom:16px;font-weight:500">
+        ⚠️ Esta ação é irreversível. Os registros serão excluídos permanentemente.
+      </div>
+      <div class="form-group">
+        <label>Filtrar por Data (opcional)</label>
+        <input type="date" id="zerar-data">
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>Filtrar por Empresa (opcional)</label>
+        <select id="zerar-empresa" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px;width:100%">
+          <option value="">Todas as empresas</option>
+        </select>
+      </div>
+      <div id="zerar-preview" style="margin-top:14px;padding:12px;background:var(--gray-50);border-radius:var(--radius);font-size:13px;display:none"></div>
+      <div class="form-group" style="margin-top:16px">
+        <label>Senha de confirmação *</label>
+        <input type="password" id="zerar-senha" placeholder="Digite a senha admin">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-zerar-ponto')">Cancelar</button>
+      <button class="btn btn-ghost" onclick="previewZerar()">👁 Pré-visualizar</button>
+      <button class="btn btn-danger" onclick="confirmarZerar()">🗑 Zerar Registros</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px"></div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDsKKZaK1WBo3FjNo-2o0O5a0ehV4tDy4U",
+  authDomain: "vagas-terceirizados-portoex.firebaseapp.com",
+  databaseURL: "https://vagas-terceirizados-portoex-default-rtdb.firebaseio.com",
+  projectId: "vagas-terceirizados-portoex",
+  storageBucket: "vagas-terceirizados-portoex.firebasestorage.app",
+  messagingSenderId: "688106736915",
+  appId: "1:688106736915:web:412ff19368208198269ee6"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ===================== STATE =====================
+let currentUser = null; // { role: 'admin'|'empresa', empresaId, empresaNome, login }
+let STATE = {
+  empresas: {},
+  operacoes: {},
+  colaboradores: {},
+  vagas: {},
+  acompanhamento: {},
+  notificacoes: {},
+  motoristas: {}
+};
+let editEmpresaId = null;
+let editVagaId = null;
+let currentAtribuirVagaId = null;
+let currentAcompId = null;
+
+// Admin logins — a senha ADMIN_SENHA é a master (usada para ações sensíveis)
+const ADMIN_SENHA = 'admin@2024';
+const ADMIN_LOGINS = [
+  { login: 'portoex.admin',        senha: 'admin@2024',   role: 'admin', label: '🔑 Administrador' },
+  { login: 'portoex.controladoria', senha: 'ctrl@2024',   role: 'admin', label: '📊 Controladoria' },
+  { login: 'portoex.logistica',     senha: 'log@2024',    role: 'admin', label: '🚚 Logística' },
+];
+
+// ===================== OPERAÇÕES PADRÃO =====================
+// Mapa fixo: operação → função automática
+const OP_FUNCAO_MAP = {
+  'EXPEDIÇÃO': 'Ajudante Interno',
+  'ROTA':     'Ajudante Externo',
+  'ESTOQUE':  'Ajudante Interno',
+  'BRAFT':    'Ajudante Externo',
+  'SAMSONITE':'Ajudante Externo',
+  'MATTEL':   'Ajudante Interno',
+  'MANOBRA':  'Ajudante Externo',
+  'THOMPSON': 'Ajudante Externo',
+  'S.K.O':    'Ajudante Externo',
+  'N/D':      'Ajudante Interno',
+};
+
+function getFuncaoByOp(opNome) {
+  return OP_FUNCAO_MAP[opNome] || 'Ajudante Externo';
+}
+
+function funcaoBadge(funcao) {
+  if (!funcao) return 'badge-navy';
+  const f = funcao.toLowerCase();
+  if (f.includes('interno')) return 'badge-func-interno';
+  if (f.includes('externo')) return 'badge-func-externo';
+  if (f.includes('conferente')) return 'badge-func-conferente';
+  return 'badge-navy';
+}
+
+const OPERACOES_PADRAO = [
+  { nome: 'EXPEDIÇÃO', cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'ROTA',      cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'ESTOQUE',   cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'BRAFT',     cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'SAMSONITE', cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'MATTEL',    cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'MANOBRA',   cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'THOMPSON',  cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'S.K.O',     cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'N/D',       cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+];
+
+// ===================== LOGIN =====================
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value.trim();
+  const lembrar = document.getElementById('login-lembrar').checked;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  if (lembrar) {
+    localStorage.setItem('px_login', user);
+    localStorage.setItem('px_pass', pass);
+  } else {
+    localStorage.removeItem('px_login');
+    localStorage.removeItem('px_pass');
+  }
+
+  // Verificar logins admin
+  const adminMatch = ADMIN_LOGINS.find(a => a.login === user && a.senha === pass);
+  if (adminMatch) {
+    currentUser = { role: 'admin', login: user, label: adminMatch.label };
+    initApp();
+    return;
+  }
+
+  db.ref('empresas').once('value', snap => {
+    const empresas = snap.val() || {};
+    let found = null;
+    Object.entries(empresas).forEach(([id, emp]) => {
+      if (emp.login === user && emp.senha === pass && emp.status === 'ativa') {
+        found = { role: 'empresa', empresaId: id, empresaNome: emp.nome, login: user };
+      }
+    });
+    if (found) {
+      currentUser = found;
+      initApp();
+    } else {
+      errEl.style.display = 'block';
+    }
+  });
+}
+
+// Auto-preencher login salvo
+window.addEventListener('load', () => {
+  const savedLogin = localStorage.getItem('px_login');
+  const savedPass = localStorage.getItem('px_pass');
+  if (savedLogin) {
+    document.getElementById('login-user').value = savedLogin;
+    document.getElementById('login-pass').value = savedPass || '';
+    document.getElementById('login-lembrar').checked = true;
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
+});
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-layout').style.display = 'none';
+}
+
+// ===================== INIT =====================
+function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-layout').style.display = 'flex';
+  document.getElementById('header-user').textContent =
+    currentUser.role === 'admin' ? (currentUser.label || '🔑 Administrador') : ('🏢 ' + currentUser.empresaNome);
+
+  buildNavTabs();
+  listenFirebase();
+  initOperacoesPadrao();
+  setTimeout(() => switchPage(currentUser.role === 'admin' ? 'page-mural' : 'page-mural'), 100);
+}
+
+function buildNavTabs() {
+  const nav = document.getElementById('nav-tabs');
+  nav.innerHTML = '';
+  const tabs = currentUser.role === 'admin'
+    ? [
+        { id: 'page-mural', label: 'Mural de Vagas' },
+        { id: 'page-vagas-admin', label: 'Gerenciar Vagas' },
+        { id: 'page-acompanhamento', label: 'Acompanhamento' },
+        { id: 'page-resumo-admin', label: '📊 Resumo Geral' },
+        { id: 'page-resumo-terceirizados', label: '💰 Acerto' },
+        { id: 'page-empresas', label: 'Empresas' },
+        { id: 'page-operacoes', label: 'Operações' },
+        { id: 'page-motoristas', label: 'Motoristas' },
+      ]
+    : [
+        { id: 'page-mural', label: 'Mural de Vagas' },
+        { id: 'page-colaboradores', label: 'Meus Colaboradores' },
+        { id: 'page-acompanhamento', label: 'Acompanhamento' },
+      ];
+
+  tabs.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'nav-tab';
+    el.textContent = t.label;
+    el.onclick = () => switchPage(t.id);
+    el.dataset.page = t.id;
+    nav.appendChild(el);
+  });
+
+  if (currentUser.role === 'admin') {
+    document.getElementById('btn-nova-vaga-wrap').style.display = 'block';
+  }
+  if (currentUser.role === 'empresa') {
+    document.getElementById('empresa-nome-sub').textContent = currentUser.empresaNome;
+  }
+}
+
+function switchPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.page === pageId);
+  });
+  document.getElementById(pageId).classList.add('active');
+
+  if (pageId === 'page-mural') renderMural();
+  if (pageId === 'page-acompanhamento') { renderAcompanhamento(); renderSugestoesPendentes(); }
+  if (pageId === 'page-colaboradores') renderColLista();
+  if (pageId === 'page-empresas') renderEmpresas();
+  if (pageId === 'page-operacoes') renderOperacoes();
+  if (pageId === 'page-vagas-admin') renderVagasAdmin();
+  if (pageId === 'page-motoristas') renderMotoristas();
+  if (pageId === 'page-resumo-admin') {
+    // Set default: current month
+    if (!document.getElementById('resumo-admin-inicio')?.value) {
+      const hoje = new Date();
+      const primDia = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`;
+      const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0);
+      const ultimoStr = `${ultimoDia.getFullYear()}-${String(ultimoDia.getMonth()+1).padStart(2,'0')}-${String(ultimoDia.getDate()).padStart(2,'0')}`;
+      sv('resumo-admin-inicio', primDia);
+      sv('resumo-admin-fim', ultimoStr);
+    }
+    populateResumoSelects();
+    renderResumoAdmin();
+  }
+  if (pageId === 'page-resumo-terceirizados') {
+    // Set default: current quinzena
+    const hoje = new Date();
+    const dia = hoje.getDate();
+    const mes = String(hoje.getMonth()+1).padStart(2,'0');
+    const ano = hoje.getFullYear();
+    if (!document.getElementById('acerto-inicio')?.value) {
+      if (dia <= 15) {
+        sv('acerto-inicio', `${ano}-${mes}-01`);
+        sv('acerto-fim', `${ano}-${mes}-15`);
+      } else {
+        const ultimoDia = new Date(ano, hoje.getMonth()+1, 0).getDate();
+        sv('acerto-inicio', `${ano}-${mes}-16`);
+        sv('acerto-fim', `${ano}-${mes}-${ultimoDia}`);
+      }
+    }
+    populateResumoSelects();
+  }
+}
+
+function switchInner(group, tab) {
+  document.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.inner-page').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(group + '-' + tab).classList.add('active');
+  if (tab === 'lista') renderColLista();
+}
+
+// ===================== FIREBASE LISTENERS =====================
+function listenFirebase() {
+  db.ref('empresas').on('value', snap => { STATE.empresas = snap.val() || {}; renderEmpresas(); populateVagaEmpresasCheck(); populateResumoSelects(); });
+  db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
+  db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
+  db.ref('motoristas').on('value', snap => { STATE.motoristas = snap.val() || {}; renderMotoristas(); populateMotoristaSelect(); });
+  db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; populateAcompFilters(); renderAcompanhamento(); renderSugestoesPendentes(); });
+  if (currentUser.role === 'admin') {
+    db.ref('notificacoes').on('value', snap => {
+      STATE.notificacoes = snap.val() || {};
+      updateNotifBadge();
+      renderSugestoesPendentes();
+    });
+  }
+  const colPath = currentUser.role === 'empresa'
+    ? 'colaboradores/' + currentUser.empresaId
+    : 'colaboradores';
+  db.ref(colPath).on('value', snap => {
+    if (currentUser.role === 'empresa') {
+      STATE.colaboradores[currentUser.empresaId] = snap.val() || {};
+    } else {
+      STATE.colaboradores = snap.val() || {};
+    }
+    renderColLista();
+    populateAtribuirCol();
+  });
+}
+
+function initOperacoesPadrao() {
+  db.ref('operacoes').once('value', snap => {
+    const ops = snap.val() || {};
+    const nomesCadastrados = Object.values(ops).map(op => op.nome.trim().toUpperCase());
+
+    if (!snap.val()) {
+      // Banco vazio — cadastra todas as padrão
+      OPERACOES_PADRAO.forEach(op => {
+        db.ref('operacoes').push({ nome: op.nome, cc: op.cc, funcao: op.funcao, ativa: 'sim' });
+      });
+    } else {
+      // Banco já existe — verifica e adiciona as que estão faltando
+      OPERACOES_PADRAO.forEach(op => {
+        if (!nomesCadastrados.includes(op.nome.trim().toUpperCase())) {
+          db.ref('operacoes').push({ nome: op.nome, cc: op.cc, funcao: op.funcao, ativa: 'sim' });
+        }
+      });
+      // Atualiza funcao nas operações existentes que não têm o campo
+      Object.entries(ops).forEach(([id, op]) => {
+        if (!op.funcao && OP_FUNCAO_MAP[op.nome]) {
+          db.ref(`operacoes/${id}/funcao`).set(OP_FUNCAO_MAP[op.nome]);
+        }
+      });
+    }
+  });
+}
+
+// ===================== EMPRESAS =====================
+function renderEmpresas() {
+  const tbody = document.getElementById('empresas-tbody');
+  if (!tbody) return;
+  const items = Object.entries(STATE.empresas);
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhuma empresa cadastrada.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(([id, emp]) => {
+    const nCols = Object.keys(STATE.colaboradores[id] || {}).length;
+    return `<tr>
+      <td class="td-name">${emp.nome}</td>
+      <td class="td-mono">${emp.login}</td>
+      <td class="td-mono">${emp.senha}</td>
+      <td><span class="badge ${emp.status==='ativa'?'badge-success':'badge-gray'}">${emp.status}</span></td>
+      <td>${nCols}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="editEmpresa('${id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEmpresa('${id}')">Excluir</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'modal-vaga') populateVagaModal();
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  editEmpresaId = null;
+  editVagaId = null;
+}
+
+function saveEmpresa() {
+  const nome = v('emp-nome'), login = v('emp-login'), senha = v('emp-senha'), status = v('emp-status');
+  if (!nome || !login || !senha) { toast('Preencha nome, login e senha.', 'error'); return; }
+  const data = {
+    nome, login, senha, status,
+    valores: {
+      'Ajudante Interno': { valor: n('emp-val-ai'), he: n('emp-he-ai') },
+      'Ajudante Externo': { valor: n('emp-val-ae'), he: n('emp-he-ae') },
+      'Conferente': { valor: n('emp-val-co'), he: n('emp-he-co') }
+    }
+  };
+  const ref = editEmpresaId ? db.ref('empresas/' + editEmpresaId) : db.ref('empresas').push();
+  (editEmpresaId ? ref.set(data) : ref.set(data)).then(() => {
+    toast('Empresa salva!', 'success');
+    closeModal('modal-empresa');
+    clearEmpForm();
+  });
+}
+
+function editEmpresa(id) {
+  const emp = STATE.empresas[id];
+  editEmpresaId = id;
+  sv('emp-nome', emp.nome); sv('emp-login', emp.login); sv('emp-senha', emp.senha); sv('emp-status', emp.status);
+  const v2 = emp.valores || {};
+  sv('emp-val-ai', (v2['Ajudante Interno']||{}).valor||'');
+  sv('emp-he-ai', (v2['Ajudante Interno']||{}).he||'');
+  sv('emp-val-ae', (v2['Ajudante Externo']||{}).valor||'');
+  sv('emp-he-ae', (v2['Ajudante Externo']||{}).he||'');
+  sv('emp-val-co', (v2['Conferente']||{}).valor||'');
+  sv('emp-he-co', (v2['Conferente']||{}).he||'');
+  openModal('modal-empresa');
+}
+
+function deleteEmpresa(id) {
+  if (!confirm('Excluir esta empresa?')) return;
+  db.ref('empresas/' + id).remove().then(() => toast('Empresa excluída.'));
+}
+
+function clearEmpForm() {
+  ['emp-nome','emp-login','emp-senha','emp-val-ai','emp-he-ai','emp-val-ae','emp-he-ae','emp-val-co','emp-he-co'].forEach(i => sv(i,''));
+  sv('emp-status','ativa');
+}
+
+// ===================== OPERAÇÕES =====================
+function renderOperacoes() {
+  const tbody = document.getElementById('operacoes-tbody');
+  if (!tbody) return;
+  const items = Object.entries(STATE.operacoes);
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhuma operação.</td></tr>'; return; }
+  tbody.innerHTML = items.map(([id, op]) =>
+    `<tr>
+      <td class="td-name">${op.nome}</td>
+      <td><span class="badge badge-info">${op.cc}</span></td>
+      <td><span class="badge ${op.ativa==='sim'?'badge-success':'badge-gray'}">${op.ativa==='sim'?'Ativa':'Inativa'}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="toggleOp('${id}','${op.ativa}')">
+          ${op.ativa==='sim'?'Desativar':'Ativar'}
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteOp('${id}')">Excluir</button>
+      </td>
+    </tr>`
+  ).join('');
+}
+
+function saveOperacao() {
+  const nome = v('op-nome'), cc = v('op-cc'), ativa = v('op-ativa');
+  if (!nome) { toast('Informe o nome da operação.', 'error'); return; }
+  const funcaoManual = v('op-funcao');
+  const funcao = funcaoManual || OP_FUNCAO_MAP[nome.toUpperCase()] || (cc === 'EXPEDIÇÃO' ? 'Ajudante Interno' : 'Ajudante Externo');
+  db.ref('operacoes').push({ nome, cc, funcao, ativa }).then(() => { toast('Operação salva!', 'success'); closeModal('modal-operacao'); sv('op-nome',''); sv('op-funcao',''); });
+}
+
+function toggleOp(id, ativa) {
+  db.ref('operacoes/' + id + '/ativa').set(ativa === 'sim' ? 'nao' : 'sim');
+}
+function deleteOp(id) {
+  if (!confirm('Excluir esta operação?')) return;
+  db.ref('operacoes/' + id).remove();
+}
+
+function populateOpSelects() {
+  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim');
+  const vagaOp = document.getElementById('vaga-op');
+  if (vagaOp) vagaOp.innerHTML = '<option value="">Selecione...</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome} / ${op.cc}</option>`).join('');
+
+  const colOp = document.getElementById('col-operacao');
+  if (colOp) colOp.innerHTML = '<option value="">Selecione...</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome}</option>`).join('');
+
+  const filterOp = document.getElementById('filter-op-acomp');
+  if (filterOp) {
+    const cur = filterOp.value;
+    filterOp.innerHTML = '<option value="">Todas as operações</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome}</option>`).join('');
+    if (cur) filterOp.value = cur;
+  }
+}
+
+// ===================== COLABORADORES =====================
+function checkColaborador() {
+  const cpf = v('col-cpf');
+  if (!cpf) return;
+  const cols = STATE.colaboradores[currentUser.empresaId] || {};
+  const found = Object.values(cols).find(c => c.cpf === cpf);
+  const aviso = document.getElementById('col-aviso');
+  if (found) {
+    sv('col-nome', found.nome);
+    document.getElementById('col-nome').readOnly = true;
+    aviso.style.display = 'block';
+  } else {
+    document.getElementById('col-nome').readOnly = false;
+    aviso.style.display = 'none';
+  }
+}
+
+function saveColaborador() {
+  const cpf = v('col-cpf'), nome = v('col-nome'), opId = v('col-operacao');
+  if (!cpf || !nome) { toast('CPF/RG e Nome são obrigatórios.', 'error'); return; }
+
+  const cols = STATE.colaboradores[currentUser.empresaId] || {};
+  const existing = Object.entries(cols).find(([,c]) => c.cpf === cpf);
+
+  const op = opId ? (STATE.operacoes[opId] || {}) : {};
+  const data = existing
+    ? { ...existing[1], operacaoId: opId, operacaoNome: op.nome || '' }
+    : { cpf, nome, operacaoId: opId, operacaoNome: op.nome || '', status: 'ativo', criadoEm: Date.now() };
+
+  const path = existing
+    ? `colaboradores/${currentUser.empresaId}/${existing[0]}`
+    : `colaboradores/${currentUser.empresaId}`;
+  const ref = existing ? db.ref(path) : db.ref(path).push();
+  (existing ? ref.set(data) : ref.set(data)).then(() => { toast('Colaborador salvo!', 'success'); clearColForm(); });
+}
+
+function clearColForm() {
+  sv('col-cpf',''); sv('col-nome',''); sv('col-operacao','');
+  document.getElementById('col-nome').readOnly = false;
+  document.getElementById('col-aviso').style.display = 'none';
+}
+
+function renderColLista() {
+  const tbody = document.getElementById('col-lista-body');
+  if (!tbody) return;
+  const empId = currentUser.role === 'empresa' ? currentUser.empresaId : null;
+  let rows = [];
+  if (empId) {
+    rows = Object.entries(STATE.colaboradores[empId] || {});
+  } else {
+    Object.entries(STATE.colaboradores).forEach(([eid, cols]) => {
+      Object.entries(cols || {}).forEach(([cid, col]) => rows.push([cid, { ...col, _empId: eid }]));
+    });
+  }
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(([id, col]) =>
+    `<tr>
+      <td class="td-mono">${col.cpf}</td>
+      <td class="td-name">${col.nome}</td>
+      <td>${col.operacaoNome || '—'}</td>
+      <td><span class="badge ${col.status==='ativo'?'badge-success':'badge-gray'}">${col.status||'ativo'}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="toggleColStatus('${id}','${col._empId || currentUser.empresaId}','${col.status||'ativo'}')">
+        ${(col.status||'ativo')==='ativo'?'Inativar':'Ativar'}
+      </button></td>
+    </tr>`
+  ).join('');
+}
+
+function toggleColStatus(id, empId, status) {
+  db.ref(`colaboradores/${empId}/${id}/status`).set(status === 'ativo' ? 'inativo' : 'ativo');
+}
+
+function handleCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    const preview = document.getElementById('csv-preview');
+    let imported = 0;
+    const rows = [];
+    lines.forEach((line, i) => {
+      if (i === 0) return; // header
+      const parts = line.split(',').map(p => p.trim().replace(/"/g,''));
+      if (parts.length >= 2) rows.push({ cpf: parts[0], nome: parts[1], operacao: parts[2] || '' });
+    });
+    preview.innerHTML = `<div style="background:var(--info-bg);border-radius:var(--radius);padding:12px;font-size:13px;margin-bottom:12px;">
+      📄 <strong>${rows.length}</strong> colaboradores encontrados no arquivo.
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>CPF</th><th>Nome</th><th>Operação</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td class="td-mono">${r.cpf}</td><td>${r.nome}</td><td>${r.operacao}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <button class="btn btn-navy" style="margin-top:12px" onclick="importCSVRows(${JSON.stringify(rows).replace(/"/g,'&quot;')})">Importar ${rows.length} Colaboradores</button>`;
+  };
+  reader.readAsText(file);
+}
+
+function importCSVRows(rows) {
+  const ops = STATE.operacoes;
+  let count = 0;
+  const batch = {};
+  rows.forEach(r => {
+    const opEntry = Object.entries(ops).find(([,op]) => op.nome.toUpperCase() === (r.operacao||'').toUpperCase());
+    const key = db.ref(`colaboradores/${currentUser.empresaId}`).push().key;
+    batch[key] = { cpf: r.cpf, nome: r.nome, operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', status: 'ativo', criadoEm: Date.now() };
+    count++;
+  });
+  db.ref(`colaboradores/${currentUser.empresaId}`).update(batch).then(() => toast(`${count} colaboradores importados!`, 'success'));
+}
+
+function populateAtribuirCol() {
+  const sel = document.getElementById('atribuir-col');
+  if (!sel) return;
+  const empId = currentUser.role === 'empresa' ? currentUser.empresaId : null;
+  if (!empId) return;
+  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([,c]) => (c.status||'ativo') === 'ativo');
+  sel.innerHTML = '<option value="">Selecione...</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} — ${c.cpf}</option>`).join('');
+}
+
+// ===================== VAGAS =====================
+// ---- VAGA LINHAS (novo modelo) ----
+let vagaLinhas = [];
+let vagaLinhaCounter = 0;
+let currentAtribuirLinhaIdx = null;
+
+function populateVagaModal() {
+  populateVagaEmpresasCheck();
+  const hoje = new Date().toISOString().split('T')[0];
+  if (!v('vaga-data')) sv('vaga-data', hoje);
+  vagaLinhas = [];
+  vagaLinhaCounter = 0;
+  // Adiciona 15 linhas vazias por padrão
+  for (let i = 0; i < 3; i++) addVagaLinha();
+}
+
+function populateVagaEmpresasCheck() {
+  const wrap = document.getElementById('vaga-empresas-check');
+  if (!wrap) return;
+  wrap.innerHTML = Object.entries(STATE.empresas).filter(([,e])=>e.status==='ativa').map(([id,emp]) =>
+    `<label class="check-item"><input type="checkbox" name="vaga-emp" value="${id}"> ${emp.nome}</label>`
+  ).join('');
+}
+
+function addVagaLinha() {
+  const idx = vagaLinhaCounter++;
+  vagaLinhas.push({ idx, opId: '', funcao: '', qtd: 0 });
+  renderVagaLinhas();
+}
+
+function removeVagaLinha(idx) {
+  vagaLinhas = vagaLinhas.filter(l => l.idx !== idx);
+  renderVagaLinhas();
+}
+
+function renderVagaLinhas() {
+  const tbody = document.getElementById('vaga-linhas-body');
+  if (!tbody) return;
+  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim');
+  const opOpts = '<option value="">— Operação —</option>' + ops.map(([id,op]) => {
+    const funcao = op.funcao || getFuncaoByOp(op.nome);
+    return `<option value="${id}">${op.nome} — ${funcao}</option>`;
+  }).join('');
+  const motOpts = '<option value="">— Motorista —</option>' + Object.entries(STATE.motoristas || {})
+    .filter(([,m]) => m.status === 'ativo')
+    .map(([id,m]) => `<option value="${id}">${m.nome}${m.ident?' — '+m.ident:''}</option>`).join('');
+
+  tbody.innerHTML = vagaLinhas.map((l, i) => {
+    const li = vagaLinhas.indexOf(l);
+    const opAtual = l.opId ? (STATE.operacoes[l.opId] || {}) : {};
+    // Função: usa override se definido, senão automática pela operação
+    const funcaoAuto = opAtual.funcao || (opAtual.nome ? getFuncaoByOp(opAtual.nome) : '');
+    const funcaoAtual = l.funcaoOverride || funcaoAuto;
+    const isRota = opAtual.cc === 'ROTA' || opAtual.nome === 'ROTA';
+    const isConferente = funcaoAtual === 'Conferente';
+
+    const qtdCell = isRota
+      ? `<td style="text-align:center;font-size:11px;color:var(--gray-400);padding:0 8px">1</td>`
+      : `<td><input type="number" min="0" value="${l.qtd||0}" style="width:60px;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;text-align:center" onchange="vagaLinhas[${li}].qtd=parseInt(this.value)||0"></td>`;
+
+    const motCell = isRota
+      ? `<td><select style="width:100%;padding:6px 8px;border:1px solid var(--yellow);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;background:var(--yellow-soft)" onchange="vagaLinhas[${li}].motoristaId=this.value;vagaLinhas[${li}].motoristaNome=this.options[this.selectedIndex].text">${motOpts.replace(`value="${l.motoristaId||''}"`,`value="${l.motoristaId||''}" selected`)}</select></td>`
+      : `<td style="text-align:center;color:var(--gray-200);font-size:11px">—</td>`;
+
+    // Select de função com opção de Conferente
+    const funcaoSelect = `<select style="padding:5px 8px;border:1px solid ${isConferente?'#6ee7a0':'var(--gray-200)'};border-radius:var(--radius);font-family:Sora,sans-serif;font-size:11px;background:${isConferente?'var(--success-bg)':'white'};color:${isConferente?'var(--success)':'var(--gray-800)'};font-weight:${isConferente?'700':'400'}"
+      onchange="vagaLinhas[${li}].funcaoOverride=this.value==='auto'?'':this.value;renderVagaLinhas()">
+      <option value="auto" ${!l.funcaoOverride?'selected':''}>Auto (${funcaoAuto||'—'})</option>
+      <option value="Ajudante Interno" ${l.funcaoOverride==='Ajudante Interno'?'selected':''}>Aj. Interno</option>
+      <option value="Ajudante Externo" ${l.funcaoOverride==='Ajudante Externo'?'selected':''}>Aj. Externo</option>
+      <option value="Conferente" ${l.funcaoOverride==='Conferente'?'selected':''}>⭐ Conferente</option>
+    </select>`;
+
+    return `<tr style="${isConferente?'background:var(--success-bg)':''}">
+      <td style="color:var(--gray-400);font-size:12px;text-align:center">${i+1}</td>
+      <td>
+        <select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px"
+          onchange="vagaLinhas[${li}].opId=this.value;vagaLinhas[${li}].qtd=1;vagaLinhas[${li}].funcaoOverride='';renderVagaLinhas()">
+          ${opOpts.replace(`value="${l.opId}"`, `value="${l.opId}" selected`)}
+        </select>
+      </td>
+      <td style="padding:0 8px">${funcaoSelect}</td>
+      ${qtdCell}
+      <td><input type="time" value="${l.hora||''}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${li}].hora=this.value"></td>
+      ${motCell}
+      <td><button class="btn btn-danger btn-sm" onclick="removeVagaLinha(${l.idx})" style="padding:4px 8px">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function saveVaga() {
+  const data = v('vaga-data');
+  if (!data) { toast('Informe a data de trabalho.', 'error'); return; }
+  const linhas = [];
+  vagaLinhas.forEach(l => {
+    if (!l.opId) return;
+    const op = STATE.operacoes[l.opId] || {};
+    // Função: override tem prioridade sobre automática
+    const funcaoAuto = op.funcao || getFuncaoByOp(op.nome);
+    const funcao = l.funcaoOverride || funcaoAuto;
+    const isRota = op.cc === 'ROTA' || op.nome === 'ROTA';
+    const qtd = isRota ? 1 : (parseInt(l.qtd) || 0);
+    if (qtd <= 0) return;
+    const linha = { opId: l.opId, opNome: op.nome, opCC: op.cc, funcao, qtd, hora: l.hora||'', atribuicoes: {} };
+    if (isRota && l.motoristaId) {
+      linha.motoristaId = l.motoristaId;
+      linha.motoristaNome = l.motoristaNome || '';
+    }
+    linhas.push(linha);
+  });
+  if (!linhas.length) { toast('Preencha ao menos uma linha com operação válida.', 'error'); return; }
+  const empsSel = [...document.querySelectorAll('input[name="vaga-emp"]:checked')].map(e=>e.value);
+  const payload = {
+    data, linhas,
+    empresasAlvo: empsSel.length ? empsSel : null,
+    obs: v('vaga-obs'),
+    status: 'aberta',
+    criadoEm: Date.now()
+  };
+  const ref = editVagaId ? db.ref('vagas/'+editVagaId) : db.ref('vagas').push();
+  (editVagaId ? ref.set(payload) : ref.set(payload)).then(() => {
+    toast('Mural publicado!','success');
+    closeModal('modal-vaga');
+    switchPage('page-mural');
+  });
+}
+
+function renderMural() {
+  const grid = document.getElementById('mural-grid');
+  if (!grid) return;
+  const vagas = Object.entries(STATE.vagas).filter(([,vaga]) => {
+    if (vaga.status === 'encerrada') return false;
+    if (currentUser.role === 'empresa') {
+      if (vaga.empresasAlvo && !vaga.empresasAlvo.includes(currentUser.empresaId)) return false;
+    }
+    return true;
+  });
+  if (!vagas.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📌</div><div class="empty-text">Nenhuma vaga publicada no momento.</div></div>';
+    return;
+  }
+  // Agrupa por data
+  const porData = {};
+  vagas.forEach(([id, vaga]) => {
+    const d = vaga.data || '0000-00-00';
+    if (!porData[d]) porData[d] = [];
+    porData[d].push([id, vaga]);
+  });
+  grid.style.display = 'block';
+  grid.innerHTML = Object.entries(porData).sort(([a],[b])=>a.localeCompare(b)).map(([data, vagasData]) => {
+    const vagasPorData = vagasData;
+    // Coleta todas as linhas de todas as vagas nessa data
+    let todasLinhas = [];
+    vagasPorData.forEach(([vagaId, vaga]) => {
+      const hora = vaga.hora || '';
+      (vaga.linhas || []).forEach((linha, li) => {
+        const atribs = Object.values(linha.atribuicoes || {});
+        const minhasAtribs = atribs.filter(a => a.empresaId === currentUser.empresaId);
+        todasLinhas.push({ vagaId, vagaHora: hora, linha, li, atribs, minhasAtribs, vagaStatus: vaga.status });
+      });
+    });
+    const hora = vagasPorData[0]?.[1]?.hora || '';
+    const totalNec = todasLinhas.reduce((s,l) => s + (l.linha.qtd||0), 0);
+    const totalAtrib = todasLinhas.reduce((s,l) => s + l.atribs.length, 0);
+    const pct = totalNec ? Math.min(100, Math.round(totalAtrib/totalNec*100)) : 0;
+    const linhasHTML = todasLinhas.map(({ vagaId, linha, li, atribs, minhasAtribs }) => {
+      const filled = atribs.length;
+      const needed = linha.qtd || 0;
+      const completo = filled >= needed;
+      const vagasRestantes = needed - filled;
+      // Quantas já indiquei nessa linha
+      const minhasQtd = minhasAtribs.length;
+      const podeIndicarMais = currentUser.role === 'empresa' && !completo;
+      const btnAtribuir = podeIndicarMais
+        ? `<button class="btn btn-yellow btn-sm" style="padding:3px 10px;font-size:11px" onclick="openAtribuir('${vagaId}',${li})">Indicar (${vagasRestantes} restante${vagasRestantes>1?'s':''})</button>`
+        : '';
+      // Lista de nomes já indicados
+      const nomesAtrib = atribs.map(a => `<span style="font-size:10px;background:var(--info-bg);color:var(--info);padding:2px 7px;border-radius:10px;margin:1px;display:inline-block">${a.colNome}</span>`).join('');
+      const statusCell = completo
+        ? `<span class="badge badge-success" style="font-size:10px">✓ Completo</span>`
+        : filled > 0
+          ? `<span style="font-size:11px;color:var(--warning);font-weight:600">${filled}/${needed} ▸ faltam ${vagasRestantes}</span>`
+          : `<span style="font-size:11px;color:var(--gray-400)">${filled}/${needed}</span>`;
+      const isConf = linha.funcao === 'Conferente';
+      return `<tr style="${isConf?'background:#F0FDF4;':''}">
+        <td style="font-weight:600;font-size:12px">${linha.opNome||'—'}</td>
+        <td><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
+        <td><span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${isConf?'⭐ ':''} ${linha.funcao||'—'}</span></td>
+        <td style="font-size:12px;text-align:center;font-weight:600">${needed}</td>
+        <td style="font-size:12px;font-family:'JetBrains Mono',monospace">${linha.hora||'—'}</td>
+        <td>${statusCell}</td>
+        <td style="min-width:200px">${nomesAtrib}</td>
+      </tr>`;
+    }).join('');
+    const btnEncerrar = currentUser.role === 'admin'
+      ? vagasPorData.map(([id]) => `<button class="btn btn-ghost btn-sm" onclick="encerrarVaga('${id}')">Encerrar</button>`).join('')
+      : '';
+    const vagaIdPrincipal = vagasPorData[0][0];
+    const todosVagaIds = vagasPorData.map(([id]) => id).join(',');
+    const temVagasAbertas = todasLinhas.some(l => l.atribs.length < (l.linha.qtd||0));
+    const btnIndicar = currentUser.role === 'empresa'
+      ? temVagasAbertas
+        ? `<button class="btn btn-yellow" onclick="openAtribuir('${todosVagaIds}')">👤 Indicar Colaboradores</button>`
+        : `<span class="badge badge-success" style="padding:8px 16px">✓ Todas as vagas preenchidas</span>`
+      : '';
+    return `<div style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);margin-bottom:20px;overflow:hidden">
+      <div style="background:var(--navy);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="color:var(--yellow);font-size:15px;font-weight:700">📅 ${formatDate(data)}</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:2px">${hora ? '⏰ Horário previsto: '+hora : ''} &nbsp; ${todasLinhas.length} operações &nbsp; ${totalAtrib}/${totalNec} preenchidos</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="background:rgba(255,255,255,0.1);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--white)">${pct}%</div>
+          ${btnEncerrar}
+        </div>
+      </div>
+      <div style="padding:0">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:var(--gray-50)">
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Operação</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">C. Custo</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Função</th>
+              <th style="padding:8px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Qtd</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Hora</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Status</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaboradores</th>
+            </tr>
+          </thead>
+          <tbody>${linhasHTML}</tbody>
+        </table>
+      </div>
+      <div style="padding:12px 18px;border-top:1px solid var(--gray-100);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        ${btnIndicar}
+        ${btnEncerrar}
+        ${vagasPorData[0]?.[1]?.obs ? `<span style="font-size:12px;color:var(--gray-400)">📝 ${vagasPorData[0][1].obs}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAtribuir(vagaIdsStr) {
+  // Suporta múltiplos vagaIds separados por vírgula (várias vagas no mesmo dia)
+  const vagaIds = vagaIdsStr.split(',').filter(Boolean);
+  currentAtribuirVagaId = vagaIds[0]; // mantém compatibilidade
+
+  const empId = currentUser.empresaId;
+  const cols = Object.entries(STATE.colaboradores[empId] || {})
+    .filter(([,c]) => (c.status||'ativo') === 'ativo')
+    .sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
+  const colOpts = '<option value="">— Selecione —</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
+
+  // Coletar todas as linhas de todas as vagas do dia
+  const todasLinhas = [];
+  vagaIds.forEach(vagaId => {
+    const vaga = STATE.vagas[vagaId];
+    if (!vaga) return;
+    (vaga.linhas || []).forEach((linha, li) => {
+      todasLinhas.push({ vagaId, vaga, linha, li });
+    });
+  });
+
+  const primeiraVaga = STATE.vagas[vagaIds[0]];
+  document.getElementById('atribuir-modal-title').textContent = `Indicar Colaboradores — ${formatDate(primeiraVaga?.data||'')}`;
+
+  // Índice global para IDs únicos no DOM (evita conflito quando mesma linha aparece em vagas diferentes)
+  let globalIdx = 0;
+  const painelHTML = todasLinhas.map(({ vagaId, vaga, linha, li }) => {
+    const gIdx = globalIdx++;
+    const atribs = Object.values(linha.atribuicoes || {});
+    const filled = atribs.length;
+    const needed = linha.qtd || 0;
+    const completo = filled >= needed;
+    const vagasRestantes = needed - filled;
+    const isConferente = linha.funcao === 'Conferente';
+
+    // Buscar valores cadastrados para Conferente desta empresa
+    let conferenteInfoHTML = '';
+    if (isConferente) {
+      const emp = STATE.empresas[empId] || {};
+      const valConf = (emp.valores || {})['Conferente'] || {};
+      const valorDia = parseFloat(valConf.valor) || 0;
+      const valorHE  = parseFloat(valConf.he) || 0;
+      conferenteInfoHTML = `
+        <div style="background:#E6F5EE;border:1px solid #6ee7a0;border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="font-size:13px;font-weight:700;color:var(--success)">⭐ Vaga de Conferente</div>
+          ${valorDia > 0
+            ? `<div style="font-size:12px;color:var(--success)">Valor/dia: <strong>R$ ${valorDia.toFixed(2).replace('.',',')}</strong></div>
+               <div style="font-size:12px;color:var(--success)">H. Extra: <strong>R$ ${valorHE.toFixed(2).replace('.',',')}</strong></div>`
+            : `<div style="font-size:12px;color:var(--gray-400)">Valores não configurados — fale com a Portoex</div>`
+          }
+        </div>`;
+    }
+
+    const listaAtribs = atribs.map(a => {
+      const minha = a.empresaId === empId;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:${minha?'var(--info-bg)':'var(--gray-50)'};border-radius:var(--radius);margin-bottom:4px;font-size:12px">
+        <span style="font-size:16px">${minha?'👤':'👥'}</span>
+        <span style="font-weight:600">${a.colNome}</span>
+        <span style="color:var(--gray-400)">${a.colCPF}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray-400)">${a.empresaNome}</span>
+      </div>`;
+    }).join('');
+
+    const selectIndicar = !completo ? `
+      <div id="sel-wrap-${gIdx}" style="background:${isConferente?'#F0FDF4':'var(--gray-50)'};border-radius:var(--radius);padding:10px 12px;margin-top:8px;${isConferente?'border:1px solid #6ee7a0;':''}">
+        <div style="font-size:11px;font-weight:600;color:${isConferente?'var(--success)':'var(--gray-600)'};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
+          ${isConferente?'⭐ Indicar Conferente':'Indicar colaborador para esta vaga'}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="col-sel-${gIdx}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid ${isConferente?'#6ee7a0':'var(--gray-200)'};border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">${colOpts}</select>
+          <button class="btn ${isConferente?'btn-success':'btn-yellow'}" style="white-space:nowrap;${isConferente?'background:var(--success);color:white;':''}" onclick="indicarNaLinha(${gIdx},'${vagaId}',${li})">
+            ✓ Confirmar (${vagasRestantes} vaga${vagasRestantes>1?'s':''})
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:6px">Função: <strong style="color:${isConferente?'var(--success)':'inherit'}">${linha.funcao}</strong> · Hora: <strong>${linha.hora||'—'}</strong></div>
+      </div>` : `<div id="sel-wrap-${gIdx}" style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
+
+    return `<div style="border-bottom:1px solid var(--gray-100);padding:16px 22px;${isConferente?'background:#F0FDF4;':''}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="background:${isConferente?'var(--success)':'var(--navy)'};color:${isConferente?'white':'var(--yellow)'};padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700">${linha.opNome}</div>
+        <span class="badge badge-info" style="font-size:10px">${linha.opCC}</span>
+        <span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${isConferente?'⭐ ':''} ${linha.funcao}</span>
+        ${linha.hora ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gray-400)">⏰ ${linha.hora}</span>` : ''}
+        <span id="counter-${gIdx}" style="margin-left:auto;font-size:12px;font-weight:600;color:${completo?'var(--success)':'var(--warning)'}">${filled}/${needed}</span>
+      </div>
+      ${conferenteInfoHTML}
+      <div id="lista-atribs-${gIdx}">${listaAtribs}</div>
+      ${selectIndicar}
+    </div>`;
+  }).join('');
+
+  document.getElementById('atribuir-painel').innerHTML = painelHTML || '<div style="padding:24px;text-align:center;color:var(--gray-400)">Nenhuma linha nesta vaga.</div>';
+  openModal('modal-atribuir');
+}
+
+function indicarNaLinha(gIdx, vagaId, linhaIdx) {
+  const sel = document.getElementById(`col-sel-${gIdx}`);
+  if (!sel || !sel.value) { toast('Selecione um colaborador.', 'error'); return; }
+  const colId = sel.value;
+  const empId = currentUser.empresaId;
+  const col = (STATE.colaboradores[empId]||{})[colId];
+  const vaga = STATE.vagas[vagaId];
+  const linha = (vaga.linhas || [])[linhaIdx] || {};
+
+  // Checar se já indicou este colaborador nesta linha
+  const atribs = Object.values(linha.atribuicoes || {});
+  if (atribs.some(a => a.colId === colId)) { toast('Este colaborador já foi indicado para esta vaga.', 'error'); return; }
+  if (atribs.length >= (linha.qtd || 0)) { toast('Vagas desta linha já estão preenchidas.', 'error'); return; }
+
+  const data = {
+    colId, colNome: col.nome, colCPF: col.cpf,
+    funcao: linha.funcao,
+    empresaId: empId,
+    empresaNome: currentUser.empresaNome,
+    atribuidoEm: Date.now(),
+    status: 'Em escolha'
+  };
+  db.ref(`vagas/${vagaId}/linhas/${linhaIdx}/atribuicoes`).push(data).then(() => {
+    db.ref('acompanhamento').push({
+      vagaId,
+      linhaIdx,
+      ...data,
+      opNome: linha.opNome,
+      opCC: linha.opCC,
+      data: vaga.data,
+      horaInicial: linha.hora || '',
+    }).then(() => {
+      // Feedback visual — usa gIdx para os IDs do DOM
+      const listaEl = document.getElementById(`lista-atribs-${gIdx}`);
+      if (listaEl) {
+        const novoItem = document.createElement('div');
+        novoItem.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--info-bg);border-radius:var(--radius);margin-bottom:4px;font-size:12px;animation:fadeIn 0.3s ease';
+        novoItem.innerHTML = `<span style="font-size:16px">👤</span><span style="font-weight:600">${col.nome}</span><span style="color:var(--gray-400)">${col.cpf}</span><span style="margin-left:auto;font-size:10px;background:var(--success-bg);color:var(--success);padding:2px 8px;border-radius:10px">✓ Indicado agora</span>`;
+        listaEl.appendChild(novoItem);
+      }
+      const novaQtd = atribs.length + 1;
+      const needed = linha.qtd || 0;
+      const restantes = needed - novaQtd;
+      const counterEl = document.getElementById(`counter-${gIdx}`);
+      if (counterEl) {
+        counterEl.textContent = `${novaQtd}/${needed} preenchidos`;
+        counterEl.style.color = restantes === 0 ? 'var(--success)' : 'var(--warning)';
+      }
+      const selWrap = document.getElementById(`sel-wrap-${gIdx}`);
+      if (restantes <= 0 && selWrap) {
+        selWrap.innerHTML = `<div style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
+        const todasCompletas = verificarTodasLinhasCompletas();
+        if (todasCompletas) {
+          toast('✓ Todas as vagas preenchidas! Encerrando...', 'success');
+          setTimeout(() => closeModal('modal-atribuir'), 1800);
+        }
+      } else if (selWrap) {
+        const btn = selWrap.querySelector('button');
+        if (btn) btn.textContent = `✓ Confirmar (${restantes} vaga${restantes>1?'s':''})`;
+        sel.value = '';
+      }
+      toast(`${col.nome} indicado!`, 'success');
+    });
+  });
+}
+
+function verificarTodasLinhasCompletas() {
+  // Verifica todos os contadores visíveis no modal
+  const contadores = document.querySelectorAll('[id^="counter-"]');
+  if (!contadores.length) return false;
+  return Array.from(contadores).every(el => {
+    const partes = el.textContent.split('/');
+    const preenchidos = parseInt(partes[0]) || 0;
+    const total = parseInt(partes[1]) || 0;
+    return total > 0 && preenchidos >= total;
+  });
+}
+
+function confirmarAtribuicao() {} // legacy — não usado mais
+
+function encerrarVaga(id) {
+  if (!confirm('Encerrar esta vaga?')) return;
+  db.ref('vagas/' + id + '/status').set('encerrada').then(() => toast('Vaga encerrada.'));
+}
+
+function renderVagasAdmin() {
+  const tbody = document.getElementById('vagas-admin-tbody');
+  if (!tbody) return;
+  const vagas = Object.entries(STATE.vagas);
+  if (!vagas.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhuma vaga.</td></tr>'; return; }
+  tbody.innerHTML = vagas.map(([id,v]) => {
+    const atribs = Object.values(v.atribuicoes||{}).length;
+    const total = (v.qtd['Ajudante Interno']||0)+(v.qtd['Ajudante Externo']||0)+(v.qtd['Conferente']||0);
+    const emps = v.empresasAlvo ? v.empresasAlvo.map(eid=>(STATE.empresas[eid]||{}).nome||eid).join(', ') : 'Todas';
+    return `<tr>
+      <td class="td-name">${v.opNome}</td>
+      <td>${formatDate(v.data)}</td>
+      <td>${v.hora||'—'}</td>
+      <td style="font-size:11px">AI:${v.qtd['Ajudante Interno']||0} AE:${v.qtd['Ajudante Externo']||0} CO:${v.qtd['Conferente']||0}</td>
+      <td style="font-size:11px">${emps}</td>
+      <td><span class="badge ${v.status==='aberta'?'badge-success':'badge-gray'}">${v.status}</span></td>
+      <td style="display:flex;gap:4px">
+        <span style="font-size:11px;color:var(--gray-400)">${atribs}/${total}</span>
+        <button class="btn btn-danger btn-sm" onclick="encerrarVaga('${id}')">Encerrar</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ===================== ACOMPANHAMENTO =====================
+function populateAcompFilters() {
+  const filterData = document.getElementById('filter-data-acomp');
+  const filterOp = document.getElementById('filter-op-acomp');
+  if (!filterData || !filterOp) return;
+
+  // Datas únicas dos registros
+  const datas = [...new Set(Object.values(STATE.acompanhamento).map(a => a.data).filter(Boolean))].sort();
+  const curData = filterData.value;
+  filterData.innerHTML = '<option value="">Todas as datas</option>' + datas.map(d => `<option value="${d}">${formatDate(d)}</option>`).join('');
+  if (curData) filterData.value = curData;
+
+  // Operações
+  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim');
+  const curOp = filterOp.value;
+  filterOp.innerHTML = '<option value="">Todas as operações</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome}</option>`).join('');
+  if (curOp) filterOp.value = curOp;
+}
+
+function renderAcompanhamento() {
+  const container = document.getElementById('acomp-container');
+  if (!container) return;
+
+  populateAcompFilters();
+
+  const filterDataVal = document.getElementById('filter-data-acomp')?.value || '';
+  const filterOpVal = document.getElementById('filter-op-acomp')?.value || '';
+
+  let items = Object.entries(STATE.acompanhamento);
+  if (currentUser.role === 'empresa') {
+    const empId = currentUser.empresaId;
+    const empNome = (currentUser.empresaNome||'').trim().toUpperCase();
+    items = items.filter(([,a]) =>
+      a.empresaId === empId ||
+      (!a.empresaId && empNome && (a.empresaNome||'').trim().toUpperCase() === empNome)
+    );
+  }
+  if (filterDataVal) items = items.filter(([,a]) => a.data === filterDataVal);
+  if (filterOpVal) {
+    const opNome = (STATE.operacoes[filterOpVal]||{}).nome;
+    if (opNome) items = items.filter(([,a]) => a.opNome === opNome);
+  }
+
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">⏱️</div><div class="empty-text">Nenhum registro para os filtros selecionados.</div></div>';
+    return;
+  }
+
+  // Agrupar por data
+  const porData = {};
+  items.forEach(([id, a]) => {
+    const d = a.data || '0000-00-00';
+    if (!porData[d]) porData[d] = [];
+    porData[d].push([id, a]);
+  });
+
+  // Paleta de cores para grupos de operação
+  const OP_CORES = [
+    { bg: '#EEF2FF', border: '#C7D2FE', text: '#3730A3' },
+    { bg: '#FFF7ED', border: '#FED7AA', text: '#9A3412' },
+    { bg: '#F0FDF4', border: '#BBF7D0', text: '#166534' },
+    { bg: '#FDF4FF', border: '#E9D5FF', text: '#6B21A8' },
+    { bg: '#FFF1F2', border: '#FECDD3', text: '#9F1239' },
+    { bg: '#F0F9FF', border: '#BAE6FD', text: '#075985' },
+    { bg: '#FEFCE8', border: '#FEF08A', text: '#713F12' },
+    { bg: '#F7F7F7', border: '#D1D5DB', text: '#374151' },
+  ];
+  // Mapear cada operação única a uma cor
+  const todasOps = [...new Set(items.map(([,a]) => a.opNome||'—'))].sort();
+  const opCorMap = {};
+  todasOps.forEach((op, i) => { opCorMap[op] = OP_CORES[i % OP_CORES.length]; });
+
+  container.innerHTML = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a)).map(([data, rows]) => {
+    // Ordenar linhas por operação para agrupar visualmente
+    const rowsOrdenados = [...rows].sort(([,a],[,b]) => (a.opNome||'').localeCompare(b.opNome||''));
+    return `
+    <div class="acomp-card" style="margin-bottom:20px">
+      <div class="acomp-header">
+        <div class="acomp-op">📅 ${formatDate(data)}</div>
+        <div class="acomp-meta">${rows.length} colaborador${rows.length>1?'es':''}</div>
+      </div>
+      <div class="table-wrap">
+        <table class="acomp-table">
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Empresa</th>
+              <th>Operação</th>
+              <th>Função</th>
+              <th>Hora Prev.</th>
+              <th>Chegada</th>
+              <th>Refeição</th>
+              <th>Saída</th>
+              <th>H. Trab.</th>
+              <th>Valor</th>
+              <th>Avaliação</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsOrdenados.map(([id, a]) => renderAcompRow(id, a, opCorMap[a.opNome||'—'])).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAcompRow(id, a, opCor) {
+  const { displayH, classe, valor } = calcHoras(a);
+  const corStyle = opCor ? `background:${opCor.bg};` : '';
+  const opBadgeStyle = opCor ? `background:${opCor.bg};color:${opCor.text};border:1px solid ${opCor.border};font-weight:700;` : '';
+  const statusBadge = {
+    'Em escolha': 'badge-warning',
+    'Validada': 'badge-info',
+    'Presente': 'badge-success',
+    'Ausente': 'badge-danger',
+    'Encerrado': 'badge-gray'
+  }[a.status] || 'badge-gray';
+
+  // Avaliação
+  const av = a.avaliacao || {};
+  const starsDisplay = [1,2,3,4,5].map(i => `<span style="color:${i<=(av.nota||0)?'var(--yellow)':'var(--gray-200)'}">★</span>`).join('');
+  const podeAvaliar = currentUser.role === 'admin';
+  const avalCell = av.bloqueada
+    ? `<div style="font-size:13px">${starsDisplay}<br><span style="font-size:10px;color:var(--gray-400)">${av.obs||''}</span></div>`
+    : podeAvaliar
+      ? `<button class="btn btn-ghost btn-sm" onclick="openAvaliacao('${id}')">${av.nota ? starsDisplay : '☆ Avaliar'}</button>`
+      : av.nota ? `<div style="font-size:13px">${starsDisplay}</div>` : '—';
+
+  // Desacordo pendente
+  const desacordo = a.desacordo || {};
+  const temDesacordoPendente = desacordo.status === 'pendente';
+  const desacordoCell = temDesacordoPendente
+    ? `<span class="badge badge-warning" style="font-size:10px;cursor:pointer" onclick="renderSugestoesPendentes();openModal('modal-sugestoes')">⚠️ Sugestão</span>`
+    : '';
+
+  // Ações por role
+  let acoes = '—';
+  if (currentUser.role === 'admin') {
+    acoes = `<div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>
+      ${temDesacordoPendente ? `<button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning)" onclick="renderSugestoesPendentes();openModal('modal-sugestoes')">⚠️ Ver sugestão</button>` : ''}
+    </div>`;
+  } else if (a.empresaId === currentUser.empresaId ||
+             (!a.empresaId && (a.empresaNome||'').trim().toUpperCase() === (currentUser.empresaNome||'').trim().toUpperCase())) {
+    acoes = `<div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="openSugestao('${id}')">Sugerir alteração</button>
+      <button class="btn btn-ghost btn-sm" onclick="openGerenciarIndicacao('${id}')">Indicação</button>
+    </div>`;
+  }
+
+  const adicional = parseInt(a.adicional) || 0;
+  const adicionalBadge = adicional === 100
+    ? `<span style="font-size:9px;background:#FFF1F2;color:#9F1239;border:1px solid #FECDD3;border-radius:3px;padding:1px 5px;margin-left:4px;font-weight:700">+100%</span>`
+    : adicional === 50
+    ? `<span style="font-size:9px;background:#FFF7ED;color:#9A3412;border:1px solid #FED7AA;border-radius:3px;padding:1px 5px;margin-left:4px;font-weight:700">+50%</span>`
+    : '';
+
+  return `<tr style="${temDesacordoPendente && currentUser.role==='admin' ? 'background:var(--warning-bg)' : corStyle}">
+    <td class="td-name">${a.colNome} ${desacordoCell}</td>
+    <td style="font-size:12px">${a.empresaNome||'—'}</td>
+    <td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span></td>
+    <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
+    <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${a.horaInicial||'—'}</td>
+    <td>${a.chegada||'—'}</td>
+    <td>${a.refeicao||'—'}</td>
+    <td>${a.saida||'—'}</td>
+    <td><span class="${classe}">${displayH}</span></td>
+    <td style="font-size:12px;font-weight:600">${valor}${adicionalBadge}</td>
+    <td>${avalCell}</td>
+    <td><span class="badge ${statusBadge}">${a.status||'Em escolha'}</span></td>
+    <td>${acoes}</td>
+  </tr>`;
+}
+
+// ===================== AVALIAÇÃO =====================
+let currentAvaliacaoId = null;
+let currentStarVal = 0;
+
+function openAvaliacao(id) {
+  currentAvaliacaoId = id;
+  const a = STATE.acompanhamento[id];
+  const av = a.avaliacao || {};
+  document.getElementById('avaliacao-info').innerHTML =
+    `<div style="font-weight:600">${a.colNome}</div>
+     <div style="font-size:12px;color:var(--gray-400)">${a.opNome} — ${formatDate(a.data)} — ${a.funcao}</div>`;
+  currentStarVal = av.nota || 0;
+  renderStars(currentStarVal);
+  sv('avaliacao-obs', av.obs || '');
+  const bloq = !!av.bloqueada;
+  document.getElementById('avaliacao-bloqueada').style.display = bloq ? 'block' : 'none';
+  document.getElementById('avaliacao-footer').style.display = bloq ? 'none' : 'flex';
+  document.getElementById('avaliacao-obs').readOnly = bloq;
+  document.querySelectorAll('.star').forEach(s => s.style.pointerEvents = bloq ? 'none' : 'auto');
+  openModal('modal-avaliacao');
+}
+
+function setStar(val) {
+  currentStarVal = val;
+  renderStars(val);
+}
+
+function renderStars(val) {
+  document.querySelectorAll('.star').forEach(s => {
+    const sv2 = parseInt(s.dataset.val);
+    s.textContent = sv2 <= val ? '★' : '☆';
+    s.style.color = sv2 <= val ? 'var(--yellow)' : 'var(--gray-200)';
+  });
+}
+
+function salvarAvaliacao() {
+  if (!currentStarVal) { toast('Selecione ao menos 1 estrela.', 'error'); return; }
+  if (!confirm('Após salvar, a avaliação será bloqueada e não poderá ser alterada. Confirmar?')) return;
+  db.ref(`acompanhamento/${currentAvaliacaoId}/avaliacao`).set({
+    nota: currentStarVal,
+    obs: v('avaliacao-obs'),
+    bloqueada: true,
+    avaliadoEm: Date.now(),
+    avaliadoPor: currentUser.login
+  }).then(() => { toast('Avaliação salva e bloqueada!', 'success'); closeModal('modal-avaliacao'); });
+}
+
+function calcHoras(a) {
+  if (!a.chegada || !a.saida) return { hTrab: null, displayH: '—', classe: '', valor: '—', valorNum: 0 };
+  const chegMin = timeToMin(a.chegada);
+  const saidaMin = timeToMin(a.saida);
+  const refMin = timeToMin(a.refeicao || '01:00');
+  const totalMin = saidaMin - chegMin - refMin;
+  const joHorasMin = 8 * 60;
+  const heMin = Math.max(0, totalMin - joHorasMin);
+  const negMin = totalMin < joHorasMin ? joHorasMin - totalMin : 0;
+
+  const emp = STATE.empresas[a.empresaId] || {};
+  const valores = (emp.valores || {})[a.funcao] || {};
+  const valorDia = parseFloat(valores.valor) || 0;
+  const valorHE = parseFloat(valores.he) || 0;
+
+  let valorTotal = valorDia;
+  if (heMin > 0) valorTotal += (heMin / 60) * valorHE;
+  if (negMin > 0 && a.desconto === 'sim') valorTotal -= (negMin / 60) * valorHE;
+
+  // Adicional sábado/domingo/feriado
+  const adicional = parseInt(a.adicional) || 0;
+  let valorAdicional = 0;
+  if (adicional === 50)  valorAdicional = valorDia * 0.50;
+  if (adicional === 100) valorAdicional = valorDia * 1.00;
+  valorTotal += valorAdicional;
+
+  let classe = '';
+  if (totalMin >= joHorasMin + 1) classe = 'horas-over';
+  else if (totalMin < joHorasMin) classe = 'horas-warn';
+  else classe = 'horas-ok';
+
+  const displayH = minToHM(totalMin) + (heMin > 0 ? ` (+${minToHM(heMin)})` : negMin > 0 ? ` (-${minToHM(negMin)})` : '');
+  const adicionalStr = adicional > 0 ? ` +${adicional}%` : '';
+  const valorStr = valorTotal > 0 ? `R$ ${valorTotal.toFixed(2).replace('.',',')}${adicionalStr}` : '—';
+  return { displayH, classe, valor: valorStr, valorNum: valorTotal, valorAdicional };
+}
+
+function timeToMin(t) {
+  if (!t) return 0;
+  const [h,m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+function minToHM(m) {
+  if (m < 0) m = Math.abs(m);
+  return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+}
+
+// ===================== MOTORISTAS =====================
+function renderMotoristas() {
+  const tbody = document.getElementById('motoristas-tbody');
+  if (!tbody) return;
+  const items = Object.entries(STATE.motoristas || {});
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum motorista cadastrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(([id, m]) => `<tr>
+    <td class="td-name">${m.nome}</td>
+    <td class="td-mono">${m.ident||'—'}</td>
+    <td><span class="badge ${m.status==='ativo'?'badge-success':'badge-gray'}">${m.status}</span></td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-danger btn-sm" onclick="deleteMotorista('${id}')">Excluir</button>
+    </td>
+  </tr>`).join('');
+}
+
+function saveMotorista() {
+  const nome = v('mot-nome');
+  if (!nome) { toast('Informe o nome.', 'error'); return; }
+  db.ref('motoristas').push({ nome, ident: v('mot-ident'), status: v('mot-status') })
+    .then(() => { toast('Motorista salvo!', 'success'); closeModal('modal-motorista'); sv('mot-nome',''); sv('mot-ident',''); });
+}
+
+function deleteMotorista(id) {
+  if (!confirm('Excluir este motorista?')) return;
+  db.ref('motoristas/' + id).remove().then(() => toast('Motorista excluído.'));
+}
+
+function populateMotoristaSelect() {
+  const sel = document.getElementById('ae-motorista');
+  if (!sel) return;
+  const ativos = Object.entries(STATE.motoristas || {}).filter(([,m]) => m.status === 'ativo');
+  sel.innerHTML = '<option value="">Selecione o motorista...</option>' +
+    ativos.map(([id,m]) => `<option value="${id}">${m.nome}${m.ident ? ' — '+m.ident : ''}</option>`).join('');
+}
+
+function updateAdicionalPreview() {
+  const a = STATE.acompanhamento[currentAcompId] || {};
+  const adicionalSel = document.querySelector('input[name="ae-adicional"]:checked');
+  const adicional = parseInt(adicionalSel?.value) || 0;
+  const emp = STATE.empresas[a.empresaId] || {};
+  const valores = (emp.valores || {})[a.funcao] || {};
+  const valorDia = parseFloat(valores.valor) || 0;
+  const previewEl = document.getElementById('ae-adicional-preview');
+  if (!previewEl) return;
+  if (!adicional || !valorDia) { previewEl.innerHTML = ''; return; }
+  const extra = valorDia * (adicional / 100);
+  previewEl.innerHTML = `<span style="color:${adicional===100?'var(--danger)':'var(--warning)'};font-weight:600">
+    Adicional de ${adicional}%: + R$ ${extra.toFixed(2).replace('.',',')}
+    <span style="color:var(--gray-400);font-weight:400"> sobre R$ ${valorDia.toFixed(2).replace('.',',')} (valor/dia)</span>
+  </span>`;
+}
+
+function atualizarFuncaoEdit() {
+  const sel = document.getElementById('ae-operacao');
+  const opId = sel.value;
+  if (!opId) return;
+  const op = STATE.operacoes[opId] || {};
+  const isRota = (op.cc||'').toUpperCase() === 'ROTA';
+  const rotaWrap = document.getElementById('ae-rota-wrap');
+  rotaWrap.style.display = isRota ? 'block' : 'none';
+  if (isRota) { populateMotoristaSelect(); }
+}
+
+function renderSugestoesPendentes() {
+  // Coleta desacordos de ponto pendentes
+  const pendentesDesacordo = Object.entries(STATE.acompanhamento)
+    .filter(([,a]) => a.desacordo && a.desacordo.status === 'pendente')
+    .sort(([,a],[,b]) => (b.desacordo?.enviadoEm||0) - (a.desacordo?.enviadoEm||0));
+
+  // Coleta notificações de indicação pendentes
+  const pendentesNotif = Object.entries(STATE.notificacoes || {})
+    .filter(([,n]) => n.status === 'pendente')
+    .sort(([,a],[,b]) => (b.enviadoEm||0) - (a.enviadoEm||0));
+
+  const total = pendentesDesacordo.length + pendentesNotif.length;
+
+  // Atualizar botão do cabeçalho
+  const btn = document.getElementById('btn-sugestoes-pendentes');
+  const cnt = document.getElementById('sugestoes-count');
+  if (btn) {
+    btn.style.display = total > 0 && currentUser?.role === 'admin' ? 'inline-flex' : 'none';
+    if (cnt) cnt.textContent = total;
+  }
+
+  const lista = document.getElementById('sugestoes-lista');
+  if (!lista) return;
+
+  if (!total) {
+    lista.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma pendência.</div></div>';
+    return;
+  }
+
+  // ---- Seção: Sugestões de correção de ponto ----
+  let htmlDesacordo = '';
+  if (pendentesDesacordo.length) {
+    htmlDesacordo = `<div style="padding:12px 20px;background:var(--warning-bg);font-size:11px;font-weight:700;color:var(--warning);text-transform:uppercase;letter-spacing:0.5px">
+      ⏱️ Sugestões de Correção de Ponto (${pendentesDesacordo.length})
+    </div>`;
+    htmlDesacordo += pendentesDesacordo.map(([id, a]) => {
+      const d = a.desacordo;
+      const chegDif = d.chegada && a.chegada && d.chegada !== a.chegada;
+      const saidaDif = d.saida && a.saida && d.saida !== a.saida;
+      const refDif = d.refeicao && a.refeicao && d.refeicao !== a.refeicao;
+
+      const campo = (label, atual, sugerido, diferente) => `
+        <div style="text-align:center">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${label}</div>
+          <div style="font-size:12px;color:var(--gray-400);text-decoration:line-through">${atual||'—'}</div>
+          <div style="font-size:14px;font-weight:700;color:${diferente?'var(--warning)':'var(--gray-600)'}">${sugerido||'—'}</div>
+          ${diferente?'<div style="font-size:9px;color:var(--warning);font-weight:700">ALTERADO</div>':''}
+        </div>`;
+
+      return `<div style="padding:16px 20px;border-bottom:1px solid var(--gray-100)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:4px">${a.colNome||'—'}</div>
+            <div style="font-size:12px;color:var(--gray-400);display:flex;gap:12px;flex-wrap:wrap">
+              <span>🏢 <strong>${d.empresaNome||a.empresaNome||'—'}</strong></span>
+              <span>📅 ${formatDate(a.data)}</span>
+              <span>⚙️ ${a.opNome||'—'}</span>
+              <span>👔 ${a.funcao||'—'}</span>
+            </div>
+            <div style="margin-top:8px;background:var(--warning-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px">
+              <span style="color:var(--warning);font-weight:600">Motivo: </span>${d.motivo||'—'}
+            </div>
+            <div style="font-size:10px;color:var(--gray-400);margin-top:4px">
+              Enviado em ${d.enviadoEm ? new Date(d.enviadoEm).toLocaleString('pt-BR') : '—'}
+            </div>
+          </div>
+          <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px 16px;display:flex;gap:20px;align-items:center;flex-shrink:0">
+            ${campo('Chegada', a.chegada, d.chegada, chegDif)}
+            ${campo('Refeição', a.refeicao, d.refeicao, refDif)}
+            ${campo('Saída', a.saida, d.saida, saidaDif)}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="recusarSugestao('${id}')">✕ Recusar</button>
+          <button class="btn btn-success btn-sm" onclick="aceitarSugestao('${id}')">✓ Aceitar e aplicar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---- Seção: Solicitações de alteração de indicação ----
+  let htmlNotif = '';
+  if (pendentesNotif.length) {
+    htmlNotif = `<div style="padding:12px 20px;background:var(--info-bg);font-size:11px;font-weight:700;color:var(--info);text-transform:uppercase;letter-spacing:0.5px">
+      👥 Solicitações de Alteração de Indicação (${pendentesNotif.length})
+    </div>`;
+    htmlNotif += pendentesNotif.map(([nid, n]) => {
+      const acomp = STATE.acompanhamento[n.acompId] || {};
+      const tipoLabel = n.tipo === 'exclusao_indicacao' ? '🗑️ Excluir indicação' : '🔄 Alterar colaborador';
+      const tipoColor = n.tipo === 'exclusao_indicacao' ? 'var(--danger)' : 'var(--info)';
+      return `<div style="padding:16px 20px;border-bottom:1px solid var(--gray-100)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="font-size:13px;font-weight:700;color:${tipoColor}">${tipoLabel}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">${acomp.colNome||n.novoColNome||'—'}</div>
+            <div style="font-size:12px;color:var(--gray-400);display:flex;gap:12px;flex-wrap:wrap">
+              <span>🏢 <strong>${n.empresaNome||'—'}</strong></span>
+              <span>📅 ${formatDate(acomp.data)}</span>
+              <span>⚙️ ${acomp.opNome||'—'}</span>
+            </div>
+            ${n.novoColNome ? `<div style="margin-top:6px;font-size:12px;background:var(--info-bg);padding:6px 10px;border-radius:var(--radius)">
+              Novo colaborador solicitado: <strong>${n.novoColNome}</strong>
+            </div>` : ''}
+            <div style="margin-top:6px;background:var(--warning-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px">
+              <span style="color:var(--warning);font-weight:600">Motivo: </span>${n.motivo||'—'}
+            </div>
+            <div style="font-size:10px;color:var(--gray-400);margin-top:4px">
+              Enviado em ${n.enviadoEm ? new Date(n.enviadoEm).toLocaleString('pt-BR') : '—'}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="recusarNotif('${nid}')">✕ Recusar</button>
+          ${n.tipo === 'exclusao_indicacao'
+            ? `<button class="btn btn-danger btn-sm" onclick="aceitarExclusaoIndicacao('${nid}','${n.acompId}')">✓ Confirmar exclusão</button>`
+            : `<button class="btn btn-success btn-sm" onclick="aceitarAlteracaoIndicacao('${nid}','${n.acompId}','${n.novoColId||''}','${n.novoColNome||''}')">✓ Confirmar alteração</button>`
+          }
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  lista.innerHTML = htmlDesacordo + htmlNotif;
+}
+
+function aceitarSugestao(id) {
+  const a = STATE.acompanhamento[id];
+  const d = a.desacordo || {};
+  const updates = { 'desacordo/status': 'aceito' };
+  if (d.chegada) updates.chegada = d.chegada;
+  if (d.saida) updates.saida = d.saida;
+  if (d.refeicao) updates.refeicao = d.refeicao;
+  db.ref('acompanhamento/' + id).update(updates).then(() => {
+    toast('Sugestão aceita e ponto atualizado!', 'success');
+    renderSugestoesPendentes();
+  });
+}
+
+function recusarSugestao(id) {
+  db.ref(`acompanhamento/${id}/desacordo/status`).set('recusado').then(() => {
+    toast('Sugestão recusada.', 'success');
+    renderSugestoesPendentes();
+  });
+}
+
+function recusarNotif(nid) {
+  db.ref(`notificacoes/${nid}/status`).set('recusado').then(() => {
+    toast('Solicitação recusada.', 'success');
+    renderSugestoesPendentes();
+  });
+}
+
+function aceitarExclusaoIndicacao(nid, acompId) {
+  db.ref('acompanhamento/' + acompId).remove().then(() => {
+    db.ref(`notificacoes/${nid}/status`).set('aceito');
+    toast('Indicação excluída com sucesso.', 'success');
+    renderSugestoesPendentes();
+  });
+}
+
+function aceitarAlteracaoIndicacao(nid, acompId, novoColId, novoColNome) {
+  const keyStatus = 'notificacoes/' + nid + '/status';
+  const keyColId = 'acompanhamento/' + acompId + '/colId';
+  const keyColNome = 'acompanhamento/' + acompId + '/colNome';
+  const updates = {};
+  updates[keyStatus] = 'aceito';
+  if (novoColId && novoColId !== 'undefined') {
+    updates[keyColId] = novoColId;
+    updates[keyColNome] = novoColNome;
+  }
+  db.ref().update(updates).then(() => {
+    toast('Alteração de indicação aplicada!', 'success');
+    renderSugestoesPendentes();
+  });
+}
+
+// ===================== ACOMP EDIT (admin) =====================
+function openAcompEdit(id) {
+  currentAcompId = id;
+  const a = STATE.acompanhamento[id];
+  document.getElementById('acomp-edit-title').textContent = 'Editar Ponto — ' + (a.colNome||'');
+  sv('ae-chegada', a.chegada||'');
+  sv('ae-refeicao', ['01:00','01:30','02:00'].includes(a.refeicao) ? a.refeicao : a.refeicao ? 'manual' : '01:00');
+  if (!['01:00','01:30','02:00'].includes(a.refeicao) && a.refeicao) {
+    sv('ae-ref-manual', a.refeicao);
+    document.getElementById('ae-ref-manual-wrap').style.display = 'block';
+  } else {
+    document.getElementById('ae-ref-manual-wrap').style.display = 'none';
+  }
+  sv('ae-saida', a.saida||'');
+  sv('ae-desconto', a.desconto||'nao');
+  sv('ae-status', a.status||'Em escolha');
+
+  // Carregar adicional
+  const adicionalVal = String(a.adicional || 'nenhum');
+  document.querySelectorAll('input[name="ae-adicional"]').forEach(r => {
+    r.checked = r.value === adicionalVal;
+  });
+  updateAdicionalPreview();
+
+  // Popular select de operação — inclui cadastradas + operações dos dados históricos
+  const aeOp = document.getElementById('ae-operacao');
+  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim' || op.ativa == null);
+
+  // Coletar operações únicas dos dados históricos que não estão no cadastro
+  const opsCadastradas = new Set(ops.map(([,op]) => op.nome.trim().toUpperCase()));
+
+  // Também incluir a operação atual do registro mesmo que não esteja em nenhum lugar
+  const opsHistorico = {};
+  const fontes = [...Object.values(STATE.acompanhamento)];
+  // Garantir que a operação atual do registro esteja na lista
+  if (a.opNome) {
+    const key = a.opNome.trim().toUpperCase();
+    if (!opsCadastradas.has(key)) {
+      opsHistorico[key] = { nome: a.opNome.trim(), cc: a.opCC||'', funcao: a.funcao||'' };
+    }
+  }
+  fontes.forEach(rec => {
+    if (rec.opNome) {
+      const key = rec.opNome.trim().toUpperCase();
+      if (!opsCadastradas.has(key) && !opsHistorico[key]) {
+        opsHistorico[key] = { nome: rec.opNome.trim(), cc: rec.opCC||'', funcao: rec.funcao||'' };
+      }
+    }
+  });
+
+  // Juntar tudo e ordenar alfabeticamente
+  const todasOps = [
+    ...ops.map(([id,op]) => ({ id, nome: op.nome, cc: op.cc, funcao: op.funcao||'' })),
+    ...Object.values(opsHistorico).map(op => ({ id: '', nome: op.nome, cc: op.cc, funcao: op.funcao }))
+  ].sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  aeOp.innerHTML = '<option value="">— Manter atual (' + (a.opNome||'?') + ') —</option>' +
+    todasOps.map(op => `<option value="${op.id}" data-nome="${op.nome}" data-cc="${op.cc}" data-funcao="${op.funcao}">${op.nome} — ${op.cc}</option>`).join('');
+  aeOp.value = '';
+
+  // Campos de ROTA
+  const isRota = (a.opCC||'').toUpperCase() === 'ROTA';
+  const rotaWrap = document.getElementById('ae-rota-wrap');
+  rotaWrap.style.display = isRota ? 'block' : 'none';
+  if (isRota) {
+    populateMotoristaSelect();
+    sv('ae-motorista', a.motoristaId||'');
+    sv('ae-md', a.md||'');
+  }
+
+  // Mostrar desacordo se pendente
+  const desacordo = a.desacordo || {};
+  const wrap = document.getElementById('ae-desacordo-wrap');
+  const info = document.getElementById('ae-desacordo-info');
+  if (desacordo.status === 'pendente') {
+    wrap.style.display = 'block';
+    info.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;font-size:12px">
+        <div><span style="color:var(--gray-400)">Chegada sugerida</span><br><strong>${desacordo.chegada||'—'}</strong></div>
+        <div><span style="color:var(--gray-400)">Refeição sugerida</span><br><strong>${desacordo.refeicao||'—'}</strong></div>
+        <div><span style="color:var(--gray-400)">Saída sugerida</span><br><strong>${desacordo.saida||'—'}</strong></div>
+      </div>
+      <div style="font-size:12px"><span style="color:var(--gray-400)">Motivo:</span> ${desacordo.motivo||'—'}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Enviado por: ${desacordo.empresaNome||'—'} em ${desacordo.enviadoEm ? new Date(desacordo.enviadoEm).toLocaleString('pt-BR') : '—'}</div>`;
+  } else {
+    wrap.style.display = 'none';
+  }
+  updateAcompPreview();
+  openModal('modal-acomp-edit');
+}
+
+function aceitarDesacordo() {
+  const a = STATE.acompanhamento[currentAcompId];
+  const d = a.desacordo || {};
+  const refVal = d.refeicao || a.refeicao;
+  db.ref('acompanhamento/' + currentAcompId).update({
+    chegada: d.chegada || a.chegada,
+    refeicao: refVal,
+    saida: d.saida || a.saida,
+    'desacordo/status': 'aceito'
+  }).then(() => { toast('Sugestão aceita e aplicada!', 'success'); closeModal('modal-acomp-edit'); });
+}
+
+function recusarDesacordo() {
+  db.ref(`acompanhamento/${currentAcompId}/desacordo/status`).set('recusado')
+    .then(() => { toast('Sugestão recusada.'); closeModal('modal-acomp-edit'); });
+}
+
+// ---- EMPRESA: Sugerir alteração no ponto ----
+let currentSugestaoId = null;
+
+function openSugestao(id) {
+  currentSugestaoId = id;
+  const a = STATE.acompanhamento[id];
+  document.getElementById('sug-info').innerHTML =
+    `<div style="font-weight:600">${a.colNome}</div>
+     <div style="font-size:12px;color:var(--gray-400)">${a.opNome} — ${formatDate(a.data)}</div>
+     <div style="font-size:12px;margin-top:6px;display:flex;gap:16px">
+       <span><span style="color:var(--gray-400)">Chegada atual:</span> <strong>${a.chegada||'—'}</strong></span>
+       <span><span style="color:var(--gray-400)">Refeição:</span> <strong>${a.refeicao||'—'}</strong></span>
+       <span><span style="color:var(--gray-400)">Saída:</span> <strong>${a.saida||'—'}</strong></span>
+     </div>`;
+  sv('sug-chegada', a.chegada||'');
+  sv('sug-refeicao', ['01:00','01:30','02:00'].includes(a.refeicao) ? a.refeicao : '01:00');
+  sv('sug-saida', a.saida||'');
+  sv('sug-motivo', '');
+  document.getElementById('sug-ref-manual-wrap').style.display = 'none';
+  document.getElementById('sug-preview').innerHTML = '';
+  openModal('modal-acomp-sugestao');
+}
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'ae-refeicao') {
+    document.getElementById('ae-ref-manual-wrap').style.display = e.target.value === 'manual' ? 'block' : 'none';
+  }
+  if (e.target.id === 'sug-refeicao') {
+    document.getElementById('sug-ref-manual-wrap').style.display = e.target.value === 'manual' ? 'block' : 'none';
+  }
+  if (e.target.name === 'ae-adicional') { updateAdicionalPreview(); updateAcompPreview(); }
+  if (['ae-chegada','ae-refeicao','ae-saida','ae-ref-manual','ae-desconto'].includes(e.target.id)) updateAcompPreview();
+  if (['sug-chegada','sug-refeicao','sug-saida','sug-ref-manual'].includes(e.target.id)) updateSugPreview();
+});
+document.addEventListener('input', e => {
+  if (['ae-chegada','ae-saida','ae-ref-manual'].includes(e.target.id)) updateAcompPreview();
+  if (['sug-chegada','sug-saida','sug-ref-manual'].includes(e.target.id)) updateSugPreview();
+});
+
+function updateSugPreview() {
+  const a = STATE.acompanhamento[currentSugestaoId] || {};
+  const chegada = v('sug-chegada');
+  const refVal = v('sug-refeicao') === 'manual' ? v('sug-ref-manual') : v('sug-refeicao');
+  const saida = v('sug-saida');
+  if (!chegada || !saida) { document.getElementById('sug-preview').innerHTML = ''; return; }
+  const mock = { ...a, chegada, refeicao: refVal, saida };
+  const { displayH, classe, valor } = calcHoras(mock);
+  const prev = chegada && refVal ? minToHM(timeToMin(chegada) + 8*60 + timeToMin(refVal)) : '—';
+  document.getElementById('sug-preview').innerHTML = `
+    <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px">
+      <div><div style="color:var(--gray-400)">Previsão Saída</div><div style="font-weight:600">${prev}</div></div>
+      <div><div style="color:var(--gray-400)">H. Trabalhadas</div><div class="${classe}" style="font-weight:600">${displayH}</div></div>
+      <div><div style="color:var(--gray-400)">Valor Est.</div><div style="font-weight:600">${valor}</div></div>
+    </div>`;
+}
+
+function enviarSugestao() {
+  const motivo = v('sug-motivo');
+  if (!motivo.trim()) { toast('Informe o motivo da sugestão.', 'error'); return; }
+  const refVal = v('sug-refeicao') === 'manual' ? v('sug-ref-manual') : v('sug-refeicao');
+  const desacordo = {
+    chegada: v('sug-chegada'),
+    refeicao: refVal,
+    saida: v('sug-saida'),
+    motivo,
+    status: 'pendente',
+    empresaId: currentUser.empresaId,
+    empresaNome: currentUser.empresaNome,
+    enviadoEm: Date.now()
+  };
+  db.ref(`acompanhamento/${currentSugestaoId}/desacordo`).set(desacordo)
+    .then(() => { toast('Sugestão enviada ao administrador!', 'success'); closeModal('modal-acomp-sugestao'); });
+}
+
+// ---- EMPRESA: Gerenciar indicação ----
+let currentIndicacaoId = null;
+
+function openGerenciarIndicacao(acompId) {
+  currentIndicacaoId = acompId;
+  const a = STATE.acompanhamento[acompId];
+  document.getElementById('gi-info').innerHTML =
+    `<div style="font-weight:600">${a.colNome}</div>
+     <div style="font-size:12px;color:var(--gray-400)">${a.opNome} — ${a.funcao} — ${formatDate(a.data)}</div>`;
+  sv('gi-motivo', '');
+
+  // Popular lista de colaboradores (exceto o atual)
+  const empId = currentUser.empresaId;
+  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([id,c]) => id !== a.colId && (c.status||'ativo') === 'ativo');
+  const sel = document.getElementById('gi-col-novo');
+  sel.innerHTML = '<option value="">Manter o atual</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
+  openModal('modal-gerenciar-indicacao');
+}
+
+function solicitarEdicaoIndicacao() {
+  const novoColId = v('gi-col-novo');
+  const motivo = v('gi-motivo');
+  if (!motivo.trim()) { toast('Informe o motivo da solicitação.', 'error'); return; }
+  const empId = currentUser.empresaId;
+  const novoCol = novoColId ? (STATE.colaboradores[empId]||{})[novoColId] : null;
+  const notif = {
+    tipo: 'edicao_indicacao',
+    acompId: currentIndicacaoId,
+    novoColId: novoColId || null,
+    novoColNome: novoCol ? novoCol.nome : null,
+    motivo,
+    status: 'pendente',
+    empresaId: empId,
+    empresaNome: currentUser.empresaNome,
+    enviadoEm: Date.now()
+  };
+  db.ref('notificacoes').push(notif).then(() => {
+    toast('Solicitação de alteração enviada ao administrador!', 'success');
+    closeModal('modal-gerenciar-indicacao');
+  });
+}
+
+function solicitarExclusaoIndicacao() {
+  const motivo = v('gi-motivo');
+  if (!motivo.trim()) { toast('Informe o motivo da exclusão.', 'error'); return; }
+  if (!confirm('Confirmar solicitação de exclusão desta indicação?')) return;
+  const notif = {
+    tipo: 'exclusao_indicacao',
+    acompId: currentIndicacaoId,
+    motivo,
+    status: 'pendente',
+    empresaId: currentUser.empresaId,
+    empresaNome: currentUser.empresaNome,
+    enviadoEm: Date.now()
+  };
+  db.ref('notificacoes').push(notif).then(() => {
+    toast('Solicitação de exclusão enviada ao administrador!', 'success');
+    closeModal('modal-gerenciar-indicacao');
+  });
+}
+
+function updateAcompPreview() {
+  const a = STATE.acompanhamento[currentAcompId] || {};
+  const chegada = v('ae-chegada');
+  const refVal = v('ae-refeicao') === 'manual' ? v('ae-ref-manual') : v('ae-refeicao');
+  const saida = v('ae-saida');
+  const desconto = v('ae-desconto');
+  const adicional = parseInt(document.querySelector('input[name="ae-adicional"]:checked')?.value) || 0;
+  const mock = { ...a, chegada, refeicao: refVal, saida, desconto, adicional };
+  const { displayH, classe, valor } = calcHoras(mock);
+  if (!chegada) { document.getElementById('ae-preview').innerHTML = ''; return; }
+  const jornada = 8 * 60;
+  const prev = chegada && refVal ? minToHM(timeToMin(chegada) + jornada + timeToMin(refVal||'01:00')) : '—';
+  const adicionalLabel = adicional > 0
+    ? `<div><div style="color:var(--gray-400)">Adicional</div><div style="font-weight:600;color:${adicional===100?'var(--danger)':'var(--warning)'}">+${adicional}%</div></div>`
+    : '';
+  document.getElementById('ae-preview').innerHTML = `
+    <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px;display:grid;grid-template-columns:repeat(${adicional>0?4:3},1fr);gap:10px;font-size:12px">
+      <div><div style="color:var(--gray-400)">Previsão de Saída</div><div style="font-weight:600">${prev}</div></div>
+      <div><div style="color:var(--gray-400)">H. Trabalhadas</div><div class="${classe}" style="font-weight:600">${displayH||'—'}</div></div>
+      ${adicionalLabel}
+      <div><div style="color:var(--gray-400)">Valor Est.</div><div style="font-weight:600;color:var(--success)">${valor}</div></div>
+    </div>`;
+}
+
+function saveAcompEdit() {
+  const senhaDigitada = v('ae-senha-confirm');
+  if (senhaDigitada !== ADMIN_SENHA) { toast('Senha incorreta. Alteração não autorizada.', 'error'); return; }
+  sv('ae-senha-confirm', '');
+  const refVal = v('ae-refeicao') === 'manual' ? v('ae-ref-manual') : v('ae-refeicao');
+  const a = STATE.acompanhamento[currentAcompId] || {};
+  const isRota = (a.opCC||'').toUpperCase() === 'ROTA';
+  const data = {
+    chegada: v('ae-chegada'),
+    refeicao: refVal,
+    saida: v('ae-saida'),
+    desconto: v('ae-desconto'),
+    status: v('ae-status'),
+    adicional: parseInt(document.querySelector('input[name="ae-adicional"]:checked')?.value) || 0
+  };
+  // Atualizar operação se foi alterada
+  const novaOpId = v('ae-operacao');
+  if (novaOpId) {
+    // Operação com ID cadastrado no sistema
+    const selEl = document.getElementById('ae-operacao');
+    const opt = selEl.options[selEl.selectedIndex];
+    const novaOp = STATE.operacoes[novaOpId] || {};
+    data.opId = novaOpId;
+    data.opNome = opt.dataset.nome || novaOp.nome || '';
+    data.opCC = opt.dataset.cc || novaOp.cc || '';
+    data.funcao = opt.dataset.funcao || novaOp.funcao || getFuncaoByOp(data.opNome);
+  } else {
+    // Verificar se escolheu uma opção histórica (id vazio mas nome diferente do atual)
+    const selEl = document.getElementById('ae-operacao');
+    const opt = selEl.options[selEl.selectedIndex];
+    const nomeEscolhido = opt?.dataset?.nome || '';
+    if (nomeEscolhido && nomeEscolhido !== (a.opNome||'')) {
+      data.opNome = nomeEscolhido;
+      data.opCC = opt.dataset.cc || '';
+      data.funcao = opt.dataset.funcao || getFuncaoByOp(nomeEscolhido);
+    }
+  }
+  const usaRota = novaOpId ? (data.opCC||'').toUpperCase() === 'ROTA' : isRota;
+  if (usaRota) {
+    const motId = v('ae-motorista');
+    data.motoristaId = motId;
+    data.motoristaNome = motId && STATE.motoristas[motId] ? STATE.motoristas[motId].nome : '';
+    data.md = v('ae-md');
+  }
+  db.ref('acompanhamento/' + currentAcompId).update(data).then(() => {
+    toast('Ponto salvo!', 'success');
+    closeModal('modal-acomp-edit');
+  });
+}
+
+// ===================== UTILS =====================
+// ===================== POPULATE ACERTO/RESUMO SELECTS =====================
+function populateResumoSelects() {
+  const emps = Object.entries(STATE.empresas).filter(([,e]) => e.status === 'ativa');
+  const opts = '<option value="">Todas</option>' + emps.map(([id,e]) => `<option value="${id}">${e.nome}</option>`).join('');
+  const selRA = document.getElementById('resumo-admin-emp');
+  if (selRA) selRA.innerHTML = opts;
+  const selAE = document.getElementById('acerto-emp');
+  if (selAE) selAE.innerHTML = opts;
+  const selZE = document.getElementById('zerar-empresa');
+  if (selZE) selZE.innerHTML = '<option value="">Todas as empresas</option>' + emps.map(([id,e]) => `<option value="${id}">${e.nome}</option>`).join('');
+}
+
+// ===================== RESUMO GERAL ADMIN =====================
+function renderResumoAdmin() {
+  const container = document.getElementById('resumo-admin-container');
+  const kpisEl = document.getElementById('resumo-admin-kpis');
+  if (!container || !kpisEl) return;
+
+  const inicio = document.getElementById('resumo-admin-inicio')?.value || '';
+  const fim = document.getElementById('resumo-admin-fim')?.value || '';
+  const empFiltro = document.getElementById('resumo-admin-emp')?.value || '';
+
+  let items = Object.entries(STATE.acompanhamento);
+  if (inicio) items = items.filter(([,a]) => a.data >= inicio);
+  if (fim) items = items.filter(([,a]) => a.data <= fim);
+  if (empFiltro) {
+    const empNomeFiltro = (STATE.empresas[empFiltro]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empFiltro ||
+      (!a.empresaId && empNomeFiltro && a.empresaNome && a.empresaNome.trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
+
+  // KPIs globais
+  let totalColabs = items.length;
+  let totalHorasMin = 0;
+  let totalValor = 0;
+  let totalHE = 0;
+  items.forEach(([,a]) => {
+    if (a.chegada && a.saida) {
+      const chegMin = timeToMin(a.chegada);
+      const saidaMin = timeToMin(a.saida);
+      const refMin = timeToMin(a.refeicao || '01:00');
+      const trabMin = saidaMin - chegMin - refMin;
+      totalHorasMin += trabMin;
+      const heMin = Math.max(0, trabMin - 8*60);
+      totalHE += heMin;
+      const { valor } = calcHoras(a);
+      const v2 = parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+      totalValor += v2;
+    }
+  });
+
+  const datas = [...new Set(items.map(([,a]) => a.data).filter(Boolean))];
+  kpisEl.innerHTML = [
+    { label: 'Colaboradores', val: totalColabs, icon: '👥' },
+    { label: 'Dias de Trabalho', val: datas.length, icon: '📅' },
+    { label: 'Total Horas', val: minToHM(totalHorasMin), icon: '⏱️' },
+    { label: 'Horas Extras', val: minToHM(totalHE), icon: '⚡' },
+    { label: 'Custo Total', val: `R$ ${totalValor.toFixed(2).replace('.',',')}`, icon: '💰' },
+  ].map(k => `
+    <div style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px;text-align:center">
+      <div style="font-size:24px;margin-bottom:6px">${k.icon}</div>
+      <div style="font-size:20px;font-weight:700;color:var(--navy)">${k.val}</div>
+      <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">${k.label}</div>
+    </div>`).join('');
+
+  // Agrupa por data → por colaborador
+  const porData = {};
+  items.forEach(([id, a]) => {
+    if (!porData[a.data]) porData[a.data] = [];
+    porData[a.data].push([id, a]);
+  });
+
+  // Resumo por Operação/CC
+  const porOp = {};
+  items.forEach(([,a]) => {
+    const key = `${a.opNome||'—'}|${a.opCC||'—'}`;
+    if (!porOp[key]) porOp[key] = { opNome: a.opNome||'—', opCC: a.opCC||'—', cols: 0, horasMin: 0, valor: 0 };
+    porOp[key].cols++;
+    if (a.chegada && a.saida) {
+      const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
+      porOp[key].horasMin += t;
+      const { valor } = calcHoras(a);
+      porOp[key].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+    }
+  });
+
+  const tabelaOp = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">📋 Resumo por Operação / Centro de Custo</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Operação</th><th>Centro de Custo</th><th>Colaboradores</th><th>H. Trabalhadas</th><th>Custo Est.</th></tr></thead>
+          <tbody>
+            ${Object.values(porOp).sort((a,b)=>a.opNome.localeCompare(b.opNome)).map(op => `<tr>
+              <td class="td-name">${op.opNome}</td>
+              <td><span class="badge badge-info">${op.opCC}</span></td>
+              <td style="text-align:center;font-weight:600">${op.cols}</td>
+              <td style="font-family:'JetBrains Mono',monospace">${minToHM(op.horasMin)}</td>
+              <td style="font-weight:600;color:var(--success)">R$ ${op.valor.toFixed(2).replace('.',',')}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  // Detalhamento por data
+  const tabelaDia = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a)).map(([data, rows]) => {
+    let totalDia = 0;
+    const tbody = rows.map(([,a]) => {
+      const { displayH, valor } = calcHoras(a);
+      const v2 = parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+      totalDia += v2;
+      return `<tr>
+        <td class="td-name">${a.colNome}</td>
+        <td style="font-size:12px">${a.empresaNome||'—'}</td>
+        <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
+        <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
+        <td>${a.chegada||'—'}</td>
+        <td>${a.saida||'—'}</td>
+        <td>${a.refeicao||'—'}</td>
+        <td><span class="${a.chegada&&a.saida?'horas-ok':''}">${displayH}</span></td>
+        <td style="font-weight:600">R$ ${parseFloat(valor.replace('R$ ','').replace(',','.') || 0).toFixed(2).replace('.',',')}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="acomp-card" style="margin-bottom:16px">
+      <div class="acomp-header" style="display:flex;justify-content:space-between">
+        <div class="acomp-op">📅 ${formatDate(data)}</div>
+        <div class="acomp-meta">${rows.length} colaboradores &nbsp;|&nbsp; R$ ${totalDia.toFixed(2).replace('.',',')}</div>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr>
+          <th>Colaborador</th><th>Empresa</th><th>Operação</th><th>Função</th>
+          <th>Chegada</th><th>Saída</th><th>Refeição</th><th>H. Trab.</th><th>Custo Est.</th>
+        </tr></thead><tbody>${tbody}</tbody></table>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = tabelaOp + tabelaDia;
+}
+
+function exportarResumoAdmin() {
+  const inicio = document.getElementById('resumo-admin-inicio')?.value || '';
+  const fim = document.getElementById('resumo-admin-fim')?.value || '';
+  const empFiltro = document.getElementById('resumo-admin-emp')?.value || '';
+  let items = Object.entries(STATE.acompanhamento);
+  if (inicio) items = items.filter(([,a]) => a.data >= inicio);
+  if (fim) items = items.filter(([,a]) => a.data <= fim);
+  if (empFiltro) {
+    const empNomeFiltro = (STATE.empresas[empFiltro]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empFiltro ||
+      (!a.empresaId && empNomeFiltro && a.empresaNome && a.empresaNome.trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
+  const rows = [['Data','Colaborador','CPF','Empresa','Operação','CC','Função','Chegada','Refeição','Saída','H.Trabalhadas','Custo Est.','Status']];
+  items.forEach(([,a]) => {
+    const { displayH, valor } = calcHoras(a);
+    rows.push([a.data||'', a.colNome||'', a.colCPF||'', a.empresaNome||'', a.opNome||'', a.opCC||'', a.funcao||'', a.chegada||'', a.refeicao||'', a.saida||'', displayH, valor, a.status||'']);
+  });
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(';')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `resumo-geral-${inicio||'tudo'}-${fim||''}.csv`;
+  a.click();
+}
+
+// ===================== ACERTO TERCEIRIZADOS =====================
+let acertoDados = [];
+
+function gerarAcerto() {
+  const inicio = v('acerto-inicio');
+  const fim = v('acerto-fim');
+  if (!inicio || !fim) { toast('Selecione data início e fim.', 'error'); return; }
+  if (inicio > fim) { toast('Data início deve ser anterior ao fim.', 'error'); return; }
+  const empFiltro = v('acerto-emp');
+
+  let items = Object.entries(STATE.acompanhamento);
+  items = items.filter(([,a]) => a.data >= inicio && a.data <= fim);
+  if (empFiltro) {
+    // Filtrar por empresaId OU por empresaNome (dados históricos não têm empresaId)
+    const empNomeFiltro = (STATE.empresas[empFiltro]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empFiltro ||
+      (!a.empresaId && empNomeFiltro && a.empresaNome && a.empresaNome.trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
+
+  acertoDados = items;
+  const container = document.getElementById('acerto-container');
+
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">💰</div><div class="empty-text">Nenhum registro encontrado para o período.</div></div>';
+    return;
+  }
+
+  // Agrupa por empresa — usa empresaId quando existe, senão agrupa por empresaNome (histórico importado)
+  const porEmpresa = {};
+  items.forEach(([id, a]) => {
+    const eid = a.empresaId || ('nome__' + (a.empresaNome||'_sem').toUpperCase().trim());
+    if (!porEmpresa[eid]) porEmpresa[eid] = { nome: a.empresaNome || '—', rows: [] };
+    porEmpresa[eid].rows.push([id, a]);
+  });
+
+  container.innerHTML = Object.entries(porEmpresa).map(([eid, emp]) => {
+    let totalEmp = 0;
+    let totalHMin = 0;
+    let totalHE = 0;
+    const tbodyRows = emp.rows.map(([,a]) => {
+      const { displayH, valor } = calcHoras(a);
+      const vNum = parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+      totalEmp += vNum;
+      if (a.chegada && a.saida) {
+        const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
+        totalHMin += t;
+        totalHE += Math.max(0, t - 8*60);
+      }
+      return `<tr>
+        <td>${formatDate(a.data)}</td>
+        <td class="td-name">${a.colNome}</td>
+        <td class="td-mono">${a.colCPF||'—'}</td>
+        <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
+        <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
+        <td>${a.chegada||'—'}</td>
+        <td>${a.saida||'—'}</td>
+        <td>${a.refeicao||'—'}</td>
+        <td><span class="${a.chegada&&a.saida?'horas-ok':''}">${displayH}</span></td>
+        <td style="font-weight:600;text-align:right">R$ ${vNum.toFixed(2).replace('.',',')}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin-bottom:0">🏢 ${emp.nome}</div>
+        <div style="display:flex;gap:16px;font-size:13px">
+          <div><span style="color:var(--gray-400)">H. Trab.:</span> <strong>${minToHM(totalHMin)}</strong></div>
+          <div><span style="color:var(--gray-400)">H. Extra:</span> <strong style="color:var(--orange)">${minToHM(totalHE)}</strong></div>
+          <div style="background:var(--success-bg);color:var(--success);padding:4px 14px;border-radius:20px;font-weight:700">TOTAL: R$ ${totalEmp.toFixed(2).replace('.',',')}</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px">Período: ${formatDate(inicio)} a ${formatDate(fim)} &nbsp;|&nbsp; ${emp.rows.length} registros</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th style="text-align:right">Valor</th></tr></thead>
+          <tbody>${tbodyRows}</tbody>
+          <tfoot><tr style="background:var(--success-bg)">
+            <td colspan="9" style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">TOTAL ${emp.nome}</td>
+            <td style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">R$ ${totalEmp.toFixed(2).replace('.',',')}</td>
+          </tr></tfoot>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function exportarAcertoCSV() {
+  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
+  const inicio = v('acerto-inicio');
+  const fim = v('acerto-fim');
+  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total']];
+  acertoDados.forEach(([,a]) => {
+    const emp = STATE.empresas[a.empresaId] || {};
+    const valores = (emp.valores || {})[a.funcao] || {};
+    const valorDia = parseFloat(valores.valor) || 0;
+    let hTrabMin = 0, heMin = 0, valorTotal = valorDia;
+    if (a.chegada && a.saida) {
+      hTrabMin = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
+      heMin = Math.max(0, hTrabMin - 8*60);
+      if (heMin > 0) valorTotal += (heMin/60) * (parseFloat(valores.he) || 0);
+    }
+    const adicional = parseInt(a.adicional) || 0;
+    const valorAdicional = valorDia * (adicional / 100);
+    valorTotal += valorAdicional;
+    const adicionalStr = adicional > 0 ? `+${adicional}%` : '—';
+    rows.push([a.empresaNome||'', a.data||'', a.colNome||'', a.colCPF||'', a.opNome||'', a.opCC||'', a.funcao||'',
+      a.chegada||'', a.refeicao||'', a.saida||'', minToHM(hTrabMin), minToHM(heMin), adicionalStr,
+      `R$ ${valorDia.toFixed(2).replace('.',',')}`,
+      `R$ ${(parseFloat(valores.he)||0).toFixed(2).replace('.',',')}`,
+      adicional > 0 ? `R$ ${valorAdicional.toFixed(2).replace('.',',')}` : '—',
+      `R$ ${valorTotal.toFixed(2).replace('.',',')}`]);
+  });
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(';')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a2 = document.createElement('a');
+  a2.href = url; a2.download = `acerto-${inicio}-${fim}.csv`;
+  a2.click();
+}
+
+function exportarAcertoPDF() {
+  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
+  const inicio = v('acerto-inicio');
+  const fim = v('acerto-fim');
+
+  // Agrupa por empresa
+  const porEmpresa = {};
+  acertoDados.forEach(([,a]) => {
+    const eid = a.empresaId || '_sem';
+    if (!porEmpresa[eid]) porEmpresa[eid] = { nome: a.empresaNome||'—', rows: [] };
+    porEmpresa[eid].rows.push(a);
+  });
+
+  const win = window.open('', '_blank');
+  const style = `
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a1a; margin: 20px; }
+      h1 { font-size: 16px; color: #0D1B3E; margin-bottom: 4px; }
+      h2 { font-size: 13px; color: #0D1B3E; margin: 20px 0 6px; border-bottom: 2px solid #F5C518; padding-bottom: 4px; }
+      .periodo { font-size: 11px; color: #666; margin-bottom: 16px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      th { background: #0D1B3E; color: #F5C518; padding: 5px 8px; text-align: left; font-size: 10px; }
+      td { padding: 4px 8px; border-bottom: 1px solid #eee; }
+      tr:nth-child(even) td { background: #f8f9fa; }
+      .total-row td { background: #e6f5ee !important; font-weight: bold; color: #1A7F4B; }
+      .total-empresa { display: flex; justify-content: space-between; background: #e6f5ee; padding: 8px 12px; border-radius: 4px; margin-top: 6px; }
+      .total-empresa span { font-weight: bold; color: #1A7F4B; font-size: 13px; }
+      .resumo-geral { background: #0D1B3E; color: white; padding: 10px 14px; border-radius: 4px; margin-top: 24px; display: flex; gap: 32px; }
+      .resumo-geral div { font-size: 11px; }
+      .resumo-geral strong { font-size: 14px; color: #F5C518; display: block; }
+      @media print { .no-print { display: none; } }
+    </style>`;
+
+  let totalGeral = 0;
+  let totalColabs = acertoDados.length;
+
+  const empresasHTML = Object.entries(porEmpresa).map(([,emp]) => {
+    let totalEmp = 0, totalHMin = 0, totalHE = 0, totalAdicional = 0;
+    const rows = emp.rows.map(a => {
+      const { displayH, valorNum, valorAdicional } = calcHoras(a);
+      const vNum = valorNum || 0;
+      const vAd = valorAdicional || 0;
+      totalEmp += vNum;
+      totalAdicional += vAd;
+      if (a.chegada && a.saida) {
+        const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
+        totalHMin += t;
+        totalHE += Math.max(0, t - 8*60);
+      }
+      const adicional = parseInt(a.adicional) || 0;
+      const adicionalCell = adicional > 0
+        ? `<span style="background:${adicional===100?'#FFF1F2':'#FFF7ED'};color:${adicional===100?'#9F1239':'#9A3412'};padding:1px 5px;border-radius:3px;font-weight:700;font-size:9px">+${adicional}%</span>`
+        : '—';
+      return `<tr>
+        <td>${formatDate(a.data)}</td>
+        <td>${a.colNome||'—'}</td>
+        <td style="font-family:monospace">${a.colCPF||'—'}</td>
+        <td>${a.opNome||'—'}</td>
+        <td>${a.funcao||'—'}</td>
+        <td>${a.chegada||'—'}</td>
+        <td>${a.saida||'—'}</td>
+        <td>${a.refeicao||'—'}</td>
+        <td>${displayH}</td>
+        <td style="text-align:center">${adicionalCell}</td>
+        <td style="text-align:right;font-weight:bold">R$ ${vNum.toFixed(2).replace('.',',')}</td>
+      </tr>`;
+    }).join('');
+    totalGeral += totalEmp;
+    const adLine = totalAdicional > 0 ? ` &nbsp;|&nbsp; Adicional: R$ ${totalAdicional.toFixed(2).replace('.',',')}` : '';
+    return `<h2>🏢 ${emp.nome}</h2>
+      <div class="periodo">${emp.rows.length} colaboradores &nbsp;|&nbsp; H. Trabalhadas: ${minToHM(totalHMin)} &nbsp;|&nbsp; H. Extra: ${minToHM(totalHE)}${adLine}</div>
+      <table>
+        <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th>Adic.</th><th>Valor</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr class="total-row"><td colspan="10" style="text-align:right">TOTAL ${emp.nome}</td><td style="text-align:right">R$ ${totalEmp.toFixed(2).replace('.',',')}</td></tr></tfoot>
+      </table>`;
+  }).join('');
+
+  win.document.write(`<!DOCTYPE html><html><head><title>Acerto ${inicio} a ${fim}</title>${style}</head><body>
+    <button class="no-print" onclick="window.print()" style="float:right;background:#0D1B3E;color:white;border:none;padding:8px 18px;border-radius:4px;cursor:pointer;font-size:13px">🖨 Imprimir / Salvar PDF</button>
+    <h1>PORTOEX — Modelo de Acerto</h1>
+    <div class="periodo">Período: <strong>${formatDate(inicio)}</strong> a <strong>${formatDate(fim)}</strong></div>
+    ${empresasHTML}
+    <div class="resumo-geral">
+      <div><strong>${totalColabs}</strong>Total Colaboradores</div>
+      <div><strong>R$ ${totalGeral.toFixed(2).replace('.',',')}</strong>Valor Total Geral</div>
+      <div><strong>${formatDate(inicio)} — ${formatDate(fim)}</strong>Período</div>
+    </div>
+  </body></html>`);
+  win.document.close();
+}
+function openZerarPonto() {
+  populateResumoSelects();
+  sv('zerar-data', '');
+  sv('zerar-empresa', '');
+  sv('zerar-senha', '');
+  const prev = document.getElementById('zerar-preview');
+  if (prev) prev.style.display = 'none';
+  openModal('modal-zerar-ponto');
+}
+
+function previewZerar() {
+  const data = v('zerar-data');
+  const empresa = v('zerar-empresa');
+  let items = Object.entries(STATE.acompanhamento);
+  if (data) items = items.filter(([,a]) => a.data === data);
+  if (empresa) {
+    const empNomeFiltro = (STATE.empresas[empresa]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empresa ||
+      (!a.empresaId && empNomeFiltro && (a.empresaNome||'').trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
+  const prev = document.getElementById('zerar-preview');
+  prev.style.display = 'block';
+  if (!items.length) {
+    prev.innerHTML = '<span style="color:var(--gray-400)">Nenhum registro encontrado com os filtros selecionados.</span>';
+    return;
+  }
+  const empNome = empresa ? (STATE.empresas[empresa]||{}).nome || empresa : 'Todas as empresas';
+  prev.innerHTML = `<strong style="color:var(--danger)">⚠️ ${items.length} registros serão excluídos</strong><br>
+    <span style="font-size:12px;color:var(--gray-600)">
+      ${data ? '📅 Data: ' + formatDate(data) : '📅 Todas as datas'} &nbsp;|&nbsp; 🏢 ${empNome}
+    </span>`;
+}
+
+function confirmarZerar() {
+  const senha = v('zerar-senha');
+  if (senha !== ADMIN_SENHA) { toast('Senha incorreta.', 'error'); return; }
+  const data = v('zerar-data');
+  const empresa = v('zerar-empresa');
+  let items = Object.entries(STATE.acompanhamento);
+  if (data) items = items.filter(([,a]) => a.data === data);
+  if (empresa) {
+    const empNomeFiltro = (STATE.empresas[empresa]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empresa ||
+      (!a.empresaId && empNomeFiltro && (a.empresaNome||'').trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
+  if (!items.length) { toast('Nenhum registro encontrado.', 'error'); return; }
+  if (!confirm(`Excluir ${items.length} registros de ponto? Esta ação não pode ser desfeita.`)) return;
+  const updates = {};
+  items.forEach(([id]) => { updates['acompanhamento/' + id] = null; });
+  db.ref().update(updates).then(() => {
+    toast(`${items.length} registros zerados com sucesso.`, 'success');
+    closeModal('modal-zerar-ponto');
+  });
+}
+
+
+function updateNotifBadge() {
+  const pendentesNotif = Object.values(STATE.notificacoes || {}).filter(n => n.status === 'pendente').length;
+  const pendentesDesacordo = Object.values(STATE.acompanhamento || {}).filter(a => a.desacordo && a.desacordo.status === 'pendente').length;
+  const total = pendentesNotif + pendentesDesacordo;
+
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if (t.dataset.page === 'page-acompanhamento') {
+      t.innerHTML = `Acompanhamento${total > 0 ? ` <span style="background:var(--danger);color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">${total}</span>` : ''}`;
+    }
+  });
+
+  // Atualizar botão de sugestões
+  const btn = document.getElementById('btn-sugestoes-pendentes');
+  const cnt = document.getElementById('sugestoes-count');
+  if (btn && currentUser?.role === 'admin') {
+    btn.style.display = total > 0 ? 'inline-flex' : 'none';
+    if (cnt) cnt.textContent = total;
+  }
+}
+
+function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+function n(id) { return parseFloat(v(id)) || 0; }
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  const t = document.createElement('div');
+  t.className = 'toast-msg ' + type;
+  t.textContent = (type === 'success' ? '✓ ' : '✕ ') + msg;
+  el.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+</script>
+</body>
+</html>
