@@ -1231,8 +1231,8 @@ tbody tr:hover { background: var(--gray-50); }
           <input type="time" id="ae-ref-manual">
         </div>
         <div class="form-group">
-          <label>Horário de Saída Real</label>
-          <input type="time" id="ae-saida">
+          <label>Horário de Saída Real <span style="font-weight:400;color:var(--gray-400)">(use 25:20 para dia seguinte)</span></label>
+          <input type="text" id="ae-saida" placeholder="HH:MM ou 25:20" style="font-family:'JetBrains Mono',monospace" maxlength="5" oninput="this.value=this.value.replace(/[^0-9:]/g,'');updateAcompPreview()">
         </div>
         <div class="form-group">
           <label>Aceitar negativo como desconto?</label>
@@ -1335,8 +1335,8 @@ tbody tr:hover { background: var(--gray-50); }
           <input type="time" id="sug-ref-manual">
         </div>
         <div class="form-group">
-          <label>Saída sugerida</label>
-          <input type="time" id="sug-saida">
+          <label>Saída sugerida <span style="font-weight:400;color:var(--gray-400)">(use 25:20 para dia seguinte)</span></label>
+          <input type="text" id="sug-saida" placeholder="HH:MM ou 25:20" style="font-family:'JetBrains Mono',monospace" maxlength="5" oninput="this.value=this.value.replace(/[^0-9:]/g,'');updateSugPreview()">
         </div>
       </div>
       <div class="form-group" style="margin-top:12px">
@@ -2617,7 +2617,7 @@ function renderAcompRow(id, a, opCor) {
     <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${a.horaInicial||'—'}</td>
     <td>${a.chegada||'—'}</td>
     <td>${a.refeicao||'—'}</td>
-    <td>${a.saida||'—'}</td>
+    <td>${formatSaida(a.saida)}</td>
     <td><span class="${classe}">${displayH}</span></td>
     <td style="font-size:12px;font-weight:600">${valor}${adicionalBadge}</td>
     <td>${avalCell}</td>
@@ -2712,12 +2712,26 @@ function calcHoras(a) {
 
 function timeToMin(t) {
   if (!t) return 0;
-  const [h,m] = t.split(':').map(Number);
-  return h * 60 + (m || 0);
+  const parts = String(t).trim().split(':');
+  const h = parseInt(parts[0]) || 0;
+  const m = parseInt(parts[1]) || 0;
+  return h * 60 + m;  // suporta 25:20, 26:00 etc
 }
 function minToHM(m) {
   if (m < 0) m = Math.abs(m);
   return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+}
+
+// Formata horário de saída: se >= 24h, mostra com badge "+1 dia"
+function formatSaida(t) {
+  if (!t) return '—';
+  const h = parseInt(t.split(':')[0]) || 0;
+  if (h >= 24) {
+    const hReal = h - 24;
+    const min = t.split(':')[1] || '00';
+    return `${String(hReal).padStart(2,'0')}:${min} <span style="font-size:9px;background:var(--info-bg);color:var(--info);border-radius:3px;padding:1px 4px;font-weight:700">+1d</span>`;
+  }
+  return t;
 }
 
 // ===================== MOTORISTAS =====================
@@ -3403,7 +3417,7 @@ function renderResumoAdmin() {
         <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
         <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
         <td>${a.chegada||'—'}</td>
-        <td>${a.saida||'—'}</td>
+        <td>${formatSaida(a.saida)}</td>
         <td>${a.refeicao||'—'}</td>
         <td><span class="${a.chegada&&a.saida?'horas-ok':''}">${displayH}</span></td>
         <td style="font-weight:600">R$ ${parseFloat(valor.replace('R$ ','').replace(',','.') || 0).toFixed(2).replace('.',',')}</td>
@@ -3510,7 +3524,7 @@ function gerarAcerto() {
         <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
         <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
         <td>${a.chegada||'—'}</td>
-        <td>${a.saida||'—'}</td>
+        <td>${formatSaida(a.saida)}</td>
         <td>${a.refeicao||'—'}</td>
         <td><span class="${a.chegada&&a.saida?'horas-ok':''}">${displayH}</span></td>
         <td style="font-weight:600;text-align:right">R$ ${vNum.toFixed(2).replace('.',',')}</td>
@@ -3634,7 +3648,7 @@ function exportarAcertoPDF() {
         <td>${a.opNome||'—'}</td>
         <td>${a.funcao||'—'}</td>
         <td>${a.chegada||'—'}</td>
-        <td>${a.saida||'—'}</td>
+        <td>${formatSaida(a.saida)}</td>
         <td>${a.refeicao||'—'}</td>
         <td>${displayH}</td>
         <td style="text-align:center">${adicionalCell}</td>
