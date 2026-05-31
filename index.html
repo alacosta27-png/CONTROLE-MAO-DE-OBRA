@@ -2950,10 +2950,14 @@ function aceitarExclusaoIndicacao(nid, acompId) {
 }
 
 function aceitarAlteracaoIndicacao(nid, acompId, novoColId, novoColNome) {
-  const updates = { 'notificacoes/' + nid + '/status': 'aceito' };
+  const keyStatus = 'notificacoes/' + nid + '/status';
+  const keyColId = 'acompanhamento/' + acompId + '/colId';
+  const keyColNome = 'acompanhamento/' + acompId + '/colNome';
+  const updates = {};
+  updates[keyStatus] = 'aceito';
   if (novoColId && novoColId !== 'undefined') {
-    updates['acompanhamento/' + acompId + '/colId'] = novoColId;
-    updates['acompanhamento/' + acompId + '/colNome'] = novoColNome;
+    updates[keyColId] = novoColId;
+    updates[keyColNome] = novoColNome;
   }
   db.ref().update(updates).then(() => {
     toast('Alteração de indicação aplicada!', 'success');
