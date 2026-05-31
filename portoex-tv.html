@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PORTOEX — Mão de Obra 3º</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root {
+  --navy: #0D1B3E;
+  --yellow: #F5C518;
+  --white: #FFFFFF;
+  --gray-100: #F0F1F3;
+  --gray-200: #E0E2E7;
+  --gray-400: #9BA3AF;
+  --gray-800: #2D3340;
+  --success: #1A7F4B;
+  --danger: #C0392B;
+  --orange: #E8721C;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #111;
+  font-family: 'Barlow Condensed', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+.tv-header {
+  background: var(--navy);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+  border-bottom: 4px solid var(--yellow);
+  flex-shrink: 0;
+}
+.tv-logo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.tv-logo-box {
+  background: var(--yellow);
+  color: var(--navy);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  padding: 6px 14px;
+  border-radius: 4px;
+}
+.tv-title {
+  color: var(--white);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.tv-subtitle {
+  color: var(--yellow);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.tv-header-right {
+  text-align: right;
+}
+.tv-date {
+  color: var(--white);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.tv-time {
+  color: var(--yellow);
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* DATE FILTER TABS */
+.date-tabs {
+  background: #1a1a1a;
+  padding: 10px 32px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+  flex-shrink: 0;
+  border-bottom: 1px solid #333;
+}
+.date-tab {
+  background: #2a2a2a;
+  color: var(--gray-400);
+  padding: 6px 18px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border: 1px solid #333;
+  transition: all 0.15s;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.date-tab:hover { color: var(--white); border-color: #555; }
+.date-tab.active {
+  background: var(--navy);
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+.date-label {
+  color: var(--gray-400);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+
+/* CONTENT */
+.tv-content {
+  flex: 1;
+  padding: 20px 32px 24px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* SECTION: por CC */
+.cc-section {
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+.cc-header {
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cc-rota { background: var(--navy); border-bottom: 2px solid var(--yellow); }
+.cc-expedicao { background: #1a2a1a; border-bottom: 2px solid #2ecc71; }
+.cc-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.cc-rota .cc-title { color: var(--yellow); }
+.cc-expedicao .cc-title { color: #2ecc71; }
+.cc-count {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  letter-spacing: 1px;
+}
+.cc-rota .cc-count { background: rgba(245,197,24,0.15); color: var(--yellow); }
+.cc-expedicao .cc-count { background: rgba(46,204,113,0.15); color: #2ecc71; }
+
+/* TABLE */
+.tv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tv-table thead tr {
+  background: #111;
+}
+.tv-table thead th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-400);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #333;
+  white-space: nowrap;
+}
+.tv-table thead th.center { text-align: center; }
+.tv-table tbody tr {
+  border-bottom: 1px solid #222;
+  transition: background 0.1s;
+}
+.tv-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+.tv-table tbody tr:hover { background: rgba(255,255,255,0.05); }
+.tv-table tbody tr:last-child { border-bottom: none; }
+.tv-table tbody td {
+  padding: 12px 16px;
+  vertical-align: middle;
+}
+.td-num {
+  color: var(--gray-400);
+  font-size: 14px;
+  font-weight: 600;
+  width: 40px;
+  text-align: center;
+}
+.td-nome {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: 0.5px;
+}
+.td-empresa {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+.td-op {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--yellow);
+  letter-spacing: 1px;
+}
+.td-func {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+.td-time {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  text-align: center;
+}
+.td-time.entrada { color: #3498db; }
+.td-time.saida-prev { color: var(--gray-400); }
+.td-time.saida-real { color: #2ecc71; }
+.td-time.empty { color: #333; font-size: 16px; }
+
+/* STATUS */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.s-escolha { background: rgba(180,83,9,0.2); color: #f59e0b; border: 1px solid #f59e0b40; }
+.s-validada { background: rgba(21,101,192,0.2); color: #60a5fa; border: 1px solid #60a5fa40; }
+.s-presente { background: rgba(26,127,75,0.2); color: #4ade80; border: 1px solid #4ade8040; }
+.s-ausente { background: rgba(192,57,43,0.2); color: #f87171; border: 1px solid #f8717140; }
+.s-encerrado { background: rgba(100,100,100,0.2); color: #9ca3af; border: 1px solid #9ca3af40; }
+
+/* MOTORISTA */
+.td-motorista {
+  font-size: 15px;
+  font-weight: 600;
+  color: #a78bfa;
+}
+/* MD */
+.td-md {
+  font-family: 'Barlow', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--yellow);
+  text-align: center;
+}
+.md-input {
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: var(--yellow);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  width: 100px;
+  padding: 4px 8px;
+  text-align: center;
+  outline: none;
+  transition: border 0.15s;
+}
+.md-input:focus { border-color: var(--yellow); background: rgba(245,197,24,0.05); }
+.md-input::placeholder { color: #444; font-size: 13px; }
+
+/* EMPTY */
+.tv-empty {
+  text-align: center;
+  padding: 60px;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* TOTAIS */
+.tv-footer {
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+  padding: 12px 32px;
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.tv-total-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tv-total-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-400);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.tv-total-val {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--white);
+}
+.tv-total-val.yellow { color: var(--yellow); }
+.tv-total-val.green { color: #2ecc71; }
+.tv-live {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-400);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2ecc71;
+  animation: blink 1.5s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header class="tv-header">
+  <div class="tv-logo">
+    <div class="tv-logo-box">PORTOEX</div>
+    <div>
+      <div class="tv-title">Mão de Obra — 3°</div>
+      <div class="tv-subtitle">Colaboradores Terceirizados</div>
+    </div>
+  </div>
+  <div class="tv-header-right">
+    <div class="tv-date" id="tv-date">—</div>
+    <div class="tv-time" id="tv-time">00:00:00</div>
+  </div>
+</header>
+
+<div class="date-tabs" id="date-tabs">
+  <span class="date-label">Data:</span>
+  <div class="date-tab active" data-date="" onclick="selectDate('')">Hoje</div>
+</div>
+
+<div class="tv-content" id="tv-content">
+  <div class="tv-empty">Carregando dados...</div>
+</div>
+
+<footer class="tv-footer" id="tv-footer">
+  <div class="tv-total-item">
+    <span class="tv-total-label">Total</span>
+    <span class="tv-total-val yellow" id="tot-total">0</span>
+  </div>
+  <div class="tv-total-item">
+    <span class="tv-total-label">Presentes</span>
+    <span class="tv-total-val green" id="tot-presentes">0</span>
+  </div>
+  <div class="tv-total-item">
+    <span class="tv-total-label">Rota</span>
+    <span class="tv-total-val" id="tot-rota">0</span>
+  </div>
+  <div class="tv-total-item">
+    <span class="tv-total-label">Expedição</span>
+    <span class="tv-total-val" id="tot-expedicao">0</span>
+  </div>
+  <div class="tv-live">
+    <div class="live-dot"></div>
+    Ao vivo
+  </div>
+</footer>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDsKKZaK1WBo3FjNo-2o0O5a0ehV4tDy4U",
+  authDomain: "vagas-terceirizados-portoex.firebaseapp.com",
+  databaseURL: "https://vagas-terceirizados-portoex-default-rtdb.firebaseio.com",
+  projectId: "vagas-terceirizados-portoex",
+  storageBucket: "vagas-terceirizados-portoex.firebasestorage.app",
+  messagingSenderId: "688106736915",
+  appId: "1:688106736915:web:412ff19368208198269ee6"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let STATE = { acompanhamento: {}, motoristas: {} };
+let selectedDate = '';
+let mdSaveTimeout = {};
+
+// ===== RELÓGIO =====
+function updateClock() {
+  const now = new Date();
+  const dias = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  document.getElementById('tv-date').textContent =
+    `${dias[now.getDay()]}, ${now.getDate()} ${meses[now.getMonth()]} ${now.getFullYear()}`;
+  document.getElementById('tv-time').textContent =
+    String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0') + ':' +
+    String(now.getSeconds()).padStart(2,'0');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===== FIREBASE =====
+db.ref('acompanhamento').on('value', snap => {
+  STATE.acompanhamento = snap.val() || {};
+  buildDateTabs();
+  render();
+});
+db.ref('motoristas').on('value', snap => {
+  STATE.motoristas = snap.val() || {};
+  render();
+});
+
+// ===== DATE TABS =====
+function buildDateTabs() {
+  const datas = [...new Set(Object.values(STATE.acompanhamento).map(a => a.data).filter(Boolean))].sort();
+  const hoje = new Date().toISOString().split('T')[0];
+  const container = document.getElementById('date-tabs');
+  container.innerHTML = '<span class="date-label">Data:</span>';
+
+  // Tab "Hoje" / data atual
+  if (!selectedDate || selectedDate === hoje) selectedDate = hoje;
+
+  // Todas as datas disponíveis
+  if (!datas.length) {
+    const tab = document.createElement('div');
+    tab.className = 'date-tab active';
+    tab.textContent = 'Hoje';
+    container.appendChild(tab);
+    return;
+  }
+
+  datas.forEach(d => {
+    const tab = document.createElement('div');
+    tab.className = 'date-tab' + (d === selectedDate ? ' active' : '');
+    tab.dataset.date = d;
+    tab.textContent = formatDate(d);
+    tab.onclick = () => selectDate(d);
+    container.appendChild(tab);
+  });
+}
+
+function selectDate(d) {
+  selectedDate = d;
+  document.querySelectorAll('.date-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.date === d || (!d && t.dataset.date === undefined));
+  });
+  render();
+}
+
+// ===== RENDER =====
+function render() {
+  const content = document.getElementById('tv-content');
+  let items = Object.entries(STATE.acompanhamento);
+
+  // Filtrar data
+  if (selectedDate) {
+    items = items.filter(([,a]) => a.data === selectedDate);
+  }
+
+  if (!items.length) {
+    content.innerHTML = '<div class="tv-empty">Nenhum colaborador cadastrado para esta data.</div>';
+    updateTotais([], []);
+    return;
+  }
+
+  // Separar por CC
+  const rota = items.filter(([,a]) => (a.opCC||'').toUpperCase() === 'ROTA');
+  const expedicao = items.filter(([,a]) => (a.opCC||'').toUpperCase() === 'EXPEDIÇÃO' || (a.opCC||'').toUpperCase() === 'EXPEDICAO');
+
+  let html = '';
+  if (rota.length) html += buildSection('ROTA', rota, 'rota');
+  if (expedicao.length) html += buildSection('EXPEDIÇÃO', expedicao, 'expedicao');
+  if (!html) content.innerHTML = '<div class="tv-empty">Nenhum colaborador para exibir.</div>';
+  else content.innerHTML = html;
+
+  updateTotais(rota, expedicao);
+  attachMdEvents();
+}
+
+function buildSection(titulo, items, tipo) {
+  const presentes = items.filter(([,a]) => a.status === 'Presente').length;
+  const isRota = tipo === 'rota';
+  const cols = isRota
+    ? `<th>Nº</th><th>Nome</th><th>Operação</th><th class="center">Hr Entrada</th><th class="center">Prev. Saída</th><th class="center">Hr Saída</th><th>Motorista</th><th class="center">MD</th><th>Status</th>`
+    : `<th>Nº</th><th>Nome</th><th>Operação</th><th class="center">Hr Entrada</th><th class="center">Prev. Saída</th><th class="center">Hr Saída</th><th>Status</th>`;
+
+  const rows = items.map(([id, a], i) => buildRow(id, a, i + 1, isRota)).join('');
+
+  return `<div class="cc-section">
+    <div class="cc-header cc-${tipo}">
+      <div class="cc-title">${titulo}</div>
+      <div class="cc-count">${items.length} colaborador${items.length>1?'es':''} &nbsp;·&nbsp; ${presentes} presente${presentes>1?'s':''}</div>
+    </div>
+    <table class="tv-table">
+      <thead><tr>${cols}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function buildRow(id, a, num, isRota) {
+  const chegada = a.chegada || '';
+  const refeicao = a.refeicao || '01:00';
+  const saida = a.saida || '';
+  const prevSaida = chegada ? calcPrevSaida(chegada, refeicao) : '';
+
+  const statusMap = {
+    'Em escolha': ['s-escolha', 'Em Escolha'],
+    'Validada': ['s-validada', 'Validada'],
+    'Presente': ['s-presente', 'Presente'],
+    'Ausente': ['s-ausente', 'Ausente'],
+    'Encerrado': ['s-encerrado', 'Encerrado']
+  };
+  const [sCls, sLabel] = statusMap[a.status] || ['s-escolha', a.status||'Em Escolha'];
+
+  // Motorista (só ROTA)
+  const motoristaId = a.motoristaId || '';
+  const motoristaNome = motoristaId && STATE.motoristas[motoristaId]
+    ? STATE.motoristas[motoristaId].nome : (a.motoristaNome || '—');
+  const md = a.md || '';
+
+  const tdNome = `<td>
+    <div class="td-nome">${a.colNome||'—'}</div>
+    <div class="td-empresa">${a.empresaNome||''}</div>
+  </td>`;
+  const tdOp = `<td>
+    <div class="td-op">${a.opNome||'—'}</div>
+    <div class="td-func">${a.funcao||''}</div>
+  </td>`;
+  const tdEntrada = `<td class="td-time entrada">${chegada||'<span class="empty">——</span>'}</td>`;
+  const tdPrev = `<td class="td-time saida-prev">${prevSaida||'<span class="empty">——</span>'}</td>`;
+  const tdSaida = `<td class="td-time saida-real">${saida||'<span class="empty">——</span>'}</td>`;
+  const tdStatus = `<td><span class="status-pill ${sCls}">${sLabel}</span></td>`;
+
+  if (isRota) {
+    return `<tr>
+      <td class="td-num">${num}</td>
+      ${tdNome}${tdOp}${tdEntrada}${tdPrev}${tdSaida}
+      <td class="td-motorista">${motoristaNome}</td>
+      <td><input class="md-input" data-id="${id}" value="${md}" placeholder="MD nº"></td>
+      ${tdStatus}
+    </tr>`;
+  }
+  return `<tr>
+    <td class="td-num">${num}</td>
+    ${tdNome}${tdOp}${tdEntrada}${tdPrev}${tdSaida}
+    ${tdStatus}
+  </tr>`;
+}
+
+function calcPrevSaida(chegada, refeicao) {
+  if (!chegada) return '';
+  const [h,m] = chegada.split(':').map(Number);
+  const [rh,rm] = (refeicao||'01:00').split(':').map(Number);
+  const total = h*60 + m + 8*60 + rh*60 + rm;
+  return String(Math.floor(total/60)%24).padStart(2,'0') + ':' + String(total%60).padStart(2,'0');
+}
+
+function updateTotais(rota, expedicao) {
+  const todos = [...rota, ...expedicao];
+  document.getElementById('tot-total').textContent = todos.length;
+  document.getElementById('tot-presentes').textContent = todos.filter(([,a])=>a.status==='Presente').length;
+  document.getElementById('tot-rota').textContent = rota.length;
+  document.getElementById('tot-expedicao').textContent = expedicao.length;
+}
+
+function attachMdEvents() {
+  document.querySelectorAll('.md-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const id = inp.dataset.id;
+      clearTimeout(mdSaveTimeout[id]);
+      mdSaveTimeout[id] = setTimeout(() => {
+        db.ref(`acompanhamento/${id}/md`).set(inp.value.trim());
+      }, 800);
+    });
+  });
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+</script>
+</body>
+</html>
