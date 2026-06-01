@@ -875,6 +875,48 @@ tbody tr:hover { background: var(--gray-50); }
       </div>
     </div>
 
+    <!-- ===================== PÁGINA: DASHBOARD ===================== -->
+    <div id="page-dashboard" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📊 Dashboard</div>
+          <div class="section-sub">Visão consolidada — período, empresa, função, horas e valores</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:end;gap:12px">
+          <div class="form-group">
+            <label>Data Início</label>
+            <input type="date" id="dash-inicio" onchange="renderDashboard()">
+          </div>
+          <div class="form-group">
+            <label>Data Fim</label>
+            <input type="date" id="dash-fim" onchange="renderDashboard()">
+          </div>
+          <div class="form-group">
+            <label>Empresa</label>
+            <select id="dash-emp" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px" onchange="renderDashboard()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div><button class="btn btn-navy" onclick="renderDashboard()">Atualizar</button></div>
+        </div>
+      </div>
+      <div id="dash-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400);margin-bottom:12px">Custo por Empresa (R$)</p><canvas id="dash-ch-emp" height="200"></canvas></div>
+        <div class="card"><p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400);margin-bottom:12px">Quantidade por Função</p><canvas id="dash-ch-func" height="200"></canvas></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400);margin-bottom:12px">Registros por Data</p><canvas id="dash-ch-data" height="200"></canvas></div>
+        <div class="card"><p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400);margin-bottom:12px">Horas Trabalhadas por Empresa</p><canvas id="dash-ch-horas" height="200"></canvas></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400);margin-bottom:12px">Custo por Operação / CC</p><canvas id="dash-ch-op" height="200"></canvas></div>
+        <div class="card"><p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400);margin-bottom:12px">Evolução de Custo por Mês</p><canvas id="dash-ch-evolucao" height="200"></canvas></div>
+      </div>
+    </div>
+
     <!-- ===================== PÁGINA: RESUMO GERAL ADMIN ===================== -->
     <div id="page-resumo-admin" class="page">
       <div class="section-header">
@@ -1291,12 +1333,12 @@ tbody tr:hover { background: var(--gray-50); }
         </div>
       </div>
       <div id="ae-senha-wrap" style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:14px;display:none">
-        <div style="background:var(--danger-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px;color:var(--danger);margin-bottom:10px">
-          🔒 Este registro está <strong>Encerrado</strong>. Digite a senha admin para liberar a edição.
+        <div style="background:var(--danger-bg);color:var(--danger);border-radius:var(--radius);padding:8px 12px;font-size:12px;margin-bottom:10px">
+          🔒 Registro <strong>Encerrado</strong> — informe a senha admin para editar.
         </div>
         <div class="form-group">
           <label>Senha Admin *</label>
-          <input type="password" id="ae-senha-confirm" placeholder="Digite a senha do administrador">
+          <input type="password" id="ae-senha-confirm" placeholder="Senha do administrador">
         </div>
       </div>
     </div>
@@ -1708,17 +1750,17 @@ function listenFirebase() {
   db.ref('empresas').on('value', snap => {
     STATE.empresas = snap.val() || {};
     renderEmpresas(); populateVagaEmpresasCheck(); populateResumoSelects();
-    const dashSel = document.getElementById('dash-emp');
-    if (dashSel) {
-      const prev = dashSel.value;
-      dashSel.innerHTML = '<option value="">Todas</option>';
-      Object.entries(STATE.empresas).filter(([,e])=>e.status==='ativa').sort(([,a],[,b])=>(a.nome||'').localeCompare(b.nome||'')).forEach(([id,emp])=>{
-        const opt = document.createElement('option');
-        opt.value = id; opt.textContent = emp.nome || id;
-        if (id === prev) opt.selected = true;
-        dashSel.appendChild(opt);
+    // Atualizar select empresa do dashboard
+    const _ds = document.getElementById('dash-emp');
+    if (_ds) {
+      const _prev = _ds.value;
+      _ds.innerHTML = '<option value="">Todas</option>';
+      Object.entries(STATE.empresas).filter(([,e])=>e.status==='ativa').sort(([,a],[,b])=>(a.nome||'').localeCompare(b.nome||'')).forEach(([id,e])=>{
+        const o=document.createElement('option'); o.value=id; o.textContent=e.nome||id;
+        if(id===_prev) o.selected=true; _ds.appendChild(o);
       });
     }
+    if(document.getElementById('page-dashboard')?.classList.contains('active')) renderDashboard();
   });
   db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
   db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
@@ -1726,8 +1768,7 @@ function listenFirebase() {
   db.ref('acompanhamento').on('value', snap => {
     STATE.acompanhamento = snap.val() || {};
     populateAcompFilters(); renderAcompanhamento(); renderSugestoesPendentes();
-    const dashPage = document.getElementById('page-dashboard');
-    if (dashPage && dashPage.classList.contains('active')) renderDashboard();
+    if(document.getElementById('page-dashboard')?.classList.contains('active')) renderDashboard();
   });
   if (currentUser.role === 'admin') {
     db.ref('notificacoes').on('value', snap => {
@@ -3018,13 +3059,11 @@ function openAcompEdit(id) {
   sv('ae-saida', a.saida||'');
   sv('ae-desconto', a.desconto||'nao');
   sv('ae-status', a.status||'Em escolha');
-  const senhaWrap = document.getElementById('ae-senha-wrap');
-  if (senhaWrap) {
-    const isEncerrado = (a.status||'') === 'Encerrado';
-    senhaWrap.style.display = isEncerrado ? '' : 'none';
-    const senhaInput = document.getElementById('ae-senha-confirm');
-    if (senhaInput) senhaInput.value = '';
-  }
+  // Mostrar senha somente se já está Encerrado
+  const _sw = document.getElementById('ae-senha-wrap');
+  if (_sw) { _sw.style.display = (a.status==='Encerrado') ? '' : 'none'; }
+  const _sc = document.getElementById('ae-senha-confirm');
+  if (_sc) _sc.value = '';
 
   // Carregar adicional
   const adicionalVal = String(a.adicional || 'nenhum');
@@ -3277,10 +3316,11 @@ function updateAcompPreview() {
 }
 
 function saveAcompEdit() {
-  const a_atual = STATE.acompanhamento[currentAcompId] || {};
-  if ((a_atual.status||'') === 'Encerrado') {
-    const senhaDigitada = v('ae-senha-confirm');
-    if (senhaDigitada !== ADMIN_SENHA) { toast('Senha incorreta. Registro encerrado requer autorização.', 'error'); return; }
+  const _recAtual = STATE.acompanhamento[currentAcompId] || {};
+  if (_recAtual.status === 'Encerrado') {
+    if (v('ae-senha-confirm') !== ADMIN_SENHA) {
+      toast('Senha incorreta. Registro encerrado requer autorização.', 'error'); return;
+    }
   }
   sv('ae-senha-confirm', '');
   const refVal = v('ae-refeicao') === 'manual' ? v('ae-ref-manual') : v('ae-refeicao');
@@ -3550,15 +3590,15 @@ function gerarAcerto() {
         totalHMin += t;
         totalHE += Math.max(0, t - 8*60);
       }
-      const motNome = a.motoristaNome || (a.motoristaId && STATE.motoristas && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '—';
+      const _motNome = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '—';
       return `<tr>
         <td>${formatDate(a.data)}</td>
         <td class="td-name">${a.colNome}</td>
         <td class="td-mono">${a.colCPF||'—'}</td>
         <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
         <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
-        <td style="font-size:11px;font-weight:600;color:var(--navy)">${a.md||'—'}</td>
-        <td style="font-size:11px">${motNome}</td>
+        <td style="font-weight:600;color:var(--navy)">${a.md||'—'}</td>
+        <td style="font-size:12px">${_motNome}</td>
         <td>${a.chegada||'—'}</td>
         <td>${formatSaida(a.saida)}</td>
         <td>${a.refeicao||'—'}</td>
@@ -3581,7 +3621,7 @@ function gerarAcerto() {
           <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>MD</th><th>Motorista</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th style="text-align:right">Valor</th></tr></thead>
           <tbody>${tbodyRows}</tbody>
           <tfoot><tr style="background:var(--success-bg)">
-            <td colspan="9" style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">TOTAL ${emp.nome}</td>
+            <td colspan="11" style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">TOTAL ${emp.nome}</td>
             <td style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">R$ ${totalEmp.toFixed(2).replace('.',',')}</td>
           </tr></tfoot>
         </table>
@@ -3594,7 +3634,7 @@ function exportarAcertoCSV() {
   if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
   const inicio = v('acerto-inicio');
   const fim = v('acerto-fim');
-  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','MD','Motorista','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total']];
+  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total']];
   acertoDados.forEach(([,a]) => {
     const emp = STATE.empresas[a.empresaId] || {};
     const valores = (emp.valores || {})[a.funcao] || {};
@@ -3609,9 +3649,7 @@ function exportarAcertoCSV() {
     const valorAdicional = valorDia * (adicional / 100);
     valorTotal += valorAdicional;
     const adicionalStr = adicional > 0 ? `+${adicional}%` : '—';
-    const motNomeCSV = a.motoristaNome || (a.motoristaId && STATE.motoristas && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '';
     rows.push([a.empresaNome||'', a.data||'', a.colNome||'', a.colCPF||'', a.opNome||'', a.opCC||'', a.funcao||'',
-      a.md||'', motNomeCSV,
       a.chegada||'', a.refeicao||'', a.saida||'', minToHM(hTrabMin), minToHM(heMin), adicionalStr,
       `R$ ${valorDia.toFixed(2).replace('.',',')}`,
       `R$ ${(parseFloat(valores.he)||0).toFixed(2).replace('.',',')}`,
@@ -3814,210 +3852,126 @@ function toast(msg, type = 'success') {
   setTimeout(() => t.remove(), 3500);
 }
 
-// ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 // DASHBOARD
-// ══════════════════════════════════════════════════════════════
-let _dashCharts = {};
-function _destroyDashCharts() {
-  Object.values(_dashCharts).forEach(c => { try { c.destroy(); } catch(e){} });
-  _dashCharts = {};
+// ══════════════════════════════════════════════════════════
+let _dcharts = {};
+function _ddestroyAll() {
+  Object.values(_dcharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  _dcharts = {};
 }
 
 function initDashboard() {
-  // Set default dates to current month if empty
   const hoje = new Date();
-  const primDia = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`;
-  const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0);
-  const ultimoStr = `${ultimoDia.getFullYear()}-${String(ultimoDia.getMonth()+1).padStart(2,'0')}-${String(ultimoDia.getDate()).padStart(2,'0')}`;
+  const y = hoje.getFullYear(), m = String(hoje.getMonth()+1).padStart(2,'0');
+  const primDia = `${y}-${m}-01`;
+  const ult = new Date(y, hoje.getMonth()+1, 0);
+  const ultimoStr = `${ult.getFullYear()}-${String(ult.getMonth()+1).padStart(2,'0')}-${String(ult.getDate()).padStart(2,'0')}`;
   const el_i = document.getElementById('dash-inicio');
   const el_f = document.getElementById('dash-fim');
   if (el_i && !el_i.value) el_i.value = primDia;
   if (el_f && !el_f.value) el_f.value = ultimoStr;
-
-  // Populate empresa select
+  // populate empresa select
   const sel = document.getElementById('dash-emp');
-  if (sel) {
-    const prev = sel.value;
-    sel.innerHTML = '<option value="">Todas</option>';
-    Object.entries(STATE.empresas || {}).sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'')).forEach(([id, emp]) => {
-      const opt = document.createElement('option');
-      opt.value = id; opt.textContent = emp.nome || id;
-      if (id === prev) opt.selected = true;
-      sel.appendChild(opt);
+  if (sel && sel.options.length <= 1) {
+    Object.entries(STATE.empresas||{}).filter(([,e])=>e.status==='ativa').sort(([,a],[,b])=>(a.nome||'').localeCompare(b.nome||'')).forEach(([id,emp])=>{
+      const o = document.createElement('option'); o.value=id; o.textContent=emp.nome||id; sel.appendChild(o);
     });
   }
   renderDashboard();
 }
 
 function renderDashboard() {
-  const inicio = document.getElementById('dash-inicio')?.value || '';
-  const fim    = document.getElementById('dash-fim')?.value    || '';
-  const empFiltro = document.getElementById('dash-emp')?.value || '';
+  const kpisEl = document.getElementById('dash-kpis');
+  if (!kpisEl) return;
+
+  const inicio    = document.getElementById('dash-inicio')?.value || '';
+  const fim       = document.getElementById('dash-fim')?.value    || '';
+  const empFiltro = document.getElementById('dash-emp')?.value    || '';
 
   let items = Object.entries(STATE.acompanhamento || {});
   if (inicio) items = items.filter(([,a]) => a.data >= inicio);
   if (fim)    items = items.filter(([,a]) => a.data <= fim);
   if (empFiltro) {
-    const empNomeFiltro = (STATE.empresas[empFiltro]||{}).nome || '';
-    items = items.filter(([,a]) =>
-      a.empresaId === empFiltro ||
-      (!a.empresaId && empNomeFiltro && (a.empresaNome||'').trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
-    );
+    const nf = (STATE.empresas[empFiltro]||{}).nome||'';
+    items = items.filter(([,a]) => a.empresaId===empFiltro || (!a.empresaId && nf && (a.empresaNome||'').trim().toUpperCase()===nf.trim().toUpperCase()));
   }
 
   if (!items.length) {
-    document.getElementById('dash-kpis').innerHTML = '<div style="color:var(--gray-400);padding:24px">Nenhum dado encontrado para o período.</div>';
-    _destroyDashCharts();
-    return;
+    kpisEl.innerHTML = '<div style="grid-column:1/-1;color:var(--gray-400);padding:24px;text-align:center">Nenhum dado encontrado para o período selecionado.</div>';
+    _ddestroyAll(); return;
   }
 
-  // ── KPIs ────────────────────────────────────────────────────
-  let totalHMin = 0, totalHE = 0, totalValor = 0;
-  items.forEach(([,a]) => {
-    const { valor } = calcHoras(a);
-    totalValor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+  // KPIs
+  let totalHMin=0, totalHE=0, totalValor=0;
+  items.forEach(([,a])=>{
     if (a.chegada && a.saida) {
-      const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
-      totalHMin += Math.max(0, t);
-      totalHE += Math.max(0, t - 8*60);
+      const t = timeToMin(a.saida)-timeToMin(a.chegada)-timeToMin(a.refeicao||'01:00');
+      totalHMin += Math.max(0,t);
+      totalHE   += Math.max(0,t-480);
     }
+    const {valorNum} = calcHoras(a);
+    totalValor += valorNum||0;
   });
-  const datas = [...new Set(items.map(([,a]) => a.data).filter(Boolean))];
-  const pessoas = new Set(items.map(([,a]) => a.colCPF || a.colNome).filter(Boolean)).size;
+  const datas   = [...new Set(items.map(([,a])=>a.data).filter(Boolean))];
+  const pessoas = new Set(items.map(([,a])=>a.colCPF||a.colNome).filter(Boolean)).size;
 
-  document.getElementById('dash-kpis').innerHTML = [
-    { icon: '👥', val: pessoas,               label: 'Colaboradores únicos' },
-    { icon: '📋', val: items.length,           label: 'Total registros' },
-    { icon: '📅', val: datas.length,           label: 'Dias trabalhados' },
-    { icon: '⏱️', val: minToHM(totalHMin),    label: 'Horas trabalhadas' },
-    { icon: '⚡', val: minToHM(totalHE),      label: 'Horas extras' },
-    { icon: '💰', val: `R$ ${totalValor.toFixed(2).replace('.',',')}`, label: 'Custo total' },
-  ].map(k => `<div style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px 16px;text-align:center">
+  kpisEl.innerHTML = [
+    {icon:'👥', val:pessoas,                                        label:'Colaboradores únicos'},
+    {icon:'📋', val:items.length,                                   label:'Total registros'},
+    {icon:'📅', val:datas.length,                                   label:'Dias trabalhados'},
+    {icon:'⏱️', val:minToHM(totalHMin),                            label:'Horas trabalhadas'},
+    {icon:'⚡', val:minToHM(totalHE),                              label:'Horas extras'},
+    {icon:'💰', val:'R$ '+totalValor.toFixed(2).replace('.',','),  label:'Custo total'},
+  ].map(k=>`<div style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px 16px;text-align:center">
     <div style="font-size:22px;margin-bottom:4px">${k.icon}</div>
     <div style="font-size:18px;font-weight:700;color:var(--navy)">${k.val}</div>
     <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:3px">${k.label}</div>
   </div>`).join('');
 
-  // ── Agrupa por empresa ──────────────────────────────────────
-  const porEmp = {};
-  items.forEach(([,a]) => {
-    const k = a.empresaNome || '—';
-    if (!porEmp[k]) porEmp[k] = { valor: 0, hMin: 0, n: 0 };
-    const { valor } = calcHoras(a);
-    porEmp[k].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
-    if (a.chegada && a.saida) porEmp[k].hMin += Math.max(0, timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00'));
-    porEmp[k].n++;
+  // Agrupamentos
+  const porEmp={}, porFunc={}, porData={}, porOp={}, porMes={};
+  items.forEach(([,a])=>{
+    const {valorNum} = calcHoras(a);
+    const v2 = valorNum||0;
+    let hMin=0;
+    if(a.chegada&&a.saida) hMin=Math.max(0,timeToMin(a.saida)-timeToMin(a.chegada)-timeToMin(a.refeicao||'01:00'));
+    // por empresa
+    const ek=a.empresaNome||'—'; if(!porEmp[ek]) porEmp[ek]={v:0,h:0,n:0}; porEmp[ek].v+=v2; porEmp[ek].h+=hMin; porEmp[ek].n++;
+    // por função
+    const fk=a.funcao||'(sem função)'; if(!porFunc[fk]) porFunc[fk]={n:0,v:0}; porFunc[fk].n++; porFunc[fk].v+=v2;
+    // por data
+    if(a.data){ if(!porData[a.data]) porData[a.data]=0; porData[a.data]++; }
+    // por operação
+    const ok=(a.opNome||'—')+(a.opCC?` (${a.opCC})`:''); if(!porOp[ok]) porOp[ok]={v:0,n:0}; porOp[ok].v+=v2; porOp[ok].n++;
+    // por mês
+    if(a.data){ const mk2=a.data.slice(0,7); if(!porMes[mk2]) porMes[mk2]={v:0,n:0}; porMes[mk2].v+=v2; porMes[mk2].n++; }
   });
-  const empKeys = Object.keys(porEmp).sort((a,b) => porEmp[b].valor - porEmp[a].valor);
 
-  // ── Agrupa por função ──────────────────────────────────────
-  const porFunc = {};
-  items.forEach(([,a]) => {
-    const k = a.funcao || '(sem função)';
-    if (!porFunc[k]) porFunc[k] = { n: 0, valor: 0 };
-    const { valor } = calcHoras(a);
-    porFunc[k].n++;
-    porFunc[k].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
-  });
-  const funcKeys = Object.keys(porFunc).sort((a,b) => porFunc[b].n - porFunc[a].n);
-
-  // ── Agrupa por data ──────────────────────────────────────
-  const porData = {};
-  items.forEach(([,a]) => {
-    if (!a.data) return;
-    if (!porData[a.data]) porData[a.data] = 0;
-    porData[a.data]++;
-  });
+  const empKeys  = Object.keys(porEmp).sort((a,b)=>porEmp[b].v-porEmp[a].v);
+  const funcKeys = Object.keys(porFunc).sort((a,b)=>porFunc[b].n-porFunc[a].n);
   const dataKeys = Object.keys(porData).sort();
+  const opKeys   = Object.keys(porOp).sort((a,b)=>porOp[b].v-porOp[a].v).slice(0,10);
+  const mesKeys  = Object.keys(porMes).sort();
+  const mesLabels= mesKeys.map(k=>{ const [y,m]=k.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+m-1]+'/'+y.slice(2); });
+  const PAL=['#0D1B3E','#1565C0','#1A7F4B','#B45309','#C0392B','#6B21A8','#0369A1','#15803D','#D97706','#7C3AED'];
 
-  // ── Agrupa por operação ──────────────────────────────────────
-  const porOp = {};
-  items.forEach(([,a]) => {
-    const k = (a.opNome || '—') + (a.opCC ? ` (${a.opCC})` : '');
-    if (!porOp[k]) porOp[k] = { valor: 0, n: 0 };
-    const { valor } = calcHoras(a);
-    porOp[k].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
-    porOp[k].n++;
-  });
-  const opKeys = Object.keys(porOp).sort((a,b) => porOp[b].valor - porOp[a].valor).slice(0, 10);
-
-  // ── Evolução por mês/semana ──────────────────────────────────
-  const porMes = {};
-  items.forEach(([,a]) => {
-    if (!a.data) return;
-    const mes = a.data.slice(0,7); // YYYY-MM
-    if (!porMes[mes]) porMes[mes] = { valor: 0, n: 0 };
-    const { valor } = calcHoras(a);
-    porMes[mes].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
-    porMes[mes].n++;
-  });
-  const mesKeys = Object.keys(porMes).sort();
-  const mesLabels = mesKeys.map(k => { const [y,m]=k.split('-'); const ns=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return ns[parseInt(m)-1]+'/'+y.slice(2); });
-
-  // ── Build Charts ────────────────────────────────────────────
-  _destroyDashCharts();
-
-  function loadChartJs(cb) {
-    if (window.Chart) { cb(); return; }
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
-    s.onload = cb; document.head.appendChild(s);
+  _ddestroyAll();
+  function loadChart(cb){ if(window.Chart){cb();return;} const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'; s.onload=cb; document.head.appendChild(s); }
+  function mk(id,type,labels,datasets,extra={}){
+    const ctx=document.getElementById(id); if(!ctx) return;
+    _dcharts[id]=new Chart(ctx,{type,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:datasets.length>1,position:'top',labels:{font:{size:10}}}},
+      scales:type==='bar'||type==='line'?{x:{ticks:{font:{size:10},maxRotation:40}},y:{ticks:{font:{size:10}},beginAtZero:true}}:{}, ...extra}});
   }
 
-  const PALETTE = ['#0D1B3E','#1565C0','#1A7F4B','#B45309','#C0392B','#6B21A8','#0369A1','#15803D','#D97706','#DC2626'];
-
-  loadChartJs(() => {
-    function mk(id, type, labels, datasets, extra={}) {
-      const ctx = document.getElementById(id); if (!ctx) return;
-      _dashCharts[id] = new Chart(ctx, { type, data:{labels, datasets}, options:{
-        responsive:true, maintainAspectRatio:true,
-        plugins:{ legend:{ display: datasets.length>1, position:'top', labels:{font:{size:10}} } },
-        scales: type==='bar'||type==='line' ? { x:{ticks:{font:{size:10},maxRotation:40}}, y:{ticks:{font:{size:10}},beginAtZero:true} } : {},
-        ...extra
-      }});
-    }
-
-    // Custo por empresa
-    mk('dash-ch-emp', 'bar', empKeys, [{
-      label: 'Custo R$',
-      data: empKeys.map(k => +porEmp[k].valor.toFixed(2)),
-      backgroundColor: PALETTE.map(c => c + 'cc'),
-    }], { plugins:{legend:{display:false}} });
-
-    // Qtd por função (horizontal bar)
-    mk('dash-ch-func', 'bar', funcKeys, [{
-      label: 'Registros',
-      data: funcKeys.map(k => porFunc[k].n),
-      backgroundColor: funcKeys.map((_,i) => PALETTE[i % PALETTE.length] + 'cc'),
-    }], { indexAxis:'y', plugins:{legend:{display:false}} });
-
-    // Registros por data (line)
-    mk('dash-ch-data', 'line', dataKeys.map(d => d.slice(5)), [{
-      label: 'Registros',
-      data: dataKeys.map(k => porData[k]),
-      borderColor: '#0D1B3E', backgroundColor: '#0D1B3E22', fill: true, tension: .3,
-    }]);
-
-    // Horas por empresa
-    mk('dash-ch-horas', 'bar', empKeys, [{
-      label: 'Horas',
-      data: empKeys.map(k => +(porEmp[k].hMin/60).toFixed(2)),
-      backgroundColor: '#F5C518cc',
-    }], { plugins:{legend:{display:false}} });
-
-    // Custo por operação
-    mk('dash-ch-op', 'bar', opKeys, [{
-      label: 'Custo R$',
-      data: opKeys.map(k => +porOp[k].valor.toFixed(2)),
-      backgroundColor: '#1565C0cc',
-    }], { indexAxis:'y', plugins:{legend:{display:false}} });
-
-    // Evolução de custo
-    mk('dash-ch-evolucao', 'line', mesLabels, [{
-      label: 'Custo R$',
-      data: mesKeys.map(k => +porMes[k].valor.toFixed(2)),
-      borderColor: '#1A7F4B', backgroundColor: '#1A7F4B22', fill: true, tension: .3,
-    }]);
+  loadChart(()=>{
+    mk('dash-ch-emp','bar',empKeys,[{label:'R$',data:empKeys.map(k=>+porEmp[k].v.toFixed(2)),backgroundColor:PAL.map(c=>c+'bb')}],{plugins:{legend:{display:false}}});
+    mk('dash-ch-func','bar',funcKeys,[{label:'Qtd',data:funcKeys.map(k=>porFunc[k].n),backgroundColor:funcKeys.map((_,i)=>PAL[i%PAL.length]+'bb')}],{indexAxis:'y',plugins:{legend:{display:false}}});
+    mk('dash-ch-data','line',dataKeys.map(d=>d.slice(5)),[{label:'Registros',data:dataKeys.map(k=>porData[k]),borderColor:'#0D1B3E',backgroundColor:'#0D1B3E22',fill:true,tension:.3}]);
+    mk('dash-ch-horas','bar',empKeys,[{label:'Horas',data:empKeys.map(k=>+(porEmp[k].h/60).toFixed(2)),backgroundColor:'#F5C518cc'}],{plugins:{legend:{display:false}}});
+    mk('dash-ch-op','bar',opKeys,[{label:'R$',data:opKeys.map(k=>+porOp[k].v.toFixed(2)),backgroundColor:'#1565C0cc'}],{indexAxis:'y',plugins:{legend:{display:false}}});
+    mk('dash-ch-evolucao','line',mesLabels,[{label:'Custo R$',data:mesKeys.map(k=>+porMes[k].v.toFixed(2)),borderColor:'#1A7F4B',backgroundColor:'#1A7F4B22',fill:true,tension:.3}]);
   });
 }
 
