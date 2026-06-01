@@ -1290,9 +1290,12 @@ tbody tr:hover { background: var(--gray-50); }
           </div>
         </div>
       </div>
-      <div style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:14px">
+      <div id="ae-senha-wrap" style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:14px;display:none">
+        <div style="background:var(--danger-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px;color:var(--danger);margin-bottom:10px">
+          🔒 Este registro está <strong>Encerrado</strong>. Digite a senha admin para liberar a edição.
+        </div>
         <div class="form-group">
-          <label>🔐 Senha Admin para confirmar alteração *</label>
+          <label>Senha Admin *</label>
           <input type="password" id="ae-senha-confirm" placeholder="Digite a senha do administrador">
         </div>
       </div>
@@ -1702,11 +1705,30 @@ function switchInner(group, tab) {
 
 // ===================== FIREBASE LISTENERS =====================
 function listenFirebase() {
-  db.ref('empresas').on('value', snap => { STATE.empresas = snap.val() || {}; renderEmpresas(); populateVagaEmpresasCheck(); populateResumoSelects(); });
+  db.ref('empresas').on('value', snap => {
+    STATE.empresas = snap.val() || {};
+    renderEmpresas(); populateVagaEmpresasCheck(); populateResumoSelects();
+    const dashSel = document.getElementById('dash-emp');
+    if (dashSel) {
+      const prev = dashSel.value;
+      dashSel.innerHTML = '<option value="">Todas</option>';
+      Object.entries(STATE.empresas).filter(([,e])=>e.status==='ativa').sort(([,a],[,b])=>(a.nome||'').localeCompare(b.nome||'')).forEach(([id,emp])=>{
+        const opt = document.createElement('option');
+        opt.value = id; opt.textContent = emp.nome || id;
+        if (id === prev) opt.selected = true;
+        dashSel.appendChild(opt);
+      });
+    }
+  });
   db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
   db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
   db.ref('motoristas').on('value', snap => { STATE.motoristas = snap.val() || {}; renderMotoristas(); populateMotoristaSelect(); });
-  db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; populateAcompFilters(); renderAcompanhamento(); renderSugestoesPendentes(); });
+  db.ref('acompanhamento').on('value', snap => {
+    STATE.acompanhamento = snap.val() || {};
+    populateAcompFilters(); renderAcompanhamento(); renderSugestoesPendentes();
+    const dashPage = document.getElementById('page-dashboard');
+    if (dashPage && dashPage.classList.contains('active')) renderDashboard();
+  });
   if (currentUser.role === 'admin') {
     db.ref('notificacoes').on('value', snap => {
       STATE.notificacoes = snap.val() || {};
@@ -2996,6 +3018,13 @@ function openAcompEdit(id) {
   sv('ae-saida', a.saida||'');
   sv('ae-desconto', a.desconto||'nao');
   sv('ae-status', a.status||'Em escolha');
+  const senhaWrap = document.getElementById('ae-senha-wrap');
+  if (senhaWrap) {
+    const isEncerrado = (a.status||'') === 'Encerrado';
+    senhaWrap.style.display = isEncerrado ? '' : 'none';
+    const senhaInput = document.getElementById('ae-senha-confirm');
+    if (senhaInput) senhaInput.value = '';
+  }
 
   // Carregar adicional
   const adicionalVal = String(a.adicional || 'nenhum');
@@ -3248,8 +3277,11 @@ function updateAcompPreview() {
 }
 
 function saveAcompEdit() {
-  const senhaDigitada = v('ae-senha-confirm');
-  if (senhaDigitada !== ADMIN_SENHA) { toast('Senha incorreta. Alteração não autorizada.', 'error'); return; }
+  const a_atual = STATE.acompanhamento[currentAcompId] || {};
+  if ((a_atual.status||'') === 'Encerrado') {
+    const senhaDigitada = v('ae-senha-confirm');
+    if (senhaDigitada !== ADMIN_SENHA) { toast('Senha incorreta. Registro encerrado requer autorização.', 'error'); return; }
+  }
   sv('ae-senha-confirm', '');
   const refVal = v('ae-refeicao') === 'manual' ? v('ae-ref-manual') : v('ae-refeicao');
   const a = STATE.acompanhamento[currentAcompId] || {};
