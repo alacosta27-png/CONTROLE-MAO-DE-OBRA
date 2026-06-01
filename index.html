@@ -692,6 +692,15 @@ tbody tr:hover { background: var(--gray-50); }
   .func-grid { grid-template-columns: 1fr; }
   .mural-grid { grid-template-columns: 1fr; }
 }
+
+/* Acompanhamento: full width */
+.content-area.acomp-full { max-width: 100% !important; padding: 16px 20px; }
+.acomp-table th, .acomp-table td { font-size: 11px !important; padding: 5px 7px !important; white-space: nowrap; }
+.acomp-table .td-name { font-size: 11px !important; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.acomp-table .btn-sm  { font-size: 10px !important; padding: 3px 8px !important; }
+#acomp-container .table-wrap { overflow-x: visible; }
+@media (max-width: 1400px) { #acomp-container .table-wrap { overflow-x: auto; } }
+
 </style>
 </head>
 <body>
@@ -1695,6 +1704,8 @@ function switchPage(pageId) {
     t.classList.toggle('active', t.dataset.page === pageId);
   });
   document.getElementById(pageId).classList.add('active');
+  const _ca = document.querySelector('.content-area');
+  if (_ca) _ca.classList.toggle('acomp-full', pageId === 'page-acompanhamento');
 
   if (pageId === 'page-mural') renderMural();
   if (pageId === 'page-acompanhamento') { renderAcompanhamento(); renderSugestoesPendentes(); }
@@ -2598,19 +2609,18 @@ function renderAcompanhamento() {
         <table class="acomp-table">
           <thead>
             <tr>
+              <th style="width:86px">Ações</th>
+              <th>Status</th>
               <th>Colaborador</th>
               <th>Empresa</th>
               <th>Operação</th>
               <th>Função</th>
-              <th>Hora Prev.</th>
-              <th>Chegada</th>
-              <th>Refeição</th>
+              <th>Entrada</th>
+              <th>Ref.</th>
               <th>Saída</th>
-              <th>H. Trab.</th>
+              <th>H.Trab.</th>
               <th>Valor</th>
-              <th>Avaliação</th>
-              <th>Status</th>
-              <th>Ações</th>
+              <th>Aval.</th>
             </tr>
           </thead>
           <tbody>
@@ -2674,19 +2684,18 @@ function renderAcompRow(id, a, opCor) {
     : '';
 
   return `<tr style="${temDesacordoPendente && currentUser.role==='admin' ? 'background:var(--warning-bg)' : corStyle}">
-    <td class="td-name">${a.colNome} ${desacordoCell}</td>
-    <td style="font-size:12px">${a.empresaNome||'—'}</td>
-    <td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span></td>
-    <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
-    <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${a.horaInicial||'—'}</td>
-    <td>${a.chegada||'—'}</td>
-    <td>${a.refeicao||'—'}</td>
-    <td>${formatSaida(a.saida)}</td>
-    <td><span class="${classe}">${displayH}</span></td>
-    <td style="font-size:12px;font-weight:600">${valor}${adicionalBadge}</td>
-    <td>${avalCell}</td>
-    <td><span class="badge ${statusBadge}">${a.status||'Em escolha'}</span></td>
     <td>${acoes}</td>
+    <td><span class="badge ${statusBadge}" style="font-size:10px">${a.status||'Em escolha'}</span></td>
+    <td class="td-name">${a.colNome}${desacordoCell ? ' '+desacordoCell : ''}</td>
+    <td style="font-size:11px;color:var(--gray-600)">${a.empresaNome||'—'}</td>
+    <td><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span></td>
+    <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
+    <td style="font-family:'JetBrains Mono',monospace">${a.chegada||'—'}</td>
+    <td style="font-family:'JetBrains Mono',monospace;color:var(--gray-400)">${a.refeicao||'—'}</td>
+    <td style="font-family:'JetBrains Mono',monospace">${formatSaida(a.saida)}</td>
+    <td><span class="${classe}" style="font-size:11px">${displayH}</span></td>
+    <td style="font-weight:600;font-size:11px">${valor}${adicionalBadge}</td>
+    <td>${avalCell}</td>
   </tr>`;
 }
 
@@ -3717,12 +3726,15 @@ function exportarAcertoPDF() {
       const adicionalCell = adicional > 0
         ? `<span style="background:${adicional===100?'#FFF1F2':'#FFF7ED'};color:${adicional===100?'#9F1239':'#9A3412'};padding:1px 5px;border-radius:3px;font-weight:700;font-size:9px">+${adicional}%</span>`
         : '—';
+      const _pdfMot = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '—';
       return `<tr>
         <td>${formatDate(a.data)}</td>
         <td>${a.colNome||'—'}</td>
         <td style="font-family:monospace">${a.colCPF||'—'}</td>
         <td>${a.opNome||'—'}</td>
         <td>${a.funcao||'—'}</td>
+        <td style="font-weight:bold">${a.md||'—'}</td>
+        <td>${_pdfMot}</td>
         <td>${a.chegada||'—'}</td>
         <td>${formatSaida(a.saida)}</td>
         <td>${a.refeicao||'—'}</td>
@@ -3736,9 +3748,9 @@ function exportarAcertoPDF() {
     return `<h2>🏢 ${emp.nome}</h2>
       <div class="periodo">${emp.rows.length} colaboradores &nbsp;|&nbsp; H. Trabalhadas: ${minToHM(totalHMin)} &nbsp;|&nbsp; H. Extra: ${minToHM(totalHE)}${adLine}</div>
       <table>
-        <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th>Adic.</th><th>Valor</th></tr></thead>
+        <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>MD</th><th>Motorista</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th>Adic.</th><th>Valor</th></tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr class="total-row"><td colspan="10" style="text-align:right">TOTAL ${emp.nome}</td><td style="text-align:right">R$ ${totalEmp.toFixed(2).replace('.',',')}</td></tr></tfoot>
+        <tfoot><tr class="total-row"><td colspan="12" style="text-align:right">TOTAL ${emp.nome}</td><td style="text-align:right">R$ ${totalEmp.toFixed(2).replace('.',',')}</td></tr></tfoot>
       </table>`;
   }).join('');
 
