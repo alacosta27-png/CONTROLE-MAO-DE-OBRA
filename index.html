@@ -1613,9 +1613,9 @@ function buildNavTabs() {
   const tabs = currentUser.role === 'admin'
     ? [
         { id: 'page-mural', label: 'Mural de Vagas' },
-        { id: 'page-vagas-admin', label: 'Gerenciar Vagas' },
         { id: 'page-acompanhamento', label: 'Acompanhamento' },
-        { id: 'page-resumo-admin', label: '📊 Resumo Geral' },
+        { id: 'page-dashboard', label: '📊 Dashboard' },
+        { id: 'page-resumo-admin', label: '📋 Resumo Geral' },
         { id: 'page-resumo-terceirizados', label: '💰 Acerto' },
         { id: 'page-empresas', label: 'Empresas' },
         { id: 'page-operacoes', label: 'Operações' },
@@ -1658,6 +1658,7 @@ function switchPage(pageId) {
   if (pageId === 'page-operacoes') renderOperacoes();
   if (pageId === 'page-vagas-admin') renderVagasAdmin();
   if (pageId === 'page-motoristas') renderMotoristas();
+  if (pageId === 'page-dashboard') { initDashboard(); }
   if (pageId === 'page-resumo-admin') {
     // Set default: current month
     if (!document.getElementById('resumo-admin-inicio')?.value) {
@@ -3517,12 +3518,15 @@ function gerarAcerto() {
         totalHMin += t;
         totalHE += Math.max(0, t - 8*60);
       }
+      const motNome = a.motoristaNome || (a.motoristaId && STATE.motoristas && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '—';
       return `<tr>
         <td>${formatDate(a.data)}</td>
         <td class="td-name">${a.colNome}</td>
         <td class="td-mono">${a.colCPF||'—'}</td>
         <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
         <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
+        <td style="font-size:11px;font-weight:600;color:var(--navy)">${a.md||'—'}</td>
+        <td style="font-size:11px">${motNome}</td>
         <td>${a.chegada||'—'}</td>
         <td>${formatSaida(a.saida)}</td>
         <td>${a.refeicao||'—'}</td>
@@ -3542,7 +3546,7 @@ function gerarAcerto() {
       <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px">Período: ${formatDate(inicio)} a ${formatDate(fim)} &nbsp;|&nbsp; ${emp.rows.length} registros</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th style="text-align:right">Valor</th></tr></thead>
+          <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>MD</th><th>Motorista</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th style="text-align:right">Valor</th></tr></thead>
           <tbody>${tbodyRows}</tbody>
           <tfoot><tr style="background:var(--success-bg)">
             <td colspan="9" style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">TOTAL ${emp.nome}</td>
@@ -3558,7 +3562,7 @@ function exportarAcertoCSV() {
   if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
   const inicio = v('acerto-inicio');
   const fim = v('acerto-fim');
-  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total']];
+  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','MD','Motorista','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total']];
   acertoDados.forEach(([,a]) => {
     const emp = STATE.empresas[a.empresaId] || {};
     const valores = (emp.valores || {})[a.funcao] || {};
@@ -3573,7 +3577,9 @@ function exportarAcertoCSV() {
     const valorAdicional = valorDia * (adicional / 100);
     valorTotal += valorAdicional;
     const adicionalStr = adicional > 0 ? `+${adicional}%` : '—';
+    const motNomeCSV = a.motoristaNome || (a.motoristaId && STATE.motoristas && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '';
     rows.push([a.empresaNome||'', a.data||'', a.colNome||'', a.colCPF||'', a.opNome||'', a.opCC||'', a.funcao||'',
+      a.md||'', motNomeCSV,
       a.chegada||'', a.refeicao||'', a.saida||'', minToHM(hTrabMin), minToHM(heMin), adicionalStr,
       `R$ ${valorDia.toFixed(2).replace('.',',')}`,
       `R$ ${(parseFloat(valores.he)||0).toFixed(2).replace('.',',')}`,
@@ -3775,6 +3781,214 @@ function toast(msg, type = 'success') {
   el.appendChild(t);
   setTimeout(() => t.remove(), 3500);
 }
+
+// ══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════
+let _dashCharts = {};
+function _destroyDashCharts() {
+  Object.values(_dashCharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  _dashCharts = {};
+}
+
+function initDashboard() {
+  // Set default dates to current month if empty
+  const hoje = new Date();
+  const primDia = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`;
+  const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0);
+  const ultimoStr = `${ultimoDia.getFullYear()}-${String(ultimoDia.getMonth()+1).padStart(2,'0')}-${String(ultimoDia.getDate()).padStart(2,'0')}`;
+  const el_i = document.getElementById('dash-inicio');
+  const el_f = document.getElementById('dash-fim');
+  if (el_i && !el_i.value) el_i.value = primDia;
+  if (el_f && !el_f.value) el_f.value = ultimoStr;
+
+  // Populate empresa select
+  const sel = document.getElementById('dash-emp');
+  if (sel) {
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">Todas</option>';
+    Object.entries(STATE.empresas || {}).sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'')).forEach(([id, emp]) => {
+      const opt = document.createElement('option');
+      opt.value = id; opt.textContent = emp.nome || id;
+      if (id === prev) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const inicio = document.getElementById('dash-inicio')?.value || '';
+  const fim    = document.getElementById('dash-fim')?.value    || '';
+  const empFiltro = document.getElementById('dash-emp')?.value || '';
+
+  let items = Object.entries(STATE.acompanhamento || {});
+  if (inicio) items = items.filter(([,a]) => a.data >= inicio);
+  if (fim)    items = items.filter(([,a]) => a.data <= fim);
+  if (empFiltro) {
+    const empNomeFiltro = (STATE.empresas[empFiltro]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empFiltro ||
+      (!a.empresaId && empNomeFiltro && (a.empresaNome||'').trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
+
+  if (!items.length) {
+    document.getElementById('dash-kpis').innerHTML = '<div style="color:var(--gray-400);padding:24px">Nenhum dado encontrado para o período.</div>';
+    _destroyDashCharts();
+    return;
+  }
+
+  // ── KPIs ────────────────────────────────────────────────────
+  let totalHMin = 0, totalHE = 0, totalValor = 0;
+  items.forEach(([,a]) => {
+    const { valor } = calcHoras(a);
+    totalValor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+    if (a.chegada && a.saida) {
+      const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
+      totalHMin += Math.max(0, t);
+      totalHE += Math.max(0, t - 8*60);
+    }
+  });
+  const datas = [...new Set(items.map(([,a]) => a.data).filter(Boolean))];
+  const pessoas = new Set(items.map(([,a]) => a.colCPF || a.colNome).filter(Boolean)).size;
+
+  document.getElementById('dash-kpis').innerHTML = [
+    { icon: '👥', val: pessoas,               label: 'Colaboradores únicos' },
+    { icon: '📋', val: items.length,           label: 'Total registros' },
+    { icon: '📅', val: datas.length,           label: 'Dias trabalhados' },
+    { icon: '⏱️', val: minToHM(totalHMin),    label: 'Horas trabalhadas' },
+    { icon: '⚡', val: minToHM(totalHE),      label: 'Horas extras' },
+    { icon: '💰', val: `R$ ${totalValor.toFixed(2).replace('.',',')}`, label: 'Custo total' },
+  ].map(k => `<div style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px 16px;text-align:center">
+    <div style="font-size:22px;margin-bottom:4px">${k.icon}</div>
+    <div style="font-size:18px;font-weight:700;color:var(--navy)">${k.val}</div>
+    <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:3px">${k.label}</div>
+  </div>`).join('');
+
+  // ── Agrupa por empresa ──────────────────────────────────────
+  const porEmp = {};
+  items.forEach(([,a]) => {
+    const k = a.empresaNome || '—';
+    if (!porEmp[k]) porEmp[k] = { valor: 0, hMin: 0, n: 0 };
+    const { valor } = calcHoras(a);
+    porEmp[k].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+    if (a.chegada && a.saida) porEmp[k].hMin += Math.max(0, timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00'));
+    porEmp[k].n++;
+  });
+  const empKeys = Object.keys(porEmp).sort((a,b) => porEmp[b].valor - porEmp[a].valor);
+
+  // ── Agrupa por função ──────────────────────────────────────
+  const porFunc = {};
+  items.forEach(([,a]) => {
+    const k = a.funcao || '(sem função)';
+    if (!porFunc[k]) porFunc[k] = { n: 0, valor: 0 };
+    const { valor } = calcHoras(a);
+    porFunc[k].n++;
+    porFunc[k].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+  });
+  const funcKeys = Object.keys(porFunc).sort((a,b) => porFunc[b].n - porFunc[a].n);
+
+  // ── Agrupa por data ──────────────────────────────────────
+  const porData = {};
+  items.forEach(([,a]) => {
+    if (!a.data) return;
+    if (!porData[a.data]) porData[a.data] = 0;
+    porData[a.data]++;
+  });
+  const dataKeys = Object.keys(porData).sort();
+
+  // ── Agrupa por operação ──────────────────────────────────────
+  const porOp = {};
+  items.forEach(([,a]) => {
+    const k = (a.opNome || '—') + (a.opCC ? ` (${a.opCC})` : '');
+    if (!porOp[k]) porOp[k] = { valor: 0, n: 0 };
+    const { valor } = calcHoras(a);
+    porOp[k].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+    porOp[k].n++;
+  });
+  const opKeys = Object.keys(porOp).sort((a,b) => porOp[b].valor - porOp[a].valor).slice(0, 10);
+
+  // ── Evolução por mês/semana ──────────────────────────────────
+  const porMes = {};
+  items.forEach(([,a]) => {
+    if (!a.data) return;
+    const mes = a.data.slice(0,7); // YYYY-MM
+    if (!porMes[mes]) porMes[mes] = { valor: 0, n: 0 };
+    const { valor } = calcHoras(a);
+    porMes[mes].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+    porMes[mes].n++;
+  });
+  const mesKeys = Object.keys(porMes).sort();
+  const mesLabels = mesKeys.map(k => { const [y,m]=k.split('-'); const ns=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return ns[parseInt(m)-1]+'/'+y.slice(2); });
+
+  // ── Build Charts ────────────────────────────────────────────
+  _destroyDashCharts();
+
+  function loadChartJs(cb) {
+    if (window.Chart) { cb(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    s.onload = cb; document.head.appendChild(s);
+  }
+
+  const PALETTE = ['#0D1B3E','#1565C0','#1A7F4B','#B45309','#C0392B','#6B21A8','#0369A1','#15803D','#D97706','#DC2626'];
+
+  loadChartJs(() => {
+    function mk(id, type, labels, datasets, extra={}) {
+      const ctx = document.getElementById(id); if (!ctx) return;
+      _dashCharts[id] = new Chart(ctx, { type, data:{labels, datasets}, options:{
+        responsive:true, maintainAspectRatio:true,
+        plugins:{ legend:{ display: datasets.length>1, position:'top', labels:{font:{size:10}} } },
+        scales: type==='bar'||type==='line' ? { x:{ticks:{font:{size:10},maxRotation:40}}, y:{ticks:{font:{size:10}},beginAtZero:true} } : {},
+        ...extra
+      }});
+    }
+
+    // Custo por empresa
+    mk('dash-ch-emp', 'bar', empKeys, [{
+      label: 'Custo R$',
+      data: empKeys.map(k => +porEmp[k].valor.toFixed(2)),
+      backgroundColor: PALETTE.map(c => c + 'cc'),
+    }], { plugins:{legend:{display:false}} });
+
+    // Qtd por função (horizontal bar)
+    mk('dash-ch-func', 'bar', funcKeys, [{
+      label: 'Registros',
+      data: funcKeys.map(k => porFunc[k].n),
+      backgroundColor: funcKeys.map((_,i) => PALETTE[i % PALETTE.length] + 'cc'),
+    }], { indexAxis:'y', plugins:{legend:{display:false}} });
+
+    // Registros por data (line)
+    mk('dash-ch-data', 'line', dataKeys.map(d => d.slice(5)), [{
+      label: 'Registros',
+      data: dataKeys.map(k => porData[k]),
+      borderColor: '#0D1B3E', backgroundColor: '#0D1B3E22', fill: true, tension: .3,
+    }]);
+
+    // Horas por empresa
+    mk('dash-ch-horas', 'bar', empKeys, [{
+      label: 'Horas',
+      data: empKeys.map(k => +(porEmp[k].hMin/60).toFixed(2)),
+      backgroundColor: '#F5C518cc',
+    }], { plugins:{legend:{display:false}} });
+
+    // Custo por operação
+    mk('dash-ch-op', 'bar', opKeys, [{
+      label: 'Custo R$',
+      data: opKeys.map(k => +porOp[k].valor.toFixed(2)),
+      backgroundColor: '#1565C0cc',
+    }], { indexAxis:'y', plugins:{legend:{display:false}} });
+
+    // Evolução de custo
+    mk('dash-ch-evolucao', 'line', mesLabels, [{
+      label: 'Custo R$',
+      data: mesKeys.map(k => +porMes[k].valor.toFixed(2)),
+      borderColor: '#1A7F4B', backgroundColor: '#1A7F4B22', fill: true, tension: .3,
+    }]);
+  });
+}
+
 </script>
 </body>
 </html>
