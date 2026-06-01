@@ -1705,7 +1705,7 @@ function switchPage(pageId) {
   });
   document.getElementById(pageId).classList.add('active');
   const _ca = document.querySelector('.content-area');
-  if (_ca) _ca.classList.toggle('acomp-full', pageId === 'page-acompanhamento');
+  if (_ca) _ca.classList.toggle('acomp-full', pageId === 'page-acompanhamento' || pageId === 'page-mural');
 
   if (pageId === 'page-mural') renderMural();
   if (pageId === 'page-acompanhamento') { renderAcompanhamento(); renderSugestoesPendentes(); }
@@ -2263,14 +2263,16 @@ function renderMural() {
           ? `<span style="font-size:11px;color:var(--warning);font-weight:600">${filled}/${needed} ▸ faltam ${vagasRestantes}</span>`
           : `<span style="font-size:11px;color:var(--gray-400)">${filled}/${needed}</span>`;
       const isConf = linha.funcao === 'Conferente';
+      const _muralMot = linha.motoristaNome || (linha.motoristaId && STATE.motoristas[linha.motoristaId] ? STATE.motoristas[linha.motoristaId].nome : '') || '';
       return `<tr style="${isConf?'background:#F0FDF4;':''}">
-        <td style="font-weight:600;font-size:12px">${linha.opNome||'—'}</td>
-        <td><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
-        <td><span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${isConf?'⭐ ':''} ${linha.funcao||'—'}</span></td>
-        <td style="font-size:12px;text-align:center;font-weight:600">${needed}</td>
-        <td style="font-size:12px;font-family:'JetBrains Mono',monospace">${linha.hora||'—'}</td>
-        <td>${statusCell}</td>
-        <td style="min-width:200px">${nomesAtrib}</td>
+        <td style="font-weight:600;font-size:11px;padding:5px 8px">${linha.opNome||'—'}</td>
+        <td style="padding:5px 8px"><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
+        <td style="padding:5px 8px"><span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${isConf?'⭐ ':''} ${linha.funcao||'—'}</span></td>
+        <td style="font-size:11px;text-align:center;font-weight:600;padding:5px 8px">${needed}</td>
+        <td style="font-size:11px;font-family:'JetBrains Mono',monospace;padding:5px 8px">${linha.hora||'—'}</td>
+        <td style="padding:5px 8px">${statusCell}</td>
+        <td style="padding:5px 8px">${_muralMot ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${_muralMot}</span>` : '<span style="font-size:10px;color:var(--gray-400)">—</span>'}</td>
+        <td style="min-width:180px;padding:5px 8px">${nomesAtrib}</td>
       </tr>`;
     }).join('');
     const btnEncerrar = currentUser.role === 'admin'
@@ -2305,6 +2307,7 @@ function renderMural() {
               <th style="padding:8px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Qtd</th>
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Hora</th>
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Status</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Motorista</th>
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaboradores</th>
             </tr>
           </thead>
