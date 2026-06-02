@@ -1351,8 +1351,19 @@ tbody tr:hover { background: var(--gray-50); }
         </div>
       </div>
     </div>
+    <div id="ae-delete-wrap" style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:14px;display:none">
+      <div style="background:var(--danger-bg);color:var(--danger);border-radius:var(--radius);padding:8px 12px;font-size:12px;margin-bottom:10px">
+        🗑️ <strong>Deletar registro</strong> — ação irreversível. Informe a senha admin para confirmar.
+      </div>
+      <div class="form-group">
+        <label>Senha Admin *</label>
+        <input type="password" id="ae-delete-senha" placeholder="Senha do administrador">
+      </div>
+      <button class="btn btn-danger" style="margin-top:6px" onclick="deleteAcomp()">🗑️ Confirmar Exclusão</button>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-acomp-edit')">Cancelar</button>
+      <button class="btn btn-ghost" style="border-color:var(--danger);color:var(--danger);margin-right:auto" onclick="toggleDeleteAcomp()">🗑️ Deletar</button>
       <button class="btn btn-navy" onclick="saveAcompEdit()">Salvar</button>
     </div>
   </div>
@@ -1705,7 +1716,7 @@ function switchPage(pageId) {
   });
   document.getElementById(pageId).classList.add('active');
   const _ca = document.querySelector('.content-area');
-  if (_ca) _ca.classList.toggle('acomp-full', pageId === 'page-acompanhamento' || pageId === 'page-mural');
+  if (_ca) _ca.classList.toggle('acomp-full', ['page-acompanhamento','page-mural','page-resumo-admin','page-resumo-terceirizados'].includes(pageId));
 
   if (pageId === 'page-mural') renderMural();
   if (pageId === 'page-acompanhamento') { renderAcompanhamento(); renderSugestoesPendentes(); }
@@ -3151,6 +3162,28 @@ function openAcompEdit(id) {
   openModal('modal-acomp-edit');
 }
 
+function toggleDeleteAcomp() {
+  const wrap = document.getElementById('ae-delete-wrap');
+  if (!wrap) return;
+  wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+  if (wrap.style.display !== 'none') document.getElementById('ae-delete-senha').focus();
+}
+
+function deleteAcomp() {
+  const senha = document.getElementById('ae-delete-senha')?.value || '';
+  if (senha !== ADMIN_SENHA) {
+    toast('Senha incorreta. Exclusão não autorizada.', 'error');
+    return;
+  }
+  if (!currentAcompId) return;
+  db.ref('acompanhamento/' + currentAcompId).remove()
+    .then(() => {
+      toast('Registro excluído com sucesso.', 'success');
+      closeModal('modal-acomp-edit');
+    })
+    .catch(err => toast('Erro ao excluir: ' + err.message, 'error'));
+}
+
 function aceitarDesacordo() {
   const a = STATE.acompanhamento[currentAcompId];
   const d = a.desacordo || {};
@@ -3471,22 +3504,28 @@ function renderResumoAdmin() {
   });
 
   const tabelaOp = `
-    <div class="card" style="margin-bottom:20px">
-      <div class="card-title">📋 Resumo por Operação / Centro de Custo</div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Operação</th><th>Centro de Custo</th><th>Colaboradores</th><th>H. Trabalhadas</th><th>Custo Est.</th></tr></thead>
-          <tbody>
-            ${Object.values(porOp).sort((a,b)=>a.opNome.localeCompare(b.opNome)).map(op => `<tr>
-              <td class="td-name">${op.opNome}</td>
-              <td><span class="badge badge-info">${op.opCC}</span></td>
-              <td style="text-align:center;font-weight:600">${op.cols}</td>
-              <td style="font-family:'JetBrains Mono',monospace">${minToHM(op.horasMin)}</td>
-              <td style="font-weight:600;color:var(--success)">R$ ${op.valor.toFixed(2).replace('.',',')}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
+    <div style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);margin-bottom:20px;overflow:hidden">
+      <div style="background:var(--navy);padding:14px 18px">
+        <div style="color:var(--yellow);font-size:14px;font-weight:700">📋 Resumo por Operação / Centro de Custo</div>
       </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:var(--gray-50)">
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Operação</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">C. Custo</th>
+          <th style="padding:7px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaboradores</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">H. Trabalhadas</th>
+          <th style="padding:7px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Custo Est.</th>
+        </tr></thead>
+        <tbody>
+          ${Object.values(porOp).sort((a,b)=>a.opNome.localeCompare(b.opNome)).map(op => `<tr>
+            <td style="padding:6px 10px;font-size:11px;font-weight:600">${op.opNome}</td>
+            <td style="padding:6px 10px"><span class="badge badge-info" style="font-size:10px">${op.opCC}</span></td>
+            <td style="padding:6px 10px;text-align:center;font-weight:600">${op.cols}</td>
+            <td style="padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:11px">${minToHM(op.horasMin)}</td>
+            <td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--success)">R$ ${op.valor.toFixed(2).replace('.',',')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
     </div>`;
 
   // Detalhamento por data
@@ -3496,32 +3535,44 @@ function renderResumoAdmin() {
       const { displayH, valor } = calcHoras(a);
       const v2 = parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
       totalDia += v2;
+      const _rMot = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '';
       return `<tr>
-        <td class="td-name">${a.colNome}</td>
-        <td style="font-size:12px">${a.empresaNome||'—'}</td>
-        <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
-        <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
-        <td>${a.chegada||'—'}</td>
-        <td>${formatSaida(a.saida)}</td>
-        <td>${a.refeicao||'—'}</td>
-        <td><span class="${a.chegada&&a.saida?'horas-ok':''}">${displayH}</span></td>
-        <td style="font-weight:600">R$ ${parseFloat(valor.replace('R$ ','').replace(',','.') || 0).toFixed(2).replace('.',',')}</td>
+        <td style="padding:5px 8px;font-size:11px;font-weight:600">${a.colNome}</td>
+        <td style="padding:5px 8px;font-size:11px">${a.empresaNome||'—'}</td>
+        <td style="padding:5px 8px;font-size:11px;font-weight:600">${a.opNome||'—'}</td>
+        <td style="padding:5px 8px"><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
+        <td style="padding:5px 8px;font-weight:700;color:var(--navy);font-size:11px">${a.md||'—'}</td>
+        <td style="padding:5px 8px">${_rMot ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${_rMot}</span>` : '<span style="font-size:10px;color:var(--gray-400)">—</span>'}</td>
+        <td style="padding:5px 8px;font-size:11px">${a.chegada||'—'}</td>
+        <td style="padding:5px 8px;font-size:11px">${formatSaida(a.saida)}</td>
+        <td style="padding:5px 8px;font-size:11px">${a.refeicao||'—'}</td>
+        <td style="padding:5px 8px"><span class="${a.chegada&&a.saida?'horas-ok':''}" style="font-size:11px">${displayH}</span></td>
+        <td style="padding:5px 8px;font-weight:700;text-align:right;font-size:11px">R$ ${v2.toFixed(2).replace('.',',')}</td>
       </tr>`;
     }).join('');
-    return `<div class="acomp-card" style="margin-bottom:16px">
-      <div class="acomp-header" style="display:flex;justify-content:space-between">
-        <div class="acomp-op">📅 ${formatDate(data)}</div>
-        <div class="acomp-meta">${rows.length} colaboradores &nbsp;|&nbsp; R$ ${totalDia.toFixed(2).replace('.',',')}</div>
+    return `<div style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);margin-bottom:16px;overflow:hidden">
+      <div style="background:var(--navy);padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div style="color:var(--yellow);font-size:14px;font-weight:700">📅 ${formatDate(data)}</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:12px">${rows.length} colaboradores &nbsp;|&nbsp; <strong style="color:var(--yellow)">R$ ${totalDia.toFixed(2).replace('.',',')}</strong></div>
       </div>
-      <div class="table-wrap">
-        <table><thead><tr>
-          <th>Colaborador</th><th>Empresa</th><th>Operação</th><th>Função</th>
-          <th>Chegada</th><th>Saída</th><th>Refeição</th><th>H. Trab.</th><th>Custo Est.</th>
-        </tr></thead><tbody>${tbody}</tbody></table>
-      </div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--gray-50)">
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaborador</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Empresa</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Operação</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Função</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">MD</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Motorista</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Chegada</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Saída</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Refeição</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">H. Trab.</th>
+          <th style="padding:7px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Custo</th>
+        </tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
     </div>`;
   }).join('');
-
   container.innerHTML = tabelaOp + tabelaDia;
 }
 
@@ -3602,42 +3653,55 @@ function gerarAcerto() {
         totalHMin += t;
         totalHE += Math.max(0, t - 8*60);
       }
-      const _motNome = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '—';
+      const _motNome = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '';
       return `<tr>
-        <td>${formatDate(a.data)}</td>
-        <td class="td-name">${a.colNome}</td>
-        <td class="td-mono">${a.colCPF||'—'}</td>
-        <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
-        <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
-        <td style="font-weight:600;color:var(--navy)">${a.md||'—'}</td>
-        <td style="font-size:12px">${_motNome}</td>
-        <td>${a.chegada||'—'}</td>
-        <td>${formatSaida(a.saida)}</td>
-        <td>${a.refeicao||'—'}</td>
-        <td><span class="${a.chegada&&a.saida?'horas-ok':''}">${displayH}</span></td>
-        <td style="font-weight:600;text-align:right">R$ ${vNum.toFixed(2).replace('.',',')}</td>
+        <td style="padding:5px 8px;font-size:11px">${formatDate(a.data)}</td>
+        <td style="padding:5px 8px;font-size:11px;font-weight:600">${a.colNome}</td>
+        <td style="padding:5px 8px;font-size:10px;font-family:'JetBrains Mono',monospace">${a.colCPF||'—'}</td>
+        <td style="padding:5px 8px;font-size:11px;font-weight:600">${a.opNome||'—'}</td>
+        <td style="padding:5px 8px"><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
+        <td style="padding:5px 8px;font-weight:700;color:var(--navy);font-size:11px">${a.md||'—'}</td>
+        <td style="padding:5px 8px">${_motNome ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${_motNome}</span>` : '<span style="font-size:10px;color:var(--gray-400)">—</span>'}</td>
+        <td style="padding:5px 8px;font-size:11px">${a.chegada||'—'}</td>
+        <td style="padding:5px 8px;font-size:11px">${formatSaida(a.saida)}</td>
+        <td style="padding:5px 8px;font-size:11px">${a.refeicao||'—'}</td>
+        <td style="padding:5px 8px"><span class="${a.chegada&&a.saida?'horas-ok':''}" style="font-size:11px">${displayH}</span></td>
+        <td style="padding:5px 8px;font-weight:700;text-align:right;font-size:11px">R$ ${vNum.toFixed(2).replace('.',',')}</td>
       </tr>`;
     }).join('');
-    return `<div class="card" style="margin-bottom:20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <div class="card-title" style="margin-bottom:0">🏢 ${emp.nome}</div>
-        <div style="display:flex;gap:16px;font-size:13px">
-          <div><span style="color:var(--gray-400)">H. Trab.:</span> <strong>${minToHM(totalHMin)}</strong></div>
-          <div><span style="color:var(--gray-400)">H. Extra:</span> <strong style="color:var(--orange)">${minToHM(totalHE)}</strong></div>
-          <div style="background:var(--success-bg);color:var(--success);padding:4px 14px;border-radius:20px;font-weight:700">TOTAL: R$ ${totalEmp.toFixed(2).replace('.',',')}</div>
+    return `<div style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);margin-bottom:20px;overflow:hidden">
+      <div style="background:var(--navy);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="color:var(--yellow);font-size:15px;font-weight:700">🏢 ${emp.nome}</div>
+        <div style="display:flex;gap:16px;align-items:center;font-size:12px;color:rgba(255,255,255,0.8)">
+          <span>H. Trab.: <strong style="color:white">${minToHM(totalHMin)}</strong></span>
+          <span>H. Extra: <strong style="color:#FCA5A5">${minToHM(totalHE)}</strong></span>
+          <span style="background:var(--success);color:white;padding:4px 14px;border-radius:20px;font-weight:700">TOTAL: R$ ${totalEmp.toFixed(2).replace('.',',')}</span>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px">Período: ${formatDate(inicio)} a ${formatDate(fim)} &nbsp;|&nbsp; ${emp.rows.length} registros</div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>MD</th><th>Motorista</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th style="text-align:right">Valor</th></tr></thead>
-          <tbody>${tbodyRows}</tbody>
-          <tfoot><tr style="background:var(--success-bg)">
-            <td colspan="11" style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">TOTAL ${emp.nome}</td>
-            <td style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">R$ ${totalEmp.toFixed(2).replace('.',',')}</td>
-          </tr></tfoot>
-        </table>
+      <div style="padding:6px 18px;background:rgba(13,27,62,0.04);font-size:11px;color:var(--gray-400);border-bottom:1px solid var(--gray-100)">
+        Período: ${formatDate(inicio)} a ${formatDate(fim)} &nbsp;|&nbsp; ${emp.rows.length} registros
       </div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--gray-50)">
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Data</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaborador</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">CPF</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Operação</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Função</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">MD</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Motorista</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Chegada</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Saída</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Refeição</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">H.Trab.</th>
+          <th style="padding:7px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Valor</th>
+        </tr></thead>
+        <tbody>${tbodyRows}</tbody>
+        <tfoot><tr style="background:#e6f5ee">
+          <td colspan="11" style="text-align:right;font-weight:700;padding:9px 12px;color:var(--success)">TOTAL ${emp.nome}</td>
+          <td style="text-align:right;font-weight:700;padding:9px 12px;color:var(--success)">R$ ${totalEmp.toFixed(2).replace('.',',')}</td>
+        </tr></tfoot>
+      </table>
     </div>`;
   }).join('');
 }
