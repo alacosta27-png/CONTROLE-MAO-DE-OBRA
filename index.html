@@ -1197,6 +1197,32 @@ tbody tr:hover { background: var(--gray-50); }
   </div>
 </div>
 
+<!-- Modal: Editar Colaborador -->
+<div class="modal-overlay" id="modal-edit-colab">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Alterar Colaborador</div>
+      <button class="modal-close" onclick="closeModal('modal-edit-colab')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ec-id">
+      <input type="hidden" id="ec-empid">
+      <div class="form-group">
+        <label>CPF / RG</label>
+        <input type="text" id="ec-cpf" disabled style="background:var(--gray-50);color:var(--gray-400)">
+      </div>
+      <div class="form-group">
+        <label>Nome *</label>
+        <input type="text" id="ec-nome" placeholder="Nome completo">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-colab')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveEditColab()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Atribuir Colaboradores — painel completo da vaga -->
 <div class="modal-overlay" id="modal-atribuir">
   <div class="modal" style="max-width:860px">
@@ -2032,11 +2058,38 @@ function renderColLista() {
       <td class="td-name">${col.nome}</td>
       <td>${col.operacaoNome || '—'}</td>
       <td><span class="badge ${col.status==='ativo'?'badge-success':'badge-gray'}">${col.status||'ativo'}</span></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="toggleColStatus('${id}','${col._empId || currentUser.empresaId}','${col.status||'ativo'}')">
-        ${(col.status||'ativo')==='ativo'?'Inativar':'Ativar'}
-      </button></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="openEditColab('${id}','${col._empId || currentUser.empresaId}')">✏️ Alterar</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleColStatus('${id}','${col._empId || currentUser.empresaId}','${col.status||'ativo'}')">
+          ${(col.status||'ativo')==='ativo'?'Inativar':'Ativar'}
+        </button>
+      </td>
     </tr>`
   ).join('');
+}
+
+function openEditColab(id, empId) {
+  const col = (STATE.colaboradores[empId] || {})[id];
+  if (!col) { toast('Colaborador não encontrado.', 'error'); return; }
+  document.getElementById('ec-id').value = id;
+  document.getElementById('ec-empid').value = empId;
+  document.getElementById('ec-cpf').value = col.cpf || '';
+  document.getElementById('ec-nome').value = col.nome || '';
+  openModal('modal-edit-colab');
+}
+
+function saveEditColab() {
+  const id = document.getElementById('ec-id').value;
+  const empId = document.getElementById('ec-empid').value;
+  const nome = document.getElementById('ec-nome').value.trim();
+  if (!nome) { toast('Informe o nome do colaborador.', 'error'); return; }
+  db.ref(`colaboradores/${empId}/${id}/nome`).set(nome)
+    .then(() => {
+      toast('Nome atualizado com sucesso!', 'success');
+      closeModal('modal-edit-colab');
+      renderColLista();
+    })
+    .catch(err => toast('Erro ao salvar: ' + err.message, 'error'));
 }
 
 function toggleColStatus(id, empId, status) {
