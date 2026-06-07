@@ -1024,9 +1024,6 @@ tbody tr:hover { background: var(--gray-50); }
             <button class="btn btn-yellow" onclick="exportarAcertoCSV()">⬇ CSV</button>
           </div>
           <div>
-            <button class="btn btn-ghost" style="border-color:var(--info);color:var(--info)" onclick="exportarAcertoTXT()">📄 TXT</button>
-          </div>
-          <div>
             <button class="btn btn-ghost" style="border-color:var(--danger);color:var(--danger)" onclick="exportarAcertoPDF()">📄 PDF</button>
           </div>
         </div>
@@ -3952,8 +3949,12 @@ function gerarAcerto() {
   }).join('');
 }
 
-function _buildAcertoRows() {
-  return acertoDados.map(([,a]) => {
+function exportarAcertoCSV() {
+  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
+  const inicio = v('acerto-inicio');
+  const fim = v('acerto-fim');
+  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total']];
+  acertoDados.forEach(([,a]) => {
     const emp = STATE.empresas[a.empresaId] || {};
     const valores = (emp.valores || {})[a.funcao] || {};
     const valorDia = parseFloat(valores.valor) || 0;
@@ -3966,84 +3967,21 @@ function _buildAcertoRows() {
     const adicional = parseInt(a.adicional) || 0;
     const valorAdicional = valorDia * (adicional / 100);
     valorTotal += valorAdicional;
-    const motNome = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '';
-    return {
-      empresa: a.empresaNome||'', data: a.data||'', colaborador: a.colNome||'', cpf: a.colCPF||'',
-      operacao: a.opNome||'', cc: a.opCC||'', funcao: a.funcao||'',
-      md: a.md||'', motorista: motNome,
-      chegada: a.chegada||'', refeicao: a.refeicao||'', saida: a.saida||'',
-      hTrab: minToHM(hTrabMin), hExtra: minToHM(heMin),
-      adicionalStr: adicional > 0 ? `+${adicional}%` : '—',
-      valorDiaStr: `R$ ${valorDia.toFixed(2).replace('.',',')}`,
-      valorHEStr: `R$ ${(parseFloat(valores.he)||0).toFixed(2).replace('.',',')}`,
-      valorAdicStr: adicional > 0 ? `R$ ${valorAdicional.toFixed(2).replace('.',',')}` : '—',
-      total: `R$ ${valorTotal.toFixed(2).replace('.',',')}`,
-      totalNum: valorTotal,
-    };
+    const adicionalStr = adicional > 0 ? `+${adicional}%` : '—';
+    rows.push([a.empresaNome||'', a.data||'', a.colNome||'', a.colCPF||'', a.opNome||'', a.opCC||'', a.funcao||'',
+      a.chegada||'', a.refeicao||'', a.saida||'', minToHM(hTrabMin), minToHM(heMin), adicionalStr,
+      `R$ ${valorDia.toFixed(2).replace('.',',')}`,
+      `R$ ${(parseFloat(valores.he)||0).toFixed(2).replace('.',',')}`,
+      adicional > 0 ? `R$ ${valorAdicional.toFixed(2).replace('.',',')}` : '—',
+      `R$ ${valorTotal.toFixed(2).replace('.',',')}`]);
   });
-}
-
-function exportarAcertoCSV() {
-  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
-  const inicio = v('acerto-inicio'), fim = v('acerto-fim');
-  const header = ['Empresa','Data','Colaborador','CPF','Operação','C. Custo','Função','MD','Motorista','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total'];
-  const data = _buildAcertoRows().map(r => [
-    r.empresa, r.data, r.colaborador, r.cpf, r.operacao, r.cc, r.funcao,
-    r.md, r.motorista, r.chegada, r.refeicao, r.saida,
-    r.hTrab, r.hExtra, r.adicionalStr, r.valorDiaStr, r.valorHEStr, r.valorAdicStr, r.total
-  ]);
-  const csv = [header, ...data].map(r => r.map(c => `"${c}"`).join(';')).join('\n');
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(';')).join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a2 = document.createElement('a');
   a2.href = url; a2.download = `acerto-${inicio}-${fim}.csv`;
   a2.click();
 }
-
-function exportarAcertoTXT() {
-  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
-  const inicio = v('acerto-inicio'), fim = v('acerto-fim');
-  const rows = _buildAcertoRows();
-
-  const porEmp = {};
-  rows.forEach(r => { if (!porEmp[r.empresa]) porEmp[r.empresa] = []; porEmp[r.empresa].push(r); });
-
-  const sep  = '='.repeat(120);
-  const dash = '-'.repeat(120);
-  const pad  = (s, n) => String(s||'').padEnd(n).slice(0, n);
-  const padL = (s, n) => String(s||'').padStart(n).slice(-n);
-
-  let txt = 'PORTOEX — MODELO DE ACERTO\n';
-  txt += `Período: ${formatDate(inicio)} a ${formatDate(fim)}\n`;
-  txt += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
-
-  Object.entries(porEmp).forEach(([empNome, empRows]) => {
-    let totalEmp = 0;
-    txt += sep + '\n';
-    txt += `EMPRESA: ${empNome}\n`;
-    txt += sep + '\n';
-    txt += `${pad('DATA',10)} ${pad('COLABORADOR',28)} ${pad('CPF',14)} ${pad('OPERAÇÃO',12)} ${pad('FUNÇÃO',16)} ${pad('MD',8)} ${pad('MOTORISTA',18)} ${pad('ENTRADA',8)} ${pad('SAÍDA',8)} ${pad('H.TRAB',7)} ${padL('VALOR',12)}\n`;
-    txt += dash + '\n';
-    empRows.forEach(r => {
-      totalEmp += r.totalNum;
-      txt += `${pad(formatDate(r.data),10)} ${pad(r.colaborador,28)} ${pad(r.cpf,14)} ${pad(r.operacao,12)} ${pad(r.funcao,16)} ${pad(r.md,8)} ${pad(r.motorista,18)} ${pad(r.chegada,8)} ${pad(r.saida,8)} ${pad(r.hTrab,7)} ${padL(r.total,12)}\n`;
-    });
-    txt += dash + '\n';
-    txt += `${pad('TOTAL ' + empNome, 107)} ${padL('R$ ' + totalEmp.toFixed(2).replace('.',','), 12)}\n\n`;
-  });
-
-  const totalGeral = rows.reduce((s, r) => s + r.totalNum, 0);
-  txt += sep + '\n';
-  txt += `TOTAL GERAL: R$ ${totalGeral.toFixed(2).replace('.',',')}   |   ${rows.length} registros\n`;
-  txt += sep + '\n';
-
-  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a2 = document.createElement('a');
-  a2.href = url; a2.download = `acerto-${inicio}-${fim}.txt`;
-  a2.click();
-}
-
 
 function exportarAcertoPDF() {
   if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
@@ -4206,4 +4144,389 @@ function updateNotifBadge() {
 
   document.querySelectorAll('.nav-tab').forEach(t => {
     if (t.dataset.page === 'page-acompanhamento') {
-      t.innerHTML = `Acom
+      t.innerHTML = `Acompanhamento${total > 0 ? ` <span style="background:var(--danger);color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">${total}</span>` : ''}`;
+    }
+  });
+
+  // Atualizar botão de sugestões
+  const btn = document.getElementById('btn-sugestoes-pendentes');
+  const cnt = document.getElementById('sugestoes-count');
+  if (btn && currentUser?.role === 'admin') {
+    btn.style.display = total > 0 ? 'inline-flex' : 'none';
+    if (cnt) cnt.textContent = total;
+  }
+}
+
+function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+function n(id) { return parseFloat(v(id)) || 0; }
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  const t = document.createElement('div');
+  t.className = 'toast-msg ' + type;
+  t.textContent = (type === 'success' ? '✓ ' : '✕ ') + msg;
+  el.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ══════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════
+let _dcharts = {};
+function _ddestroyAll() {
+  Object.values(_dcharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  _dcharts = {};
+}
+
+function initDashboard() {
+  const hoje = new Date();
+  const y = hoje.getFullYear(), m = String(hoje.getMonth()+1).padStart(2,'0');
+  const primDia = `${y}-${m}-01`;
+  const ult = new Date(y, hoje.getMonth()+1, 0);
+  const ultimoStr = `${ult.getFullYear()}-${String(ult.getMonth()+1).padStart(2,'0')}-${String(ult.getDate()).padStart(2,'0')}`;
+  const el_i = document.getElementById('dash-inicio');
+  const el_f = document.getElementById('dash-fim');
+  if (el_i && !el_i.value) el_i.value = primDia;
+  if (el_f && !el_f.value) el_f.value = ultimoStr;
+  // populate empresa select
+  const sel = document.getElementById('dash-emp');
+  if (sel && sel.options.length <= 1) {
+    Object.entries(STATE.empresas||{}).filter(([,e])=>e.status==='ativa').sort(([,a],[,b])=>(a.nome||'').localeCompare(b.nome||'')).forEach(([id,emp])=>{
+      const o = document.createElement('option'); o.value=id; o.textContent=emp.nome||id; sel.appendChild(o);
+    });
+  }
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const kpisEl = document.getElementById('dash-kpis');
+  if (!kpisEl) return;
+
+  const inicio    = document.getElementById('dash-inicio')?.value || '';
+  const fim       = document.getElementById('dash-fim')?.value    || '';
+  const empFiltro = document.getElementById('dash-emp')?.value    || '';
+
+  let items = Object.entries(STATE.acompanhamento || {});
+  if (inicio) items = items.filter(([,a]) => a.data >= inicio);
+  if (fim)    items = items.filter(([,a]) => a.data <= fim);
+  if (empFiltro) {
+    const nf = (STATE.empresas[empFiltro]||{}).nome||'';
+    items = items.filter(([,a]) => a.empresaId===empFiltro || (!a.empresaId && nf && (a.empresaNome||'').trim().toUpperCase()===nf.trim().toUpperCase()));
+  }
+
+  if (!items.length) {
+    kpisEl.innerHTML = '<div style="grid-column:1/-1;color:var(--gray-400);padding:24px;text-align:center">Nenhum dado encontrado para o período selecionado.</div>';
+    _ddestroyAll(); return;
+  }
+
+  // KPIs
+  let totalHMin=0, totalHE=0, totalValor=0;
+  items.forEach(([,a])=>{
+    if (a.chegada && a.saida) {
+      const t = timeToMin(a.saida)-timeToMin(a.chegada)-timeToMin(a.refeicao||'01:00');
+      totalHMin += Math.max(0,t);
+      totalHE   += Math.max(0,t-480);
+    }
+    const {valorNum} = calcHoras(a);
+    totalValor += valorNum||0;
+  });
+  const datas   = [...new Set(items.map(([,a])=>a.data).filter(Boolean))];
+  const pessoas = new Set(items.map(([,a])=>a.colCPF||a.colNome).filter(Boolean)).size;
+
+  kpisEl.innerHTML = [
+    {icon:'👥', val:pessoas,                                        label:'Colaboradores únicos'},
+    {icon:'📋', val:items.length,                                   label:'Total registros'},
+    {icon:'📅', val:datas.length,                                   label:'Dias trabalhados'},
+    {icon:'⏱️', val:minToHM(totalHMin),                            label:'Horas trabalhadas'},
+    {icon:'⚡', val:minToHM(totalHE),                              label:'Horas extras'},
+    {icon:'💰', val:'R$ '+totalValor.toFixed(2).replace('.',','),  label:'Custo total'},
+  ].map(k=>`<div style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px 16px;text-align:center">
+    <div style="font-size:22px;margin-bottom:4px">${k.icon}</div>
+    <div style="font-size:18px;font-weight:700;color:var(--navy)">${k.val}</div>
+    <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:3px">${k.label}</div>
+  </div>`).join('');
+
+  // Agrupamentos
+  const porEmp={}, porFunc={}, porData={}, porOp={}, porMes={};
+  items.forEach(([,a])=>{
+    const {valorNum} = calcHoras(a);
+    const v2 = valorNum||0;
+    let hMin=0;
+    if(a.chegada&&a.saida) hMin=Math.max(0,timeToMin(a.saida)-timeToMin(a.chegada)-timeToMin(a.refeicao||'01:00'));
+    // por empresa
+    const ek=a.empresaNome||'—'; if(!porEmp[ek]) porEmp[ek]={v:0,h:0,n:0}; porEmp[ek].v+=v2; porEmp[ek].h+=hMin; porEmp[ek].n++;
+    // por função
+    const fk=a.funcao||'(sem função)'; if(!porFunc[fk]) porFunc[fk]={n:0,v:0}; porFunc[fk].n++; porFunc[fk].v+=v2;
+    // por data
+    if(a.data){ if(!porData[a.data]) porData[a.data]=0; porData[a.data]++; }
+    // por operação
+    const ok=(a.opNome||'—')+(a.opCC?` (${a.opCC})`:''); if(!porOp[ok]) porOp[ok]={v:0,n:0}; porOp[ok].v+=v2; porOp[ok].n++;
+    // por mês
+    if(a.data){ const mk2=a.data.slice(0,7); if(!porMes[mk2]) porMes[mk2]={v:0,n:0}; porMes[mk2].v+=v2; porMes[mk2].n++; }
+  });
+
+  const empKeys  = Object.keys(porEmp).sort((a,b)=>porEmp[b].v-porEmp[a].v);
+  const funcKeys = Object.keys(porFunc).sort((a,b)=>porFunc[b].n-porFunc[a].n);
+  const dataKeys = Object.keys(porData).sort();
+  const opKeys   = Object.keys(porOp).sort((a,b)=>porOp[b].v-porOp[a].v).slice(0,10);
+  const mesKeys  = Object.keys(porMes).sort();
+  const mesLabels= mesKeys.map(k=>{ const [y,m]=k.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+m-1]+'/'+y.slice(2); });
+  const PAL=['#0D1B3E','#1565C0','#1A7F4B','#B45309','#C0392B','#6B21A8','#0369A1','#15803D','#D97706','#7C3AED'];
+
+  _ddestroyAll();
+  function loadChart(cb){ if(window.Chart){cb();return;} const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'; s.onload=cb; document.head.appendChild(s); }
+  function mk(id,type,labels,datasets,extra={}){
+    const ctx=document.getElementById(id); if(!ctx) return;
+    _dcharts[id]=new Chart(ctx,{type,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:datasets.length>1,position:'top',labels:{font:{size:10}}}},
+      scales:type==='bar'||type==='line'?{x:{ticks:{font:{size:10},maxRotation:40}},y:{ticks:{font:{size:10}},beginAtZero:true}}:{}, ...extra}});
+  }
+
+  loadChart(()=>{
+    mk('dash-ch-emp','bar',empKeys,[{label:'R$',data:empKeys.map(k=>+porEmp[k].v.toFixed(2)),backgroundColor:PAL.map(c=>c+'bb')}],{plugins:{legend:{display:false}}});
+    mk('dash-ch-func','bar',funcKeys,[{label:'Qtd',data:funcKeys.map(k=>porFunc[k].n),backgroundColor:funcKeys.map((_,i)=>PAL[i%PAL.length]+'bb')}],{indexAxis:'y',plugins:{legend:{display:false}}});
+    mk('dash-ch-data','line',dataKeys.map(d=>d.slice(5)),[{label:'Registros',data:dataKeys.map(k=>porData[k]),borderColor:'#0D1B3E',backgroundColor:'#0D1B3E22',fill:true,tension:.3}]);
+    mk('dash-ch-horas','bar',empKeys,[{label:'Horas',data:empKeys.map(k=>+(porEmp[k].h/60).toFixed(2)),backgroundColor:'#F5C518cc'}],{plugins:{legend:{display:false}}});
+    mk('dash-ch-op','bar',opKeys,[{label:'R$',data:opKeys.map(k=>+porOp[k].v.toFixed(2)),backgroundColor:'#1565C0cc'}],{indexAxis:'y',plugins:{legend:{display:false}}});
+    mk('dash-ch-evolucao','line',mesLabels,[{label:'Custo R$',data:mesKeys.map(k=>+porMes[k].v.toFixed(2)),borderColor:'#1A7F4B',backgroundColor:'#1A7F4B22',fill:true,tension:.3}]);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// G.R. – GERENCIAMENTO DE RISCO
+// ══════════════════════════════════════════════════════════
+function getGRStatus(cpf) {
+  const key = cpf.replace(/\./g, '_').replace(/-/g, '_').replace(/\//g, '_');
+  return STATE.grStatus[key] || { status: 'LIBERADO', motivo: '' };
+}
+
+function renderGR() {
+  const tbody = document.getElementById('gr-tbody');
+  if (!tbody) return;
+
+  const busca = (document.getElementById('gr-busca')?.value || '').toLowerCase();
+  const filtroStatus = document.getElementById('gr-filtro-status')?.value || '';
+
+  // Coletar todos os colaboradores de todas as empresas
+  let rows = [];
+  Object.entries(STATE.colaboradores).forEach(([empId, cols]) => {
+    const empNome = (STATE.empresas[empId] || {}).nome || empId;
+    Object.entries(cols || {}).forEach(([colId, col]) => {
+      rows.push({ colId, empId, empNome, ...col });
+    });
+  });
+
+  // Filtrar
+  if (busca) rows = rows.filter(r =>
+    (r.nome || '').toLowerCase().includes(busca) ||
+    (r.cpf || '').toLowerCase().includes(busca)
+  );
+
+  // KPIs
+  let kpiLib = 0, kpiAna = 0, kpiBlq = 0;
+  rows.forEach(r => {
+    const gr = getGRStatus(r.cpf);
+    if (gr.status === 'BLOQUEADO') kpiBlq++;
+    else if (gr.status === 'ANÁLISE') kpiAna++;
+    else kpiLib++;
+  });
+  const kpisEl = document.getElementById('gr-kpis');
+  if (kpisEl) {
+    kpisEl.innerHTML = [
+      { icon: '✅', val: kpiLib, label: 'Liberados', color: 'var(--success)' },
+      { icon: '⚠️', val: kpiAna, label: 'Em Análise', color: 'var(--warning)' },
+      { icon: '🚫', val: kpiBlq, label: 'Bloqueados', color: 'var(--danger)' },
+    ].map(k => `
+      <div style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px;text-align:center">
+        <div style="font-size:24px;margin-bottom:4px">${k.icon}</div>
+        <div style="font-size:22px;font-weight:700;color:${k.color}">${k.val}</div>
+        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">${k.label}</div>
+      </div>`).join('');
+  }
+
+  // Filtrar por status após KPIs
+  if (filtroStatus) rows = rows.filter(r => getGRStatus(r.cpf).status === filtroStatus);
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador encontrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const gr = getGRStatus(r.cpf);
+    const badgeClass = gr.status === 'BLOQUEADO' ? 'badge-gr-bloqueado' : gr.status === 'ANÁLISE' ? 'badge-gr-analise' : 'badge-gr-liberado';
+    const dataAtt = gr.atualizadoEm ? new Date(gr.atualizadoEm).toLocaleDateString('pt-BR') : '—';
+    return `<tr style="${gr.status === 'BLOQUEADO' ? 'background:var(--danger-bg)' : gr.status === 'ANÁLISE' ? 'background:var(--warning-bg)' : ''}">
+      <td class="td-mono">${r.cpf || '—'}</td>
+      <td class="td-name">${r.nome || '—'}</td>
+      <td style="font-size:12px">${r.empNome}</td>
+      <td><span class="badge ${badgeClass}">${gr.status}</span></td>
+      <td style="font-size:12px;color:var(--gray-600);max-width:200px;overflow:hidden;text-overflow:ellipsis">${gr.motivo || '—'}</td>
+      <td style="font-size:11px;color:var(--gray-400)">${dataAtt}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openGRStatus('${r.cpf.replace(/'/g,"\\'")}','${r.empId}','${(r.nome||'').replace(/'/g,"\\'")}')">✏️ Alterar</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openGRStatus(cpf, empId, nome) {
+  document.getElementById('gr-col-cpf').value = cpf;
+  document.getElementById('gr-col-empid').value = empId;
+  document.getElementById('gr-modal-info').innerHTML =
+    `<div style="font-weight:600">${nome}</div><div style="font-size:12px;color:var(--gray-400)">${cpf}</div>`;
+  const gr = getGRStatus(cpf);
+  document.getElementById('gr-novo-status').value = gr.status || 'LIBERADO';
+  document.getElementById('gr-motivo').value = gr.motivo || '';
+  document.getElementById('gr-motivo-obrigatorio').style.display = 'none';
+  document.getElementById('gr-novo-status').onchange = function() {
+    document.getElementById('gr-motivo-obrigatorio').style.display = this.value === 'BLOQUEADO' ? 'inline' : 'none';
+  };
+  openModal('modal-gr-status');
+}
+
+function saveGRStatus() {
+  const cpf = document.getElementById('gr-col-cpf').value;
+  const status = document.getElementById('gr-novo-status').value;
+  const motivo = document.getElementById('gr-motivo').value.trim();
+  if (status === 'BLOQUEADO' && !motivo) {
+    toast('Informe o motivo do bloqueio.', 'error');
+    return;
+  }
+  const key = cpf.replace(/\./g, '_').replace(/-/g, '_').replace(/\//g, '_');
+  db.ref('grStatus/' + key).set({
+    cpf, status, motivo,
+    atualizadoEm: Date.now(),
+    atualizadoPor: currentUser.login
+  }).then(() => {
+    toast('Status G.R. atualizado!', 'success');
+    closeModal('modal-gr-status');
+    renderGR();
+  });
+}
+
+// Verificar se colaborador está bloqueado pelo G.R.
+function checkGRBloqueio(cpf) {
+  const gr = getGRStatus(cpf);
+  return gr.status === 'BLOQUEADO' ? gr.motivo : null;
+}
+
+// ══════════════════════════════════════════════════════════
+// AVISOS
+// ══════════════════════════════════════════════════════════
+function renderAvisosBanner() {
+  const banner = document.getElementById('aviso-banner');
+  if (!banner) return;
+  if (!currentUser) { banner.style.display = 'none'; return; }
+
+  // Pegar avisos ativos, do mais recente
+  const avisos = Object.entries(STATE.avisos || {})
+    .filter(([, a]) => {
+      if (!a.ativo) return false;
+      if (a.empresasAlvo && currentUser.role === 'empresa' && !a.empresasAlvo.includes(currentUser.empresaId)) return false;
+      if (a.empresasAlvo && currentUser.role === 'gr') return false;
+      return true;
+    })
+    .sort(([, a], [, b]) => (b.criadoEm || 0) - (a.criadoEm || 0));
+
+  if (!avisos.length) { banner.style.display = 'none'; return; }
+
+  const [, aviso] = avisos[0];
+  banner.className = `tipo-${aviso.tipo || 'info'}`;
+  banner.style.display = 'block';
+  document.getElementById('aviso-banner-texto').textContent =
+    (aviso.tipo === 'urgente' ? '🚨 ' : aviso.tipo === 'atencao' ? '⚠️ ' : 'ℹ️ ') + aviso.texto;
+}
+
+function fecharAvisoBanner() {
+  const banner = document.getElementById('aviso-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function renderAvisosAdmin() {
+  const container = document.getElementById('avisos-container');
+  if (!container) return;
+
+  const items = Object.entries(STATE.avisos || {}).sort(([, a], [, b]) => (b.criadoEm || 0) - (a.criadoEm || 0));
+
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📢</div><div class="empty-text">Nenhum aviso publicado.</div></div>';
+    return;
+  }
+
+  container.innerHTML = items.map(([id, a]) => {
+    const tipoIcon = a.tipo === 'urgente' ? '🚨' : a.tipo === 'atencao' ? '⚠️' : 'ℹ️';
+    const tipoColor = a.tipo === 'urgente' ? 'var(--danger)' : a.tipo === 'atencao' ? 'var(--warning)' : 'var(--info)';
+    const tipoBg = a.tipo === 'urgente' ? 'var(--danger-bg)' : a.tipo === 'atencao' ? 'var(--warning-bg)' : 'var(--info-bg)';
+    const emps = a.empresasAlvo
+      ? a.empresasAlvo.map(eid => (STATE.empresas[eid] || {}).nome || eid).join(', ')
+      : 'Todas as empresas';
+    const data = a.criadoEm ? new Date(a.criadoEm).toLocaleString('pt-BR') : '—';
+    return `
+    <div class="card" style="border-left:4px solid ${tipoColor};margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:18px">${tipoIcon}</span>
+            <span style="font-size:13px;font-weight:700;color:${tipoColor};text-transform:uppercase">${a.tipo || 'info'}</span>
+            <span class="badge ${a.ativo ? 'badge-success' : 'badge-gray'}" style="font-size:10px">${a.ativo ? 'Ativo' : 'Inativo'}</span>
+          </div>
+          <div style="font-size:14px;font-weight:500;color:var(--gray-800);margin-bottom:8px">${a.texto || '—'}</div>
+          <div style="font-size:11px;color:var(--gray-400)">📅 ${data} &nbsp;|&nbsp; 🏢 ${emps}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-ghost btn-sm" onclick="toggleAviso('${id}',${!a.ativo})">${a.ativo ? 'Desativar' : 'Ativar'}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteAviso('${id}')">Excluir</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveAviso() {
+  const tipo = document.getElementById('aviso-tipo').value;
+  const texto = document.getElementById('aviso-texto').value.trim();
+  if (!texto) { toast('Informe o texto do aviso.', 'error'); return; }
+  const empsSel = [...document.querySelectorAll('#aviso-empresas-check input:checked')].map(e => e.value);
+  db.ref('avisos').push({
+    tipo, texto,
+    empresasAlvo: empsSel.length ? empsSel : null,
+    ativo: true,
+    criadoEm: Date.now(),
+    criadoPor: currentUser.login
+  }).then(() => {
+    toast('Aviso publicado!', 'success');
+    closeModal('modal-aviso');
+    document.getElementById('aviso-texto').value = '';
+  });
+}
+
+function toggleAviso(id, ativo) {
+  db.ref('avisos/' + id + '/ativo').set(ativo).then(() => toast(ativo ? 'Aviso ativado.' : 'Aviso desativado.'));
+}
+
+function deleteAviso(id) {
+  if (!confirm('Excluir este aviso?')) return;
+  db.ref('avisos/' + id).remove().then(() => toast('Aviso excluído.'));
+}
+
+// Preencher empresas no modal de aviso
+document.addEventListener('click', e => {
+  if (e.target.closest('#modal-aviso')) {
+    const wrap = document.getElementById('aviso-empresas-check');
+    if (wrap && !wrap.children.length) {
+      wrap.innerHTML = Object.entries(STATE.empresas || {})
+        .filter(([, emp]) => emp.status === 'ativa')
+        .map(([id, emp]) => `<label class="check-item"><input type="checkbox" value="${id}"> ${emp.nome}</label>`)
+        .join('');
+    }
+  }
+});
+
+
+</script>
+</body>
+</html>
