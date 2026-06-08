@@ -2875,6 +2875,7 @@ function renderAcompanhamento() {
               <th>Empresa</th>
               <th>Operação</th>
               <th>Função</th>
+              <th>H. Inicial</th>
               <th>Entrada</th>
               <th>Ref.</th>
               <th>Saída</th>
@@ -2950,6 +2951,7 @@ function renderAcompRow(id, a, opCor) {
     <td style="font-size:11px;color:var(--gray-600)">${a.empresaNome||'—'}</td>
     <td><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span></td>
     <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
+    <td style="font-family:'JetBrains Mono',monospace;color:var(--info);font-weight:600">${a.horaInicial||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace">${a.chegada||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace;color:var(--gray-400)">${a.refeicao||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace">${formatSaida(a.saida)}</td>
