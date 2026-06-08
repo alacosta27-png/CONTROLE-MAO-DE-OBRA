@@ -329,7 +329,12 @@ function buildSection(titulo, items, tipo) {
     ? `<th>Nº</th><th>Nome</th><th>Operação</th><th class="center">Entrada</th><th class="center">Prev.Saída</th><th class="center">Saída</th><th>Motorista</th><th class="center">MD</th><th>Status</th>`
     : `<th>Nº</th><th>Nome</th><th>Operação</th><th class="center">Entrada</th><th class="center">Prev.Saída</th><th class="center">Saída</th><th>Status</th>`;
 
-  const rows = items.map(([id, a], i) => buildRow(id, a, i+1, isRota)).join('');
+  const sorted = [...items].sort(([,a],[,b]) => {
+    const opCmp = (a.opNome||'').localeCompare(b.opNome||'', 'pt-BR');
+    if (opCmp !== 0) return opCmp;
+    return (a.chegada||'').localeCompare(b.chegada||'');
+  });
+  const rows = sorted.map(([id, a], i) => buildRow(id, a, i+1, isRota)).join('');
 
   return `<div class="cc-section">
     <div class="cc-header cc-${tipo}">
