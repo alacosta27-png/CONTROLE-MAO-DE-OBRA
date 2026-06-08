@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PORTOEX — Terceirizados</title>
+<meta name="theme-color" content="#0D1B3E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PORTOEX">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
@@ -701,9 +706,37 @@ tbody tr:hover { background: var(--gray-50); }
 #acomp-container .table-wrap { overflow-x: visible; }
 @media (max-width: 1400px) { #acomp-container .table-wrap { overflow-x: auto; } }
 
+/* ===== G.R. STATUS BADGES ===== */
+.badge-gr-liberado { background: var(--success-bg); color: var(--success); border: 1px solid #6ee7a0; }
+.badge-gr-bloqueado { background: var(--danger-bg); color: var(--danger); border: 1px solid #fca5a5; }
+.badge-gr-analise { background: var(--warning-bg); color: var(--warning); border: 1px solid #fcd34d; }
+
+/* ===== AVISO BANNER ===== */
+#aviso-banner {
+  display: none;
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  animation: fadeIn 0.3s ease;
+}
+#aviso-banner.tipo-info { background: var(--info-bg); color: var(--info); border-color: var(--info); }
+#aviso-banner.tipo-atencao { background: var(--warning-bg); color: var(--warning); border-color: var(--warning); }
+#aviso-banner.tipo-urgente { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+#aviso-banner .aviso-close {
+  float: right; cursor: pointer; font-size: 16px; opacity: 0.6;
+}
+#aviso-banner .aviso-close:hover { opacity: 1; }
+
 </style>
 </head>
 <body>
+
+<!-- BANNER DE AVISOS -->
+<div id="aviso-banner">
+  <span id="aviso-banner-texto"></span>
+  <span class="aviso-close" onclick="fecharAvisoBanner()">✕</span>
+</div>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -991,6 +1024,9 @@ tbody tr:hover { background: var(--gray-50); }
             <button class="btn btn-yellow" onclick="exportarAcertoCSV()">⬇ CSV</button>
           </div>
           <div>
+            <button class="btn btn-ghost" style="border-color:var(--info);color:var(--info)" onclick="exportarAcertoTXT()">📄 TXT</button>
+          </div>
+          <div>
             <button class="btn btn-ghost" style="border-color:var(--danger);color:var(--danger)" onclick="exportarAcertoPDF()">📄 PDF</button>
           </div>
         </div>
@@ -1018,6 +1054,48 @@ tbody tr:hover { background: var(--gray-50); }
           <thead><tr><th>Nome</th><th>Identificação / Placa</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="motoristas-tbody"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum motorista cadastrado.</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: G.R. – GERENCIAMENTO DE RISCO ===================== -->
+    <div id="page-gr" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🛡️ G.R. – Gerenciamento de Risco</div>
+          <div class="section-sub">Controle de status dos colaboradores — Bloqueados, Em Análise e Liberados</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="gr-busca" placeholder="Buscar por nome ou CPF..." style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px;width:240px" oninput="renderGR()">
+          <select id="gr-filtro-status" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px" onchange="renderGR()">
+            <option value="">Todos os status</option>
+            <option value="LIBERADO">✅ Liberados</option>
+            <option value="ANÁLISE">⚠️ Em Análise</option>
+            <option value="BLOQUEADO">🚫 Bloqueados</option>
+          </select>
+        </div>
+      </div>
+      <div id="gr-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>CPF / RG</th><th>Nome</th><th>Empresa</th><th>Status G.R.</th><th>Motivo</th><th>Atualizado em</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="gr-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador cadastrado.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: AVISOS ===================== -->
+    <div id="page-avisos" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📢 Avisos</div>
+          <div class="section-sub">Comunicados publicados para as empresas terceirizadas</div>
+        </div>
+        <button class="btn btn-yellow" onclick="openModal('modal-aviso')">+ Novo Aviso</button>
+      </div>
+      <div id="avisos-container">
+        <div class="empty-state"><div class="empty-icon">📢</div><div class="empty-text">Nenhum aviso publicado.</div></div>
       </div>
     </div>
 
@@ -1542,6 +1620,71 @@ tbody tr:hover { background: var(--gray-50); }
   </div>
 </div>
 
+<!-- Modal: G.R. — Alterar Status -->
+<div class="modal-overlay" id="modal-gr-status">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header" style="background:var(--navy)">
+      <div class="modal-title">🛡️ Alterar Status G.R.</div>
+      <button class="modal-close" onclick="closeModal('modal-gr-status')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="gr-modal-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <input type="hidden" id="gr-col-cpf">
+      <input type="hidden" id="gr-col-empid">
+      <div class="form-group">
+        <label>Novo Status *</label>
+        <select id="gr-novo-status" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px;width:100%">
+          <option value="LIBERADO">✅ LIBERADO</option>
+          <option value="ANÁLISE">⚠️ EM ANÁLISE</option>
+          <option value="BLOQUEADO">🚫 BLOQUEADO</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label>Motivo <span id="gr-motivo-obrigatorio" style="color:var(--danger);display:none">*</span></label>
+        <textarea id="gr-motivo" placeholder="Descreva o motivo..." style="min-height:80px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-gr-status')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveGRStatus()">Salvar Status</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo Aviso -->
+<div class="modal-overlay" id="modal-aviso">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">📢 Publicar Aviso</div>
+      <button class="modal-close" onclick="closeModal('modal-aviso')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="aviso-tipo" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px;width:100%">
+            <option value="info">ℹ️ Informação</option>
+            <option value="atencao">⚠️ Atenção</option>
+            <option value="urgente">🚨 Urgente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Direcionar para <span style="font-weight:400;color:var(--gray-400)">(vazio = todas)</span></label>
+          <div class="check-group" id="aviso-empresas-check" style="flex-wrap:wrap;"></div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label>Mensagem *</label>
+        <textarea id="aviso-texto" placeholder="Digite o aviso..." style="min-height:100px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-aviso')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveAviso()">Publicar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" style="position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px"></div>
 
 <script>
@@ -1567,7 +1710,9 @@ let STATE = {
   vagas: {},
   acompanhamento: {},
   notificacoes: {},
-  motoristas: {}
+  motoristas: {},
+  grStatus: {},
+  avisos: {}
 };
 let editEmpresaId = null;
 let editVagaId = null;
@@ -1581,6 +1726,8 @@ const ADMIN_LOGINS = [
   { login: 'portoex.controladoria', senha: 'ctrl@2024',   role: 'admin', label: '📊 Controladoria' },
   { login: 'portoex.logistica',     senha: 'log@2024',    role: 'admin', label: '🚚 Logística' },
 ];
+// Login G.R. (Gerenciamento de Risco)
+const GR_LOGIN = { login: 'gr.portoex', senha: 'gr@2024', role: 'gr', label: '🛡️ G.R. – Risco' };
 
 // ===================== OPERAÇÕES PADRÃO =====================
 // Mapa fixo: operação → função automática
@@ -1639,6 +1786,12 @@ function doLogin() {
     localStorage.removeItem('px_pass');
   }
 
+  // Verificar login G.R.
+  if (user === GR_LOGIN.login && pass === GR_LOGIN.senha) {
+    currentUser = { role: 'gr', login: user, label: GR_LOGIN.label };
+    initApp();
+    return;
+  }
   // Verificar logins admin
   const adminMatch = ADMIN_LOGINS.find(a => a.login === user && a.senha === pass);
   if (adminMatch) {
@@ -1690,12 +1843,15 @@ function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-layout').style.display = 'flex';
   document.getElementById('header-user').textContent =
-    currentUser.role === 'admin' ? (currentUser.label || '🔑 Administrador') : ('🏢 ' + currentUser.empresaNome);
+    currentUser.role === 'admin' ? (currentUser.label || '🔑 Administrador') :
+    currentUser.role === 'gr' ? currentUser.label :
+    ('🏢 ' + currentUser.empresaNome);
 
   buildNavTabs();
   listenFirebase();
-  initOperacoesPadrao();
-  setTimeout(() => switchPage(currentUser.role === 'admin' ? 'page-mural' : 'page-mural'), 100);
+  if (currentUser.role !== 'gr') initOperacoesPadrao();
+  const startPage = currentUser.role === 'gr' ? 'page-gr' : 'page-mural';
+  setTimeout(() => switchPage(startPage), 100);
 }
 
 function buildNavTabs() {
@@ -1711,6 +1867,12 @@ function buildNavTabs() {
         { id: 'page-empresas', label: 'Empresas' },
         { id: 'page-operacoes', label: 'Operações' },
         { id: 'page-motoristas', label: 'Motoristas' },
+        { id: 'page-gr', label: '🛡️ G.R.' },
+        { id: 'page-avisos', label: '📢 Avisos' },
+      ]
+    : currentUser.role === 'gr'
+    ? [
+        { id: 'page-gr', label: '🛡️ G.R. – Risco' },
       ]
     : [
         { id: 'page-mural', label: 'Mural de Vagas' },
@@ -1751,6 +1913,8 @@ function switchPage(pageId) {
   if (pageId === 'page-operacoes') renderOperacoes();
   if (pageId === 'page-vagas-admin') renderVagasAdmin();
   if (pageId === 'page-motoristas') renderMotoristas();
+  if (pageId === 'page-gr') renderGR();
+  if (pageId === 'page-avisos') renderAvisosAdmin();
   if (pageId === 'page-dashboard') { initDashboard(); }
   if (pageId === 'page-resumo-admin') {
     // Set default: current month
@@ -1825,6 +1989,16 @@ function listenFirebase() {
       renderSugestoesPendentes();
     });
   }
+  // Listeners GR e Avisos (sempre)
+  db.ref('grStatus').on('value', snap => {
+    STATE.grStatus = snap.val() || {};
+    if (document.getElementById('page-gr')?.classList.contains('active')) renderGR();
+  });
+  db.ref('avisos').on('value', snap => {
+    STATE.avisos = snap.val() || {};
+    renderAvisosBanner();
+    if (document.getElementById('page-avisos')?.classList.contains('active')) renderAvisosAdmin();
+  });
   const colPath = currentUser.role === 'empresa'
     ? 'colaboradores/' + currentUser.empresaId
     : 'colaboradores';
@@ -2017,6 +2191,13 @@ function checkColaborador() {
 function saveColaborador() {
   const cpf = v('col-cpf'), nome = v('col-nome'), opId = v('col-operacao');
   if (!cpf || !nome) { toast('CPF/RG e Nome são obrigatórios.', 'error'); return; }
+
+  // Verificar bloqueio G.R.
+  const motivoBloq = checkGRBloqueio(cpf);
+  if (motivoBloq) {
+    toast(`🚫 Colaborador BLOQUEADO pelo G.R. — ${motivoBloq}`, 'error');
+    return;
+  }
 
   const cols = STATE.colaboradores[currentUser.empresaId] || {};
   const existing = Object.entries(cols).find(([,c]) => c.cpf === cpf);
@@ -2493,6 +2674,15 @@ function indicarNaLinha(gIdx, vagaId, linhaIdx) {
   const col = (STATE.colaboradores[empId]||{})[colId];
   const vaga = STATE.vagas[vagaId];
   const linha = (vaga.linhas || [])[linhaIdx] || {};
+
+  // Verificar bloqueio G.R.
+  if (col && col.cpf) {
+    const motivoBloq = checkGRBloqueio(col.cpf);
+    if (motivoBloq) {
+      toast(`🚫 ${col.nome} está BLOQUEADO pelo G.R. — ${motivoBloq}`, 'error');
+      return;
+    }
+  }
 
   // Checar se já indicou este colaborador nesta linha
   const atribs = Object.values(linha.atribuicoes || {});
@@ -3762,12 +3952,8 @@ function gerarAcerto() {
   }).join('');
 }
 
-function exportarAcertoCSV() {
-  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
-  const inicio = v('acerto-inicio');
-  const fim = v('acerto-fim');
-  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total']];
-  acertoDados.forEach(([,a]) => {
+function _buildAcertoRows() {
+  return acertoDados.map(([,a]) => {
     const emp = STATE.empresas[a.empresaId] || {};
     const valores = (emp.valores || {})[a.funcao] || {};
     const valorDia = parseFloat(valores.valor) || 0;
@@ -3780,21 +3966,84 @@ function exportarAcertoCSV() {
     const adicional = parseInt(a.adicional) || 0;
     const valorAdicional = valorDia * (adicional / 100);
     valorTotal += valorAdicional;
-    const adicionalStr = adicional > 0 ? `+${adicional}%` : '—';
-    rows.push([a.empresaNome||'', a.data||'', a.colNome||'', a.colCPF||'', a.opNome||'', a.opCC||'', a.funcao||'',
-      a.chegada||'', a.refeicao||'', a.saida||'', minToHM(hTrabMin), minToHM(heMin), adicionalStr,
-      `R$ ${valorDia.toFixed(2).replace('.',',')}`,
-      `R$ ${(parseFloat(valores.he)||0).toFixed(2).replace('.',',')}`,
-      adicional > 0 ? `R$ ${valorAdicional.toFixed(2).replace('.',',')}` : '—',
-      `R$ ${valorTotal.toFixed(2).replace('.',',')}`]);
+    const motNome = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '';
+    return {
+      empresa: a.empresaNome||'', data: a.data||'', colaborador: a.colNome||'', cpf: a.colCPF||'',
+      operacao: a.opNome||'', cc: a.opCC||'', funcao: a.funcao||'',
+      md: a.md||'', motorista: motNome,
+      chegada: a.chegada||'', refeicao: a.refeicao||'', saida: a.saida||'',
+      hTrab: minToHM(hTrabMin), hExtra: minToHM(heMin),
+      adicionalStr: adicional > 0 ? `+${adicional}%` : '—',
+      valorDiaStr: `R$ ${valorDia.toFixed(2).replace('.',',')}`,
+      valorHEStr: `R$ ${(parseFloat(valores.he)||0).toFixed(2).replace('.',',')}`,
+      valorAdicStr: adicional > 0 ? `R$ ${valorAdicional.toFixed(2).replace('.',',')}` : '—',
+      total: `R$ ${valorTotal.toFixed(2).replace('.',',')}`,
+      totalNum: valorTotal,
+    };
   });
-  const csv = rows.map(r => r.map(c => `"${c}"`).join(';')).join('\n');
+}
+
+function exportarAcertoCSV() {
+  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
+  const inicio = v('acerto-inicio'), fim = v('acerto-fim');
+  const header = ['Empresa','Data','Colaborador','CPF','Operação','C. Custo','Função','MD','Motorista','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total'];
+  const data = _buildAcertoRows().map(r => [
+    r.empresa, r.data, r.colaborador, r.cpf, r.operacao, r.cc, r.funcao,
+    r.md, r.motorista, r.chegada, r.refeicao, r.saida,
+    r.hTrab, r.hExtra, r.adicionalStr, r.valorDiaStr, r.valorHEStr, r.valorAdicStr, r.total
+  ]);
+  const csv = [header, ...data].map(r => r.map(c => `"${c}"`).join(';')).join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a2 = document.createElement('a');
   a2.href = url; a2.download = `acerto-${inicio}-${fim}.csv`;
   a2.click();
 }
+
+function exportarAcertoTXT() {
+  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
+  const inicio = v('acerto-inicio'), fim = v('acerto-fim');
+  const rows = _buildAcertoRows();
+
+  const porEmp = {};
+  rows.forEach(r => { if (!porEmp[r.empresa]) porEmp[r.empresa] = []; porEmp[r.empresa].push(r); });
+
+  const sep  = '='.repeat(120);
+  const dash = '-'.repeat(120);
+  const pad  = (s, n) => String(s||'').padEnd(n).slice(0, n);
+  const padL = (s, n) => String(s||'').padStart(n).slice(-n);
+
+  let txt = 'PORTOEX — MODELO DE ACERTO\n';
+  txt += `Período: ${formatDate(inicio)} a ${formatDate(fim)}\n`;
+  txt += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
+
+  Object.entries(porEmp).forEach(([empNome, empRows]) => {
+    let totalEmp = 0;
+    txt += sep + '\n';
+    txt += `EMPRESA: ${empNome}\n`;
+    txt += sep + '\n';
+    txt += `${pad('DATA',10)} ${pad('COLABORADOR',28)} ${pad('CPF',14)} ${pad('OPERAÇÃO',12)} ${pad('FUNÇÃO',16)} ${pad('MD',8)} ${pad('MOTORISTA',18)} ${pad('ENTRADA',8)} ${pad('SAÍDA',8)} ${pad('H.TRAB',7)} ${padL('VALOR',12)}\n`;
+    txt += dash + '\n';
+    empRows.forEach(r => {
+      totalEmp += r.totalNum;
+      txt += `${pad(formatDate(r.data),10)} ${pad(r.colaborador,28)} ${pad(r.cpf,14)} ${pad(r.operacao,12)} ${pad(r.funcao,16)} ${pad(r.md,8)} ${pad(r.motorista,18)} ${pad(r.chegada,8)} ${pad(r.saida,8)} ${pad(r.hTrab,7)} ${padL(r.total,12)}\n`;
+    });
+    txt += dash + '\n';
+    txt += `${pad('TOTAL ' + empNome, 107)} ${padL('R$ ' + totalEmp.toFixed(2).replace('.',','), 12)}\n\n`;
+  });
+
+  const totalGeral = rows.reduce((s, r) => s + r.totalNum, 0);
+  txt += sep + '\n';
+  txt += `TOTAL GERAL: R$ ${totalGeral.toFixed(2).replace('.',',')}   |   ${rows.length} registros\n`;
+  txt += sep + '\n';
+
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a2 = document.createElement('a');
+  a2.href = url; a2.download = `acerto-${inicio}-${fim}.txt`;
+  a2.click();
+}
+
 
 function exportarAcertoPDF() {
   if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
@@ -3960,8 +4209,6 @@ function updateNotifBadge() {
       t.innerHTML = `Acompanhamento${total > 0 ? ` <span style="background:var(--danger);color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">${total}</span>` : ''}`;
     }
   });
-
-  // Atualizar botão de sugestões
   const btn = document.getElementById('btn-sugestoes-pendentes');
   const cnt = document.getElementById('sugestoes-count');
   if (btn && currentUser?.role === 'admin') {
@@ -3970,146 +4217,330 @@ function updateNotifBadge() {
   }
 }
 
-function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+// ─── UTILITÁRIOS ─────────────────────────────────────────────────────────────
+function v(id)       { const el = document.getElementById(id); return el ? el.value : ''; }
 function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
-function n(id) { return parseFloat(v(id)) || 0; }
+function n(id)       { return document.getElementById(id); }
 function formatDate(d) {
-  if (!d) return '—';
-  const [y,m,day] = d.split('-');
-  return `${day}/${m}/${y}`;
+  if (!d) return '';
+  const [y, m, dia] = d.split('-');
+  return `${dia}/${m}/${y}`;
 }
-function toast(msg, type = 'success') {
-  const el = document.getElementById('toast');
+function toast(msg, type) {
+  type = type || 'success';
+  const container = document.getElementById('toast');
   const t = document.createElement('div');
-  t.className = 'toast-msg ' + type;
-  t.textContent = (type === 'success' ? '✓ ' : '✕ ') + msg;
-  el.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
+  const bg = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
+  t.style.cssText = `padding:11px 18px;border-radius:10px;font-family:Sora,sans-serif;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.18);color:#fff;background:${bg};transition:opacity .4s;min-width:200px`;
+  t.textContent = msg;
+  if (container) container.appendChild(t);
+  else document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
 }
 
-// ══════════════════════════════════════════════════════════
-// DASHBOARD
-// ══════════════════════════════════════════════════════════
-let _dcharts = {};
-function _ddestroyAll() {
-  Object.values(_dcharts).forEach(c => { try { c.destroy(); } catch(e){} });
-  _dcharts = {};
-}
-
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+let _dashCharts = {};
 function initDashboard() {
-  const hoje = new Date();
-  const y = hoje.getFullYear(), m = String(hoje.getMonth()+1).padStart(2,'0');
-  const primDia = `${y}-${m}-01`;
-  const ult = new Date(y, hoje.getMonth()+1, 0);
-  const ultimoStr = `${ult.getFullYear()}-${String(ult.getMonth()+1).padStart(2,'0')}-${String(ult.getDate()).padStart(2,'0')}`;
-  const el_i = document.getElementById('dash-inicio');
-  const el_f = document.getElementById('dash-fim');
-  if (el_i && !el_i.value) el_i.value = primDia;
-  if (el_f && !el_f.value) el_f.value = ultimoStr;
-  // populate empresa select
+  if (!document.getElementById('dash-inicio')) return;
+  if (!document.getElementById('dash-inicio').value) {
+    const hoje = new Date();
+    const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0,10);
+    document.getElementById('dash-inicio').value = ini;
+    document.getElementById('dash-fim').value    = hoje.toISOString().slice(0,10);
+  }
   const sel = document.getElementById('dash-emp');
   if (sel && sel.options.length <= 1) {
-    Object.entries(STATE.empresas||{}).filter(([,e])=>e.status==='ativa').sort(([,a],[,b])=>(a.nome||'').localeCompare(b.nome||'')).forEach(([id,emp])=>{
-      const o = document.createElement('option'); o.value=id; o.textContent=emp.nome||id; sel.appendChild(o);
+    Object.entries(STATE.empresas).forEach(([id, e]) => {
+      if ([...sel.options].some(o => o.value === id)) return;
+      const o = document.createElement('option'); o.value = id; o.textContent = e.nome; sel.appendChild(o);
     });
   }
   renderDashboard();
 }
 
 function renderDashboard() {
-  const kpisEl = document.getElementById('dash-kpis');
-  if (!kpisEl) return;
+  const inicio = v('dash-inicio'), fim = v('dash-fim'), empFiltro = v('dash-emp');
+  if (!inicio || !fim) return;
 
-  const inicio    = document.getElementById('dash-inicio')?.value || '';
-  const fim       = document.getElementById('dash-fim')?.value    || '';
-  const empFiltro = document.getElementById('dash-emp')?.value    || '';
-
-  let items = Object.entries(STATE.acompanhamento || {});
-  if (inicio) items = items.filter(([,a]) => a.data >= inicio);
-  if (fim)    items = items.filter(([,a]) => a.data <= fim);
-  if (empFiltro) {
-    const nf = (STATE.empresas[empFiltro]||{}).nome||'';
-    items = items.filter(([,a]) => a.empresaId===empFiltro || (!a.empresaId && nf && (a.empresaNome||'').trim().toUpperCase()===nf.trim().toUpperCase()));
-  }
-
-  if (!items.length) {
-    kpisEl.innerHTML = '<div style="grid-column:1/-1;color:var(--gray-400);padding:24px;text-align:center">Nenhum dado encontrado para o período selecionado.</div>';
-    _ddestroyAll(); return;
-  }
-
-  // KPIs
-  let totalHMin=0, totalHE=0, totalValor=0;
-  items.forEach(([,a])=>{
-    if (a.chegada && a.saida) {
-      const t = timeToMin(a.saida)-timeToMin(a.chegada)-timeToMin(a.refeicao||'01:00');
-      totalHMin += Math.max(0,t);
-      totalHE   += Math.max(0,t-480);
-    }
-    const {valorNum} = calcHoras(a);
-    totalValor += valorNum||0;
+  const rows = Object.entries(STATE.acompanhamento || {}).filter(([,a]) => {
+    if (!a.data) return false;
+    if (a.data < inicio || a.data > fim) return false;
+    if (empFiltro && a.empresaId !== empFiltro) return false;
+    return true;
   });
-  const datas   = [...new Set(items.map(([,a])=>a.data).filter(Boolean))];
-  const pessoas = new Set(items.map(([,a])=>a.colCPF||a.colNome).filter(Boolean)).size;
 
-  kpisEl.innerHTML = [
-    {icon:'👥', val:pessoas,                                        label:'Colaboradores únicos'},
-    {icon:'📋', val:items.length,                                   label:'Total registros'},
-    {icon:'📅', val:datas.length,                                   label:'Dias trabalhados'},
-    {icon:'⏱️', val:minToHM(totalHMin),                            label:'Horas trabalhadas'},
-    {icon:'⚡', val:minToHM(totalHE),                              label:'Horas extras'},
-    {icon:'💰', val:'R$ '+totalValor.toFixed(2).replace('.',','),  label:'Custo total'},
-  ].map(k=>`<div style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px 16px;text-align:center">
-    <div style="font-size:22px;margin-bottom:4px">${k.icon}</div>
-    <div style="font-size:18px;font-weight:700;color:var(--navy)">${k.val}</div>
-    <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:3px">${k.label}</div>
+  let totalCusto = 0, totalHEhrs = 0;
+  const totalColabs = new Set();
+  const custoEmp = {}, qtFunc = {}, custoData = {}, horasEmp = {}, custoOp = {}, custoMes = {};
+
+  rows.forEach(([,a]) => {
+    const emp = STATE.empresas[a.empresaId] || {};
+    const valores = (emp.valores || {})[a.funcao] || {};
+    const valorDia = parseFloat(valores.valor) || 0;
+    let hTrabMin = 0, heMin = 0, valorTotal = valorDia;
+    if (a.chegada && a.saida) {
+      hTrabMin = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao || '01:00');
+      heMin = Math.max(0, hTrabMin - 8 * 60);
+      if (heMin > 0) { valorTotal += (heMin / 60) * (parseFloat(valores.he) || 0); totalHEhrs += heMin / 60; }
+    }
+    const adic = parseInt(a.adicional) || 0;
+    if (adic > 0) valorTotal += valorDia * (adic / 100);
+    totalCusto += valorTotal;
+    totalColabs.add(a.colNome || a.colId);
+    const empN = a.empresaNome || emp.nome || 'Desconhecida';
+    custoEmp[empN]  = (custoEmp[empN]  || 0) + valorTotal;
+    qtFunc[a.funcao || '—'] = (qtFunc[a.funcao || '—'] || 0) + 1;
+    custoData[a.data] = (custoData[a.data] || 0) + valorTotal;
+    horasEmp[empN]  = (horasEmp[empN]  || 0) + hTrabMin / 60;
+    const opN = a.opNome || (a.opCC ? a.opCC : '—');
+    custoOp[opN]    = (custoOp[opN]    || 0) + valorTotal;
+    const mes = a.data ? a.data.slice(0, 7) : '?';
+    custoMes[mes]   = (custoMes[mes]   || 0) + valorTotal;
+  });
+
+  const kpiEl = document.getElementById('dash-kpis');
+  if (kpiEl) kpiEl.innerHTML = [
+    { icon: '💰', label: 'Custo Total',    val: `R$ ${totalCusto.toFixed(2).replace('.', ',')}`,  cor: 'var(--navy)' },
+    { icon: '👷', label: 'Colaboradores',  val: totalColabs.size,                                 cor: 'var(--info,#3b82f6)' },
+    { icon: '📋', label: 'Registros',      val: rows.length,                                      cor: 'var(--yellow-dark)' },
+    { icon: '⏱',  label: 'H.Extra Total',  val: `${totalHEhrs.toFixed(1).replace('.', ',')}h`,    cor: 'var(--danger,#ef4444)' },
+  ].map(k => `<div class="card" style="text-align:center;padding:16px 12px">
+    <div style="font-size:22px">${k.icon}</div>
+    <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:4px 0">${k.label}</div>
+    <div style="font-size:18px;font-weight:700;color:${k.cor}">${k.val}</div>
   </div>`).join('');
 
-  // Agrupamentos
-  const porEmp={}, porFunc={}, porData={}, porOp={}, porMes={};
-  items.forEach(([,a])=>{
-    const {valorNum} = calcHoras(a);
-    const v2 = valorNum||0;
-    let hMin=0;
-    if(a.chegada&&a.saida) hMin=Math.max(0,timeToMin(a.saida)-timeToMin(a.chegada)-timeToMin(a.refeicao||'01:00'));
-    // por empresa
-    const ek=a.empresaNome||'—'; if(!porEmp[ek]) porEmp[ek]={v:0,h:0,n:0}; porEmp[ek].v+=v2; porEmp[ek].h+=hMin; porEmp[ek].n++;
-    // por função
-    const fk=a.funcao||'(sem função)'; if(!porFunc[fk]) porFunc[fk]={n:0,v:0}; porFunc[fk].n++; porFunc[fk].v+=v2;
-    // por data
-    if(a.data){ if(!porData[a.data]) porData[a.data]=0; porData[a.data]++; }
-    // por operação
-    const ok=(a.opNome||'—')+(a.opCC?` (${a.opCC})`:''); if(!porOp[ok]) porOp[ok]={v:0,n:0}; porOp[ok].v+=v2; porOp[ok].n++;
-    // por mês
-    if(a.data){ const mk2=a.data.slice(0,7); if(!porMes[mk2]) porMes[mk2]={v:0,n:0}; porMes[mk2].v+=v2; porMes[mk2].n++; }
-  });
+  function drawCharts() {
+    const COLORS = ['#0D1B3E','#1E3060','#F5C518','#ef4444','#3b82f6','#22c55e','#f97316','#a855f7','#14b8a6','#ec4899'];
+    function mk(id, cfg) {
+      const c = document.getElementById(id); if (!c) return;
+      if (_dashCharts[id]) { _dashCharts[id].destroy(); }
+      _dashCharts[id] = new Chart(c, cfg);
+    }
+    const baseOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
 
-  const empKeys  = Object.keys(porEmp).sort((a,b)=>porEmp[b].v-porEmp[a].v);
-  const funcKeys = Object.keys(porFunc).sort((a,b)=>porFunc[b].n-porFunc[a].n);
-  const dataKeys = Object.keys(porData).sort();
-  const opKeys   = Object.keys(porOp).sort((a,b)=>porOp[b].v-porOp[a].v).slice(0,10);
-  const mesKeys  = Object.keys(porMes).sort();
-  const mesLabels= mesKeys.map(k=>{ const [y,m]=k.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+m-1]+'/'+y.slice(2); });
-  const PAL=['#0D1B3E','#1565C0','#1A7F4B','#B45309','#C0392B','#6B21A8','#0369A1','#15803D','#D97706','#7C3AED'];
+    const eL = Object.keys(custoEmp).slice(0, 10);
+    mk('dash-ch-emp', { type: 'bar', data: { labels: eL, datasets: [{ data: eL.map(k => +custoEmp[k].toFixed(2)), backgroundColor: COLORS }] }, options: { ...baseOpts, scales: { y: { ticks: { callback: v => 'R$' + v } } } } });
 
-  _ddestroyAll();
-  function loadChart(cb){ if(window.Chart){cb();return;} const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'; s.onload=cb; document.head.appendChild(s); }
-  function mk(id,type,labels,datasets,extra={}){
-    const ctx=document.getElementById(id); if(!ctx) return;
-    _dcharts[id]=new Chart(ctx,{type,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:datasets.length>1,position:'top',labels:{font:{size:10}}}},
-      scales:type==='bar'||type==='line'?{x:{ticks:{font:{size:10},maxRotation:40}},y:{ticks:{font:{size:10}},beginAtZero:true}}:{}, ...extra}});
+    const fL = Object.keys(qtFunc).slice(0, 10);
+    mk('dash-ch-func', { type: 'doughnut', data: { labels: fL, datasets: [{ data: fL.map(k => qtFunc[k]), backgroundColor: COLORS }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } });
+
+    const dL = Object.keys(custoData).sort().slice(-30);
+    mk('dash-ch-data', { type: 'line', data: { labels: dL.map(d => formatDate(d)), datasets: [{ data: dL.map(k => +custoData[k].toFixed(2)), borderColor: '#F5C518', backgroundColor: 'rgba(245,197,24,.15)', fill: true, tension: .3, pointRadius: 2 }] }, options: { ...baseOpts, scales: { y: { ticks: { callback: v => 'R$' + v } } } } });
+
+    const hL = Object.keys(horasEmp).slice(0, 10);
+    mk('dash-ch-horas', { type: 'bar', data: { labels: hL, datasets: [{ data: hL.map(k => +horasEmp[k].toFixed(1)), backgroundColor: '#1E3060' }] }, options: { ...baseOpts, scales: { y: { ticks: { callback: v => v + 'h' } } } } });
+
+    const oL = Object.keys(custoOp).slice(0, 10);
+    mk('dash-ch-op', { type: 'bar', data: { labels: oL, datasets: [{ data: oL.map(k => +custoOp[k].toFixed(2)), backgroundColor: COLORS }] }, options: { ...baseOpts, scales: { y: { ticks: { callback: v => 'R$' + v } } } } });
+
+    const mL = Object.keys(custoMes).sort();
+    mk('dash-ch-evolucao', { type: 'line', data: { labels: mL, datasets: [{ data: mL.map(k => +custoMes[k].toFixed(2)), borderColor: '#0D1B3E', backgroundColor: 'rgba(13,27,62,.1)', fill: true, tension: .3, pointRadius: 4, pointBackgroundColor: '#F5C518' }] }, options: { ...baseOpts, scales: { y: { ticks: { callback: v => 'R$' + v } } } } });
   }
 
-  loadChart(()=>{
-    mk('dash-ch-emp','bar',empKeys,[{label:'R$',data:empKeys.map(k=>+porEmp[k].v.toFixed(2)),backgroundColor:PAL.map(c=>c+'bb')}],{plugins:{legend:{display:false}}});
-    mk('dash-ch-func','bar',funcKeys,[{label:'Qtd',data:funcKeys.map(k=>porFunc[k].n),backgroundColor:funcKeys.map((_,i)=>PAL[i%PAL.length]+'bb')}],{indexAxis:'y',plugins:{legend:{display:false}}});
-    mk('dash-ch-data','line',dataKeys.map(d=>d.slice(5)),[{label:'Registros',data:dataKeys.map(k=>porData[k]),borderColor:'#0D1B3E',backgroundColor:'#0D1B3E22',fill:true,tension:.3}]);
-    mk('dash-ch-horas','bar',empKeys,[{label:'Horas',data:empKeys.map(k=>+(porEmp[k].h/60).toFixed(2)),backgroundColor:'#F5C518cc'}],{plugins:{legend:{display:false}}});
-    mk('dash-ch-op','bar',opKeys,[{label:'R$',data:opKeys.map(k=>+porOp[k].v.toFixed(2)),backgroundColor:'#1565C0cc'}],{indexAxis:'y',plugins:{legend:{display:false}}});
-    mk('dash-ch-evolucao','line',mesLabels,[{label:'Custo R$',data:mesKeys.map(k=>+porMes[k].v.toFixed(2)),borderColor:'#1A7F4B',backgroundColor:'#1A7F4B22',fill:true,tension:.3}]);
-  });
+  if (typeof Chart !== 'undefined') {
+    drawCharts();
+  } else {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    s.onload = drawCharts;
+    document.head.appendChild(s);
+  }
 }
 
+// ─── G.R. – GERENCIAMENTO DE RISCO ───────────────────────────────────────────
+function getGRStatus(cpf) {
+  if (!cpf) return null;
+  const clean = cpf.replace(/\D/g, '');
+  const byKey = STATE.grStatus[clean];
+  if (byKey) return byKey;
+  return Object.values(STATE.grStatus || {}).find(g => (g.cpf || '').replace(/\D/g, '') === clean) || null;
+}
+
+function checkGRBloqueio(cpf) {
+  const gr = getGRStatus(cpf);
+  if (gr && gr.status === 'BLOQUEADO') return gr.motivo || 'Bloqueado pelo G.R.';
+  return null;
+}
+
+function renderGR() {
+  const busca = (document.getElementById('gr-busca')?.value || '').toLowerCase().trim();
+  const filtroStatus = document.getElementById('gr-filtro-status')?.value || '';
+  const cols = Object.entries(STATE.colaboradores || {});
+
+  let liberados = 0, analise = 0, bloqueados = 0;
+  cols.forEach(([, c]) => {
+    const st = (getGRStatus(c.cpf) || {}).status || 'LIBERADO';
+    if (st === 'LIBERADO') liberados++;
+    else if (st === 'ANÁLISE') analise++;
+    else bloqueados++;
+  });
+
+  const kpiEl = document.getElementById('gr-kpis');
+  if (kpiEl) kpiEl.innerHTML = [
+    { label: '✅ Liberados',  val: liberados,  cor: '#22c55e' },
+    { label: '⚠️ Em Análise', val: analise,    cor: '#f59e0b' },
+    { label: '🚫 Bloqueados', val: bloqueados, cor: '#ef4444' },
+  ].map(k => `<div class="card" style="text-align:center;padding:14px">
+    <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px">${k.label}</div>
+    <div style="font-size:28px;font-weight:700;color:${k.cor}">${k.val}</div>
+  </div>`).join('');
+
+  const tbody = document.getElementById('gr-tbody');
+  if (!tbody) return;
+
+  const visible = cols.filter(([, c]) => {
+    if (busca && !(c.nome || '').toLowerCase().includes(busca) && !(c.cpf || '').includes(busca)) return false;
+    if (filtroStatus) {
+      const st = (getGRStatus(c.cpf) || {}).status || 'LIBERADO';
+      if (st !== filtroStatus) return false;
+    }
+    return true;
+  });
+
+  if (!visible.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador encontrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = visible.map(([cid, c]) => {
+    const gr = getGRStatus(c.cpf);
+    const st = gr ? gr.status : 'LIBERADO';
+    const stCor  = st === 'BLOQUEADO' ? '#ef4444' : st === 'ANÁLISE' ? '#f59e0b' : '#22c55e';
+    const stIcon = st === 'BLOQUEADO' ? '🚫' : st === 'ANÁLISE' ? '⚠️' : '✅';
+    const emp = STATE.empresas[c.empresaId];
+    const cpfEsc = (c.cpf || '').replace(/'/g, "\\'");
+    const nomeEsc = (c.nome || '').replace(/'/g, "\\'");
+    return `<tr>
+      <td style="font-family:JetBrains Mono,monospace;font-size:12px">${c.cpf || c.rg || '—'}</td>
+      <td><strong>${c.nome || '—'}</strong></td>
+      <td>${emp ? emp.nome : '—'}</td>
+      <td><span style="background:${stCor};color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">${stIcon} ${st}</span></td>
+      <td style="font-size:12px;color:var(--gray-500)">${gr ? (gr.motivo || '—') : '—'}</td>
+      <td style="font-size:12px;color:var(--gray-400)">${gr && gr.atualizadoEm ? new Date(gr.atualizadoEm).toLocaleString('pt-BR') : '—'}</td>
+      <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="openGRStatus('${cid}','${cpfEsc}','${nomeEsc}')">✏️ Editar</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openGRStatus(colId, cpf, nome) {
+  document.getElementById('gr-col-cpf').value  = cpf;
+  document.getElementById('gr-col-empid').value = colId;
+  const infoEl = document.getElementById('gr-modal-info');
+  if (infoEl) infoEl.innerHTML = `<strong>Colaborador:</strong> ${nome}<br><strong>CPF:</strong> ${cpf}`;
+  const gr = getGRStatus(cpf);
+  document.getElementById('gr-novo-status').value = gr ? gr.status : 'LIBERADO';
+  document.getElementById('gr-motivo').value      = gr ? (gr.motivo || '') : '';
+  openModal('modal-gr-status');
+}
+
+function saveGRStatus() {
+  const cpf    = document.getElementById('gr-col-cpf').value;
+  const colId  = document.getElementById('gr-col-empid').value;
+  const status = document.getElementById('gr-novo-status').value;
+  const motivo = document.getElementById('gr-motivo').value.trim();
+  if (!status) { toast('Selecione um status.', 'error'); return; }
+  if (status !== 'LIBERADO' && !motivo) { toast('Informe o motivo.', 'error'); return; }
+  const key = (cpf || colId).replace(/\D/g, '') || colId;
+  db.ref('grStatus/' + key).set({ colId, cpf, status, motivo, atualizadoEm: Date.now() })
+    .then(() => { toast('Status G.R. atualizado!'); closeModal('modal-gr-status'); renderGR(); })
+    .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+
+// ─── AVISOS ──────────────────────────────────────────────────────────────────
+function renderAvisosBanner() {
+  const banner  = document.getElementById('aviso-banner');
+  const textoEl = document.getElementById('aviso-banner-texto');
+  if (!banner) return;
+  if (currentUser?.role !== 'empresa') { banner.style.display = 'none'; return; }
+  const ativos = Object.entries(STATE.avisos || {}).filter(([, a]) => {
+    if (!a.ativo) return false;
+    if (a.empresas && Object.keys(a.empresas).length > 0) {
+      return a.empresas[currentUser.empresaId];
+    }
+    return true;
+  });
+  if (!ativos.length) { banner.style.display = 'none'; return; }
+  const [, aviso] = ativos[ativos.length - 1];
+  banner.style.display = 'flex';
+  banner.className = '';
+  const tipo = aviso.tipo || 'atencao';
+  banner.classList.add('tipo-' + tipo);
+  if (textoEl) textoEl.textContent = aviso.texto || '';
+}
+
+function fecharAvisoBanner() {
+  const b = document.getElementById('aviso-banner');
+  if (b) b.style.display = 'none';
+}
+
+function renderAvisosAdmin() {
+  const container = document.getElementById('avisos-container');
+  if (!container) return;
+  // populate empresa checkboxes in modal
+  const chk = document.getElementById('aviso-empresas-check');
+  if (chk && chk.children.length === 0) {
+    Object.entries(STATE.empresas).forEach(([id, e]) => {
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer';
+      lbl.innerHTML = `<input type="checkbox" value="${id}" style="accent-color:var(--navy)"> ${e.nome}`;
+      chk.appendChild(lbl);
+    });
+  }
+  const avisos = Object.entries(STATE.avisos || {}).sort((a, b) => (b[1].criadoEm || 0) - (a[1].criadoEm || 0));
+  if (!avisos.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📢</div><div class="empty-text">Nenhum aviso publicado.</div></div>';
+    return;
+  }
+  const tipoLabel = { info: 'ℹ️ Informação', atencao: '⚠️ Atenção', urgente: '🚨 Urgente' };
+  const tipoCor   = { info: 'var(--info,#3b82f6)', atencao: 'var(--warning,#f59e0b)', urgente: 'var(--danger,#ef4444)' };
+  container.innerHTML = avisos.map(([id, a]) => {
+    const cor = tipoCor[a.tipo] || tipoCor.atencao;
+    return `<div class="card" style="border-left:5px solid ${cor};margin-bottom:12px;display:flex;align-items:center;gap:12px">
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px">${a.texto || ''}</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:4px">
+          ${tipoLabel[a.tipo] || a.tipo || ''}
+          &nbsp;|&nbsp; Criado em ${a.criadoEm ? new Date(a.criadoEm).toLocaleString('pt-BR') : '—'}
+          &nbsp;|&nbsp; <span style="font-weight:600;color:${a.ativo ? '#22c55e' : '#9ca3af'}">${a.ativo ? '✅ Ativo' : '⏸ Inativo'}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="toggleAviso('${id}',${!a.ativo})">${a.ativo ? '⏸ Pausar' : '▶ Ativar'}</button>
+        <button class="btn btn-danger"  style="font-size:11px;padding:4px 10px" onclick="deleteAviso('${id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveAviso() {
+  const texto = (document.getElementById('aviso-texto')?.value || '').trim();
+  const tipo  = document.getElementById('aviso-tipo')?.value || 'atencao';
+  if (!texto) { toast('Digite o texto do aviso.', 'error'); return; }
+  const empresasSel = {};
+  document.querySelectorAll('#aviso-empresas-check input:checked').forEach(cb => { empresasSel[cb.value] = true; });
+  db.ref('avisos').push({ texto, tipo, ativo: true, empresas: empresasSel, criadoEm: Date.now() })
+    .then(() => {
+      toast('Aviso publicado!');
+      closeModal('modal-aviso');
+      document.getElementById('aviso-texto').value = '';
+      document.querySelectorAll('#aviso-empresas-check input').forEach(cb => cb.checked = false);
+    })
+    .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+
+function toggleAviso(id, ativo) {
+  db.ref('avisos/' + id).update({ ativo })
+    .then(() => toast(ativo ? 'Aviso ativado.' : 'Aviso pausado.'))
+    .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+
+function deleteAviso(id) {
+  if (!confirm('Excluir este aviso permanentemente?')) return;
+  db.ref('avisos/' + id).remove()
+    .then(() => toast('Aviso excluído.'))
+    .catch(e => toast('Erro: ' + e.message, 'error'));
+}
 </script>
 </body>
 </html>
