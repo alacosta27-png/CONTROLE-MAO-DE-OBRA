@@ -88,45 +88,64 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* DATE FILTER TABS */
-.date-tabs {
+/* STATS BAR (substitui date-tabs) */
+.stats-bar {
   background: #1a1a1a;
-  padding: 10px 32px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  overflow-x: auto;
-  flex-shrink: 0;
   border-bottom: 1px solid #333;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  height: 56px;
 }
-.date-tab {
-  background: #2a2a2a;
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 28px 0 0;
+  margin-right: 28px;
+  border-right: 1px solid #333;
+}
+.stat-item:last-of-type {
+  border-right: none;
+}
+.stat-label {
+  font-size: 11px;
+  font-weight: 700;
   color: var(--gray-400);
-  padding: 6px 18px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  cursor: pointer;
-  border: 1px solid #333;
-  transition: all 0.15s;
-  white-space: nowrap;
+  letter-spacing: 2px;
   text-transform: uppercase;
 }
-.date-tab:hover { color: var(--white); border-color: #555; }
-.date-tab.active {
-  background: var(--navy);
-  color: var(--yellow);
-  border-color: var(--yellow);
+.stat-val {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--white);
+  line-height: 1;
 }
-.date-label {
+.stat-val.yellow { color: var(--yellow); }
+.stat-val.green  { color: #2ecc71; }
+.stat-val.blue   { color: #60a5fa; }
+.stat-val.purple { color: #a78bfa; }
+.tv-live {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--gray-400);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  margin-right: 4px;
 }
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2ecc71;
+  animation: blink 1.5s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
 /* CONTENT */
 .tv-content {
@@ -255,11 +274,11 @@ body {
   text-transform: uppercase;
   white-space: nowrap;
 }
-.s-escolha { background: rgba(180,83,9,0.2); color: #f59e0b; border: 1px solid #f59e0b40; }
-.s-validada { background: rgba(21,101,192,0.2); color: #60a5fa; border: 1px solid #60a5fa40; }
-.s-presente { background: rgba(26,127,75,0.2); color: #4ade80; border: 1px solid #4ade8040; }
-.s-ausente { background: rgba(192,57,43,0.2); color: #f87171; border: 1px solid #f8717140; }
-.s-encerrado { background: rgba(100,100,100,0.2); color: #9ca3af; border: 1px solid #9ca3af40; }
+.s-escolha  { background: rgba(180,83,9,0.2);    color: #f59e0b; border: 1px solid #f59e0b40; }
+.s-validada { background: rgba(21,101,192,0.2);   color: #60a5fa; border: 1px solid #60a5fa40; }
+.s-presente { background: rgba(26,127,75,0.2);    color: #4ade80; border: 1px solid #4ade8040; }
+.s-ausente  { background: rgba(192,57,43,0.2);    color: #f87171; border: 1px solid #f8717140; }
+.s-encerrado{ background: rgba(100,100,100,0.2);  color: #9ca3af; border: 1px solid #9ca3af40; }
 
 /* MOTORISTA */
 .td-motorista {
@@ -303,55 +322,6 @@ body {
   text-transform: uppercase;
 }
 
-/* TOTAIS */
-.tv-footer {
-  background: #1a1a1a;
-  border-top: 1px solid #333;
-  padding: 12px 32px;
-  display: flex;
-  gap: 32px;
-  align-items: center;
-  flex-shrink: 0;
-}
-.tv-total-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.tv-total-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gray-400);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-.tv-total-val {
-  font-size: 24px;
-  font-weight: 900;
-  color: var(--white);
-}
-.tv-total-val.yellow { color: var(--yellow); }
-.tv-total-val.green { color: #2ecc71; }
-.tv-live {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gray-400);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-.live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #2ecc71;
-  animation: blink 1.5s infinite;
-}
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: #111; }
@@ -374,37 +344,33 @@ body {
   </div>
 </header>
 
-<div class="date-tabs" id="date-tabs">
-  <span class="date-label">Data:</span>
-  <div class="date-tab active" data-date="" onclick="selectDate('')">Hoje</div>
-</div>
-
-<div class="tv-content" id="tv-content">
-  <div class="tv-empty">Carregando dados...</div>
-</div>
-
-<footer class="tv-footer" id="tv-footer">
-  <div class="tv-total-item">
-    <span class="tv-total-label">Total</span>
-    <span class="tv-total-val yellow" id="tot-total">0</span>
+<!-- BARRA DE TOTAIS (substitui seleção de datas) -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-label">Total</span>
+    <span class="stat-val yellow" id="tot-total">0</span>
   </div>
-  <div class="tv-total-item">
-    <span class="tv-total-label">Presentes</span>
-    <span class="tv-total-val green" id="tot-presentes">0</span>
+  <div class="stat-item">
+    <span class="stat-label">Presentes</span>
+    <span class="stat-val green" id="tot-presentes">0</span>
   </div>
-  <div class="tv-total-item">
-    <span class="tv-total-label">Rota</span>
-    <span class="tv-total-val" id="tot-rota">0</span>
+  <div class="stat-item">
+    <span class="stat-label">Rota</span>
+    <span class="stat-val blue" id="tot-rota">0</span>
   </div>
-  <div class="tv-total-item">
-    <span class="tv-total-label">Expedição</span>
-    <span class="tv-total-val" id="tot-expedicao">0</span>
+  <div class="stat-item">
+    <span class="stat-label">Expedição</span>
+    <span class="stat-val purple" id="tot-expedicao">0</span>
   </div>
   <div class="tv-live">
     <div class="live-dot"></div>
     Ao vivo
   </div>
-</footer>
+</div>
+
+<div class="tv-content" id="tv-content">
+  <div class="tv-empty">Carregando dados...</div>
+</div>
 
 <script>
 const firebaseConfig = {
@@ -420,7 +386,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let STATE = { acompanhamento: {}, motoristas: {} };
-let selectedDate = '';
 let mdSaveTimeout = {};
 
 // ===== RELÓGIO =====
@@ -441,7 +406,6 @@ updateClock();
 // ===== FIREBASE =====
 db.ref('acompanhamento').on('value', snap => {
   STATE.acompanhamento = snap.val() || {};
-  buildDateTabs();
   render();
 });
 db.ref('motoristas').on('value', snap => {
@@ -449,70 +413,51 @@ db.ref('motoristas').on('value', snap => {
   render();
 });
 
-// ===== DATE TABS =====
-function buildDateTabs() {
-  const datas = [...new Set(Object.values(STATE.acompanhamento).map(a => a.data).filter(Boolean))].sort();
-  const hoje = new Date().toISOString().split('T')[0];
-  const container = document.getElementById('date-tabs');
-  container.innerHTML = '<span class="date-label">Data:</span>';
-
-  // Tab "Hoje" / data atual
-  if (!selectedDate || selectedDate === hoje) selectedDate = hoje;
-
-  // Todas as datas disponíveis
-  if (!datas.length) {
-    const tab = document.createElement('div');
-    tab.className = 'date-tab active';
-    tab.textContent = 'Hoje';
-    container.appendChild(tab);
-    return;
-  }
-
-  datas.forEach(d => {
-    const tab = document.createElement('div');
-    tab.className = 'date-tab' + (d === selectedDate ? ' active' : '');
-    tab.dataset.date = d;
-    tab.textContent = formatDate(d);
-    tab.onclick = () => selectDate(d);
-    container.appendChild(tab);
-  });
-}
-
-function selectDate(d) {
-  selectedDate = d;
-  document.querySelectorAll('.date-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.date === d || (!d && t.dataset.date === undefined));
-  });
-  render();
-}
-
 // ===== RENDER =====
 function render() {
   const content = document.getElementById('tv-content');
-  let items = Object.entries(STATE.acompanhamento);
+  const hoje = new Date().toISOString().split('T')[0];
 
-  // Filtrar data
-  if (selectedDate) {
-    items = items.filter(([,a]) => a.data === selectedDate);
-  }
+  // Filtra somente o dia atual
+  let items = Object.entries(STATE.acompanhamento).filter(([,a]) => a.data === hoje);
 
   if (!items.length) {
-    content.innerHTML = '<div class="tv-empty">Nenhum colaborador cadastrado para esta data.</div>';
+    content.innerHTML = '<div class="tv-empty">Nenhum colaborador cadastrado para hoje.</div>';
     updateTotais([], []);
     return;
   }
 
   // Separar por CC
   const rota = items.filter(([,a]) => (a.opCC||'').toUpperCase() === 'ROTA');
-  const expedicao = items.filter(([,a]) => (a.opCC||'').toUpperCase() === 'EXPEDIÇÃO' || (a.opCC||'').toUpperCase() === 'EXPEDICAO');
+  const expedicao = items.filter(([,a]) => {
+    const cc = (a.opCC||'').toUpperCase();
+    return cc === 'EXPEDIÇÃO' || cc === 'EXPEDICAO';
+  });
+  const outros = items.filter(([,a]) => {
+    const cc = (a.opCC||'').toUpperCase();
+    return cc !== 'ROTA' && cc !== 'EXPEDIÇÃO' && cc !== 'EXPEDICAO';
+  });
 
   let html = '';
-  if (rota.length) html += buildSection('ROTA', rota, 'rota');
+  if (rota.length)      html += buildSection('ROTA', rota, 'rota');
   if (expedicao.length) html += buildSection('EXPEDIÇÃO', expedicao, 'expedicao');
+  // Outros CC agrupados por opCC
+  if (outros.length) {
+    const grupos = {};
+    outros.forEach(e => {
+      const k = e[1].opCC || e[1].opNome || 'Outros';
+      if (!grupos[k]) grupos[k] = [];
+      grupos[k].push(e);
+    });
+    Object.entries(grupos).forEach(([cc, rows]) => {
+      html += buildSection(cc, rows, 'expedicao');
+    });
+  }
+
   if (!html) content.innerHTML = '<div class="tv-empty">Nenhum colaborador para exibir.</div>';
   else content.innerHTML = html;
 
-  updateTotais(rota, expedicao);
+  updateTotais(rota, expedicao, outros);
   attachMdEvents();
 }
 
@@ -528,7 +473,7 @@ function buildSection(titulo, items, tipo) {
   return `<div class="cc-section">
     <div class="cc-header cc-${tipo}">
       <div class="cc-title">${titulo}</div>
-      <div class="cc-count">${items.length} colaborador${items.length>1?'es':''} &nbsp;·&nbsp; ${presentes} presente${presentes>1?'s':''}</div>
+      <div class="cc-count">${items.length} colaborador${items.length>1?'es':''}&nbsp;&nbsp;·&nbsp;&nbsp;${presentes} presente${presentes!==1?'s':''}</div>
     </div>
     <table class="tv-table">
       <thead><tr>${cols}</tr></thead>
@@ -538,37 +483,29 @@ function buildSection(titulo, items, tipo) {
 }
 
 function buildRow(id, a, num, isRota) {
-  const chegada = a.chegada || '';
+  const chegada  = a.chegada || '';
   const refeicao = a.refeicao || '01:00';
-  const saida = a.saida || '';
+  const saida    = a.saida || '';
   const prevSaida = chegada ? calcPrevSaida(chegada, refeicao) : '';
 
   const statusMap = {
-    'Em escolha': ['s-escolha', 'Em Escolha'],
-    'Validada': ['s-validada', 'Validada'],
-    'Presente': ['s-presente', 'Presente'],
-    'Ausente': ['s-ausente', 'Ausente'],
-    'Encerrado': ['s-encerrado', 'Encerrado']
+    'Em escolha': ['s-escolha',   'Em Escolha'],
+    'Validada':   ['s-validada',  'Validada'],
+    'Presente':   ['s-presente',  'Presente'],
+    'Ausente':    ['s-ausente',   'Ausente'],
+    'Encerrado':  ['s-encerrado', 'Encerrado']
   };
-  const [sCls, sLabel] = statusMap[a.status] || ['s-escolha', a.status||'Em Escolha'];
+  const [sCls, sLabel] = statusMap[a.status] || ['s-escolha', a.status || 'Em Escolha'];
 
-  // Motorista (só ROTA)
-  const motoristaId = a.motoristaId || '';
-  const motoristaNome = motoristaId && STATE.motoristas[motoristaId]
-    ? STATE.motoristas[motoristaId].nome : (a.motoristaNome || '—');
+  const motoristaNome = a.motoristaId && STATE.motoristas[a.motoristaId]
+    ? STATE.motoristas[a.motoristaId].nome : (a.motoristaNome || '—');
   const md = a.md || '';
 
-  const tdNome = `<td>
-    <div class="td-nome">${a.colNome||'—'}</div>
-    <div class="td-empresa">${a.empresaNome||''}</div>
-  </td>`;
-  const tdOp = `<td>
-    <div class="td-op">${a.opNome||'—'}</div>
-    <div class="td-func">${a.funcao||''}</div>
-  </td>`;
+  const tdNome   = `<td><div class="td-nome">${a.colNome||'—'}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
+  const tdOp     = `<td><div class="td-op">${a.opNome||'—'}</div><div class="td-func">${a.funcao||''}</div></td>`;
   const tdEntrada = `<td class="td-time entrada">${chegada||'<span class="empty">——</span>'}</td>`;
-  const tdPrev = `<td class="td-time saida-prev">${prevSaida||'<span class="empty">——</span>'}</td>`;
-  const tdSaida = `<td class="td-time saida-real">${saida||'<span class="empty">——</span>'}</td>`;
+  const tdPrev   = `<td class="td-time saida-prev">${prevSaida||'<span class="empty">——</span>'}</td>`;
+  const tdSaida  = `<td class="td-time saida-real">${saida||'<span class="empty">——</span>'}</td>`;
   const tdStatus = `<td><span class="status-pill ${sCls}">${sLabel}</span></td>`;
 
   if (isRota) {
@@ -589,17 +526,18 @@ function buildRow(id, a, num, isRota) {
 
 function calcPrevSaida(chegada, refeicao) {
   if (!chegada) return '';
-  const [h,m] = chegada.split(':').map(Number);
-  const [rh,rm] = (refeicao||'01:00').split(':').map(Number);
+  const [h, m]  = chegada.split(':').map(Number);
+  const [rh, rm] = (refeicao || '01:00').split(':').map(Number);
   const total = h*60 + m + 8*60 + rh*60 + rm;
-  return String(Math.floor(total/60)%24).padStart(2,'0') + ':' + String(total%60).padStart(2,'0');
+  return String(Math.floor(total/60) % 24).padStart(2,'0') + ':' + String(total % 60).padStart(2,'0');
 }
 
-function updateTotais(rota, expedicao) {
-  const todos = [...rota, ...expedicao];
-  document.getElementById('tot-total').textContent = todos.length;
-  document.getElementById('tot-presentes').textContent = todos.filter(([,a])=>a.status==='Presente').length;
-  document.getElementById('tot-rota').textContent = rota.length;
+function updateTotais(rota, expedicao, outros) {
+  outros = outros || [];
+  const todos = [...rota, ...expedicao, ...outros];
+  document.getElementById('tot-total').textContent     = todos.length;
+  document.getElementById('tot-presentes').textContent = todos.filter(([,a]) => a.status === 'Presente').length;
+  document.getElementById('tot-rota').textContent      = rota.length;
   document.getElementById('tot-expedicao').textContent = expedicao.length;
 }
 
@@ -613,12 +551,6 @@ function attachMdEvents() {
       }, 800);
     });
   });
-}
-
-function formatDate(d) {
-  if (!d) return '—';
-  const [y,m,day] = d.split('-');
-  return `${day}/${m}/${y}`;
 }
 </script>
 </body>
