@@ -4366,7 +4366,11 @@ function checkGRBloqueio(cpf) {
 function renderGR() {
   const busca = (document.getElementById('gr-busca')?.value || '').toLowerCase().trim();
   const filtroStatus = document.getElementById('gr-filtro-status')?.value || '';
-  const cols = Object.entries(STATE.colaboradores || {});
+  // STATE.colaboradores é aninhado: { empresaId: { colId: {...} } }
+  const cols = [];
+  Object.values(STATE.colaboradores || {}).forEach(empCols => {
+    Object.entries(empCols || {}).forEach(e => cols.push(e));
+  });
 
   let liberados = 0, analise = 0, bloqueados = 0;
   cols.forEach(([, c]) => {
