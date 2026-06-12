@@ -29,6 +29,104 @@ body {
   flex-direction: column;
 }
 
+/* ===== LOGIN OVERLAY ===== */
+#login-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0a0f1e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.login-box {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-top: 4px solid var(--yellow);
+  border-radius: 8px;
+  padding: 40px 48px;
+  width: 380px;
+  text-align: center;
+}
+.login-logo {
+  background: var(--yellow);
+  color: var(--navy);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  padding: 6px 16px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+.login-title {
+  color: var(--white);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.login-sub {
+  color: var(--gray-400);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+.login-field {
+  margin-bottom: 14px;
+  text-align: left;
+}
+.login-field label {
+  display: block;
+  color: var(--gray-400);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.login-field input {
+  width: 100%;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: var(--white);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color .2s;
+}
+.login-field input:focus { border-color: var(--yellow); }
+.login-btn {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--yellow);
+  color: var(--navy);
+  border: none;
+  border-radius: 4px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 12px;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.login-btn:hover { opacity: .85; }
+.login-error {
+  margin-top: 12px;
+  color: #e74c3c;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  min-height: 18px;
+}
+
 /* HEADER */
 .tv-header {
   background: var(--navy);
@@ -55,6 +153,18 @@ body {
 .tv-header-right { text-align: right; }
 .tv-date { color: var(--white); font-size: 18px; font-weight: 700; }
 .tv-time { color: var(--yellow); font-size: 30px; font-weight: 900; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+.tv-empresa-tag {
+  margin-left: 16px;
+  background: rgba(245,197,24,.15);
+  color: var(--yellow);
+  border: 1px solid rgba(245,197,24,.3);
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
 
 /* STATS BAR */
 .stats-bar {
@@ -92,7 +202,7 @@ body {
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-/* CONTENT — preenche o restante da tela sem scroll */
+/* CONTENT */
 .tv-content {
   flex: 1;
   min-height: 0;
@@ -103,7 +213,6 @@ body {
   overflow: hidden;
 }
 
-/* GRADE DE 2 COLUNAS — ROTA e EXPEDIÇÃO lado a lado */
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -111,11 +220,8 @@ body {
   flex: 1;
   min-height: 0;
 }
-
-/* Seção única (quando só existe um bloco) ocupa a linha toda */
 .two-col.single { grid-template-columns: 1fr; }
 
-/* Blocos extras (outros CC) — linha completa abaixo */
 .extra-sections {
   display: flex;
   flex-direction: column;
@@ -142,12 +248,8 @@ body {
 .cc-rota .cc-count      { background: rgba(245,197,24,.15); color: var(--yellow); }
 .cc-expedicao .cc-count { background: rgba(46,204,113,.15); color: #2ecc71; }
 
-/* TABLE — ocupa o espaço restante da seção */
-.table-scroll {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
+/* TABLE */
+.table-scroll { flex: 1; overflow-y: auto; min-height: 0; }
 .tv-table { width: 100%; border-collapse: collapse; }
 .tv-table thead tr { background: #111; position: sticky; top: 0; z-index: 1; }
 .tv-table thead th {
@@ -219,6 +321,25 @@ body {
 </head>
 <body>
 
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">PORTOEX</div>
+    <div class="login-title">Painel TV</div>
+    <div class="login-sub">Mão de Obra Terceirizada</div>
+    <div class="login-field">
+      <label>Usuário</label>
+      <input type="text" id="login-user" placeholder="Login" autocomplete="off" autocapitalize="off">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="Senha">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
 <header class="tv-header">
   <div class="tv-logo">
     <div class="tv-logo-box">PORTOEX</div>
@@ -226,6 +347,7 @@ body {
       <div class="tv-title">Mão de Obra — 3°</div>
       <div class="tv-subtitle">Colaboradores Terceirizados</div>
     </div>
+    <span class="tv-empresa-tag" id="tv-empresa-tag" style="display:none"></span>
   </div>
   <div class="tv-header-right">
     <div class="tv-date" id="tv-date">—</div>
@@ -261,6 +383,57 @@ body {
 </div>
 
 <script>
+// ===== CREDENCIAIS =====
+// Cada entrada: { senha, filtro }
+// filtro: string que será comparada (case-insensitive) contra empresaNome e opNome do colaborador
+// filtro null = acesso total (admin)
+const CREDENCIAIS = {
+  'LJA':    { senha: '123456', filtro: 'LJA' },
+  'RP':     { senha: 'RP123',  filtro: 'RP'  },
+  'IAGO':   { senha: '123456', filtro: 'IAGO' },
+  'litoral':{ senha: '123456', filtro: 'litoral' },
+};
+
+let filtroEmpresa = null; // definido após login
+
+// ===== LOGIN =====
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-error');
+
+  const cred = CREDENCIAIS[user] || CREDENCIAIS[user.toUpperCase()] ||
+    Object.entries(CREDENCIAIS).find(([k]) => k.toLowerCase() === user.toLowerCase())?.[1];
+
+  if (!cred || cred.senha !== pass) {
+    err.textContent = 'Usuário ou senha inválidos.';
+    document.getElementById('login-pass').value = '';
+    return;
+  }
+
+  filtroEmpresa = cred.filtro;
+
+  // Mostra tag da empresa no header
+  const tag = document.getElementById('tv-empresa-tag');
+  tag.textContent = user.toUpperCase();
+  tag.style.display = 'inline-block';
+
+  // Remove overlay
+  document.getElementById('login-overlay').style.display = 'none';
+
+  // Inicia Firebase e render
+  initFirebase();
+}
+
+// Enter no campo de senha dispara login
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('login-user').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('login-pass').focus();
+});
+
+// ===== FIREBASE =====
 const firebaseConfig = {
   apiKey: "AIzaSyDsKKZaK1WBo3FjNo-2o0O5a0ehV4tDy4U",
   authDomain: "vagas-terceirizados-portoex.firebaseapp.com",
@@ -275,6 +448,11 @@ const db = firebase.database();
 
 let STATE = { acompanhamento: {}, motoristas: {} };
 let mdSaveTimeout = {};
+
+function initFirebase() {
+  db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; render(); });
+  db.ref('motoristas').on('value',     snap => { STATE.motoristas     = snap.val() || {}; render(); });
+}
 
 // ===== RELÓGIO =====
 function updateClock() {
@@ -291,16 +469,24 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-// ===== FIREBASE =====
-db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; render(); });
-db.ref('motoristas').on('value',     snap => { STATE.motoristas     = snap.val() || {}; render(); });
+// ===== FILTRO POR EMPRESA =====
+function pertenceAEmpresa(a) {
+  if (!filtroEmpresa) return true; // acesso total
+  const f = filtroEmpresa.toLowerCase();
+  return (
+    (a.empresaNome  || '').toLowerCase().includes(f) ||
+    (a.opNome       || '').toLowerCase().includes(f) ||
+    (a.opCC         || '').toLowerCase().includes(f)
+  );
+}
 
 // ===== RENDER =====
 function render() {
   const content = document.getElementById('tv-content');
   const hoje = new Date().toISOString().split('T')[0];
 
-  let items = Object.entries(STATE.acompanhamento).filter(([,a]) => a.data === hoje);
+  let items = Object.entries(STATE.acompanhamento)
+    .filter(([,a]) => a.data === hoje && pertenceAEmpresa(a));
 
   if (!items.length) {
     content.innerHTML = '<div class="tv-empty">Nenhum colaborador cadastrado para hoje.</div>';
@@ -312,16 +498,14 @@ function render() {
   const expedicao = items.filter(([,a]) => { const c=(a.opCC||'').toUpperCase(); return c==='EXPEDIÇÃO'||c==='EXPEDICAO'; });
   const outros    = items.filter(([,a]) => { const c=(a.opCC||'').toUpperCase(); return c!=='ROTA'&&c!=='EXPEDIÇÃO'&&c!=='EXPEDICAO'; });
 
-  // Grade de duas colunas: ROTA à esquerda, EXPEDIÇÃO à direita
   const temRota = rota.length > 0, temExp = expedicao.length > 0;
   const gridClass = (temRota && temExp) ? 'two-col' : 'two-col single';
 
   let gridHtml = `<div class="${gridClass}">`;
-  if (temRota)      gridHtml += buildSection('ROTA',      rota,      'rota');
-  if (temExp)       gridHtml += buildSection('EXPEDIÇÃO', expedicao, 'expedicao');
+  if (temRota) gridHtml += buildSection('ROTA',      rota,      'rota');
+  if (temExp)  gridHtml += buildSection('EXPEDIÇÃO', expedicao, 'expedicao');
   gridHtml += '</div>';
 
-  // Outros CC agrupados (linha completa abaixo, se houver)
   let extrasHtml = '';
   if (outros.length) {
     const grupos = {};
@@ -381,20 +565,17 @@ function buildRow(id, a, num, isRota) {
     ? STATE.motoristas[a.motoristaId].nome : (a.motoristaNome||'—');
   const md = a.md || '';
 
-  // Exibe ATRASO apenas se: sem entrada E horário atual já passou do horaInicial
+  // ATRASO: sem entrada E horário atual já passou do horaInicial
   const semEntrada = !chegada;
   let isAtraso = false;
   if (semEntrada && a.horaInicial) {
     const now = new Date();
     const [hi, mi] = a.horaInicial.split(':').map(Number);
-    const inicioMin = hi * 60 + mi;
-    const agoraMin  = now.getHours() * 60 + now.getMinutes();
-    isAtraso = agoraMin > inicioMin;
+    isAtraso = (now.getHours() * 60 + now.getMinutes()) > (hi * 60 + mi);
   }
   const nomeClass   = isAtraso ? 'td-nome-atraso' : 'td-nome';
-  const atrasoBadge = isAtraso
-    ? `<span class="badge-atraso">⚠ ATRASO</span>`
-    : '';
+  const atrasoBadge = isAtraso ? `<span class="badge-atraso">⚠ ATRASO</span>` : '';
+
   const tdNome    = `<td><div class="${nomeClass}">${a.colNome||'—'} ${atrasoBadge}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
   const tdOp      = `<td><div class="td-op">${a.opNome||'—'}</div><div class="td-func">${a.funcao||''}</div></td>`;
   const tdEntrada = `<td class="td-time entrada">${chegada||'——'}</td>`;
