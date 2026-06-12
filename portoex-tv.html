@@ -200,6 +200,18 @@ body {
 
 .tv-empty { text-align: center; padding: 40px; color: #333; font-size: 18px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
 
+
+/* ATRASO */
+.td-nome-atraso { font-size: 16px; font-weight: 700; color: #e74c3c !important; }
+.badge-atraso {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(231,76,60,.2); color: #e74c3c;
+  border: 1px solid #e74c3c60;
+  padding: 2px 7px; border-radius: 4px;
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  animation: pulse-red 1.5s infinite;
+}
+@keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.5} }
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: #111; }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
@@ -369,7 +381,12 @@ function buildRow(id, a, num, isRota) {
     ? STATE.motoristas[a.motoristaId].nome : (a.motoristaNome||'—');
   const md = a.md || '';
 
-  const tdNome    = `<td><div class="td-nome">${a.colNome||'—'}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
+  const semEntrada = !chegada;
+  const nomeClass  = semEntrada ? 'td-nome-atraso' : 'td-nome';
+  const atrasoBadge = semEntrada
+    ? `<span class="badge-atraso">⚠ ATRASO</span>`
+    : '';
+  const tdNome    = `<td><div class="${nomeClass}">${a.colNome||'—'} ${atrasoBadge}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
   const tdOp      = `<td><div class="td-op">${a.opNome||'—'}</div><div class="td-func">${a.funcao||''}</div></td>`;
   const tdEntrada = `<td class="td-time entrada">${chegada||'——'}</td>`;
   const tdPrev    = `<td class="td-time saida-prev">${prevSaida||'——'}</td>`;
