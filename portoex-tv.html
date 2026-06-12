@@ -200,7 +200,6 @@ body {
 
 .tv-empty { text-align: center; padding: 40px; color: #333; font-size: 18px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
 
-
 /* ATRASO */
 .td-nome-atraso { font-size: 16px; font-weight: 700; color: #e74c3c !important; }
 .badge-atraso {
@@ -212,6 +211,7 @@ body {
   animation: pulse-red 1.5s infinite;
 }
 @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: #111; }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
@@ -381,9 +381,18 @@ function buildRow(id, a, num, isRota) {
     ? STATE.motoristas[a.motoristaId].nome : (a.motoristaNome||'—');
   const md = a.md || '';
 
+  // Exibe ATRASO apenas se: sem entrada E horário atual já passou do horaInicial
   const semEntrada = !chegada;
-  const nomeClass  = semEntrada ? 'td-nome-atraso' : 'td-nome';
-  const atrasoBadge = semEntrada
+  let isAtraso = false;
+  if (semEntrada && a.horaInicial) {
+    const now = new Date();
+    const [hi, mi] = a.horaInicial.split(':').map(Number);
+    const inicioMin = hi * 60 + mi;
+    const agoraMin  = now.getHours() * 60 + now.getMinutes();
+    isAtraso = agoraMin > inicioMin;
+  }
+  const nomeClass   = isAtraso ? 'td-nome-atraso' : 'td-nome';
+  const atrasoBadge = isAtraso
     ? `<span class="badge-atraso">⚠ ATRASO</span>`
     : '';
   const tdNome    = `<td><div class="${nomeClass}">${a.colNome||'—'} ${atrasoBadge}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
