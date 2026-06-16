@@ -388,11 +388,10 @@ body {
 // filtro: string que será comparada (case-insensitive) contra empresaNome e opNome do colaborador
 // filtro null = acesso total (admin)
 const CREDENCIAIS = {
-  'ADMIN':   { senha: 'PORTOEX2025', filtro: null },        // acesso total
-  'LJA':     { senha: '123456', filtro: 'LJA' },
-  'RP':      { senha: 'RP123',  filtro: 'RP'  },
-  'IAGO':    { senha: '123456', filtro: 'IAGO' },
-  'litoral': { senha: '123456', filtro: 'litoral' },
+  'LJA':    { senha: '123456', filtro: 'LJA' },
+  'RP':     { senha: 'RP123',  filtro: 'RP'  },
+  'IAGO':   { senha: '123456', filtro: 'IAGO' },
+  'litoral':{ senha: '123456', filtro: 'litoral' },
 };
 
 let filtroEmpresa = null; // definido após login
