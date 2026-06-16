@@ -903,6 +903,65 @@ tbody tr:hover { background: var(--gray-50); }
       <div id="acomp-container"></div>
     </div>
 
+    <!-- ===================== PÁGINA: ADMIN – LOGINS ===================== -->
+    <div id="page-admin-logins" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🔐 Gerenciar Logins Admin</div>
+          <div class="section-sub">Usuários com acesso administrativo ao sistema</div>
+        </div>
+        <button class="btn btn-yellow" onclick="openModal('modal-admin-login')">+ Novo Login</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Login</th><th>Senha</th><th>Perfil</th><th>Rótulo</th><th>Ações</th></tr></thead>
+          <tbody id="admin-logins-tbody"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum login cadastrado.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card" style="margin-top:16px;background:var(--warning-bg);border:1px solid var(--warning)">
+        <div style="font-size:12px;color:var(--warning)">⚠️ Os logins abaixo são fixos do sistema e não podem ser removidos por aqui:</div>
+        <div style="margin-top:8px;display:flex;gap:16px;flex-wrap:wrap" id="fixed-logins-list"></div>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: LOG DE TRANSAÇÕES ===================== -->
+    <div id="page-transacoes" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📜 Log de Transações</div>
+          <div class="section-sub">Histórico de ações realizadas por login</div>
+        </div>
+        <button class="btn btn-ghost" onclick="limparLogAntigo()">🗑 Limpar +30 dias</button>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="margin:0;min-width:160px">
+            <label>Filtrar por login</label>
+            <select id="log-filter-login" onchange="renderLog()">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;min-width:140px">
+            <label>Tipo de ação</label>
+            <select id="log-filter-tipo" onchange="renderLog()">
+              <option value="">Todos</option>
+              <option value="vaga">Vagas</option>
+              <option value="empresa">Empresas</option>
+              <option value="motorista">Motoristas</option>
+              <option value="aviso">Avisos</option>
+              <option value="acompanhamento">Acompanhamento</option>
+              <option value="login_admin">Logins Admin</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;min-width:140px">
+            <label>Data</label>
+            <input type="date" id="log-filter-data" onchange="renderLog()">
+          </div>
+        </div>
+      </div>
+      <div id="log-container"></div>
+    </div>
+
     <!-- ===================== PÁGINA: ADMIN – VAGAS (gerenciar) ===================== -->
     <div id="page-vagas-admin" class="page">
       <div class="section-header">
@@ -1116,6 +1175,43 @@ tbody tr:hover { background: var(--gray-50); }
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-sugestoes')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo Login Admin -->
+<div class="modal-overlay" id="modal-admin-login">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="admin-login-modal-title">Novo Login Admin</div>
+      <button class="modal-close" onclick="closeModal('modal-admin-login')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Login *</label>
+          <input type="text" id="al-login" placeholder="Ex: portoex.rh">
+        </div>
+        <div class="form-group">
+          <label>Senha *</label>
+          <input type="text" id="al-senha" placeholder="Senha de acesso">
+        </div>
+        <div class="form-group">
+          <label>Perfil</label>
+          <select id="al-role">
+            <option value="admin">Admin (acesso total)</option>
+            <option value="inserir">Inserir (Motoristas + Avisos)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Rótulo (exibido no sistema)</label>
+          <input type="text" id="al-label" placeholder="Ex: 🏠 RH – Recursos Humanos">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-admin-login')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveAdminLogin()">Salvar</button>
     </div>
   </div>
 </div>
@@ -1719,7 +1815,9 @@ let STATE = {
   notificacoes: {},
   motoristas: {},
   grStatus: {},
-  avisos: {}
+  avisos: {},
+  adminLogins: {},
+  transacoes: {}
 };
 let editEmpresaId = null;
 let editVagaId = null;
@@ -1799,28 +1897,40 @@ function doLogin() {
     initApp();
     return;
   }
-  // Verificar logins admin
+  // Verificar logins admin fixos
   const adminMatch = ADMIN_LOGINS.find(a => a.login === user && a.senha === pass);
   if (adminMatch) {
-    currentUser = { role: 'admin', login: user, label: adminMatch.label };
+    currentUser = { role: adminMatch.role || 'admin', login: user, label: adminMatch.label };
     initApp();
     return;
   }
 
-  db.ref('empresas').once('value', snap => {
-    const empresas = snap.val() || {};
-    let found = null;
-    Object.entries(empresas).forEach(([id, emp]) => {
-      if (emp.login === user && emp.senha === pass && emp.status === 'ativa') {
-        found = { role: 'empresa', empresaId: id, empresaNome: emp.nome, login: user, acesso: emp.acesso || 'padrao' };
+  // Verificar logins admin cadastrados no Firebase
+  db.ref('adminLogins').once('value', snapAL => {
+    const als = snapAL.val() || {};
+    const alMatch = Object.entries(als).find(([,a]) => a.login === user && a.senha === pass);
+    if (alMatch) {
+      const al = alMatch[1];
+      currentUser = { role: al.role || 'admin', login: user, label: al.label || ('👤 ' + user) };
+      initApp();
+      return;
+    }
+    // Verificar logins de empresa
+    db.ref('empresas').once('value', snap => {
+      const empresas = snap.val() || {};
+      let found = null;
+      Object.entries(empresas).forEach(([id, emp]) => {
+        if (emp.login === user && emp.senha === pass && emp.status === 'ativa') {
+          found = { role: 'empresa', empresaId: id, empresaNome: emp.nome, login: user, acesso: emp.acesso || 'padrao' };
+        }
+      });
+      if (found) {
+        currentUser = found;
+        initApp();
+      } else {
+        errEl.style.display = 'block';
       }
     });
-    if (found) {
-      currentUser = found;
-      initApp();
-    } else {
-      errEl.style.display = 'block';
-    }
   });
 }
 
@@ -1876,6 +1986,8 @@ function buildNavTabs() {
         { id: 'page-motoristas', label: 'Motoristas' },
         { id: 'page-gr', label: '🛡️ G.R.' },
         { id: 'page-avisos', label: '📢 Avisos' },
+        { id: 'page-admin-logins', label: '🔐 Logins' },
+        { id: 'page-transacoes', label: '📜 Transações' },
       ]
     : currentUser.role === 'gr'
     ? [
@@ -1930,6 +2042,8 @@ function switchPage(pageId) {
   if (pageId === 'page-motoristas') renderMotoristas();
   if (pageId === 'page-gr') renderGR();
   if (pageId === 'page-avisos') renderAvisosAdmin();
+  if (pageId === 'page-admin-logins') renderAdminLogins();
+  if (pageId === 'page-transacoes') renderLog();
   if (pageId === 'page-dashboard') { initDashboard(); }
   if (pageId === 'page-resumo-admin') {
     // Set default: current month
@@ -2014,6 +2128,16 @@ function listenFirebase() {
     renderAvisosBanner();
     if (document.getElementById('page-avisos')?.classList.contains('active')) renderAvisosAdmin();
   });
+  if (currentUser.role === 'admin') {
+    db.ref('adminLogins').on('value', snap => {
+      STATE.adminLogins = snap.val() || {};
+      if (document.getElementById('page-admin-logins')?.classList.contains('active')) renderAdminLogins();
+    });
+    db.ref('transacoes').on('value', snap => {
+      STATE.transacoes = snap.val() || {};
+      if (document.getElementById('page-transacoes')?.classList.contains('active')) renderLog();
+    });
+  }
   const colPath = currentUser.role === 'empresa'
     ? 'colaboradores/' + currentUser.empresaId
     : 'colaboradores';
@@ -2108,6 +2232,7 @@ function saveEmpresa() {
   };
   const ref = editEmpresaId ? db.ref('empresas/' + editEmpresaId) : db.ref('empresas').push();
   (editEmpresaId ? ref.set(data) : ref.set(data)).then(() => {
+    registrarTransacao('empresa', editEmpresaId ? `Empresa editada: ${nome}` : `Nova empresa: ${nome}`);
     toast('Empresa salva!', 'success');
     closeModal('modal-empresa');
     clearEmpForm();
@@ -2469,6 +2594,7 @@ function saveVaga() {
   };
   const ref = editVagaId ? db.ref('vagas/'+editVagaId) : db.ref('vagas').push();
   (editVagaId ? ref.set(payload) : ref.set(payload)).then(() => {
+    registrarTransacao('vaga', `Mural publicado: ${formatDate(data)}`);
     toast('Mural publicado!','success');
     closeModal('modal-vaga');
     switchPage('page-mural');
@@ -2799,7 +2925,11 @@ function confirmarAtribuicao() {} // legacy — não usado mais
 
 function encerrarVaga(id) {
   if (!confirm('Encerrar esta vaga?')) return;
-  db.ref('vagas/' + id + '/status').set('encerrada').then(() => toast('Vaga encerrada.'));
+  const vaga = STATE.vagas[id] || {};
+  db.ref('vagas/' + id + '/status').set('encerrada').then(() => {
+    registrarTransacao('vaga', `Vaga encerrada: ${formatDate(vaga.data||'')}${vaga.opNome ? ' — '+vaga.opNome : ''}`);
+    toast('Vaga encerrada.');
+  });
 }
 
 function renderVagasAdmin() {
@@ -3134,7 +3264,10 @@ function saveMotorista() {
   const nome = v('mot-nome');
   if (!nome) { toast('Informe o nome.', 'error'); return; }
   db.ref('motoristas').push({ nome, ident: v('mot-ident'), status: v('mot-status') })
-    .then(() => { toast('Motorista salvo!', 'success'); closeModal('modal-motorista'); sv('mot-nome',''); sv('mot-ident',''); });
+    .then(() => {
+      registrarTransacao('motorista', `Motorista cadastrado: ${nome}`);
+      toast('Motorista salvo!', 'success'); closeModal('modal-motorista'); sv('mot-nome',''); sv('mot-ident','');
+    });
 }
 
 function deleteMotorista(id) {
@@ -4569,6 +4702,7 @@ function saveAviso() {
   document.querySelectorAll('#aviso-empresas-check input:checked').forEach(cb => { empresasSel[cb.value] = true; });
   db.ref('avisos').push({ texto, tipo, ativo: true, empresas: empresasSel, criadoEm: Date.now() })
     .then(() => {
+      registrarTransacao('aviso', `Aviso publicado: "${texto.substring(0,60)}${texto.length>60?'…':''}"`);
       toast('Aviso publicado!');
       closeModal('modal-aviso');
       document.getElementById('aviso-texto').value = '';
@@ -4588,6 +4722,157 @@ function deleteAviso(id) {
   db.ref('avisos/' + id).remove()
     .then(() => toast('Aviso excluído.'))
     .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+
+// ===================== ADMIN LOGINS =====================
+let editAdminLoginId = null;
+
+function renderAdminLogins() {
+  const tbody = document.getElementById('admin-logins-tbody');
+  if (!tbody) return;
+  const items = Object.entries(STATE.adminLogins || {});
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum login cadastrado.</td></tr>';
+  } else {
+    const roleLabel = { admin: '🔑 Admin', inserir: '⚙️ Inserir', gr: '🛡️ G.R.' };
+    tbody.innerHTML = items.map(([id, al]) => `<tr>
+      <td class="td-mono">${al.login}</td>
+      <td class="td-mono">${al.senha}</td>
+      <td><span class="badge ${al.role==='admin'?'badge-navy':'badge-warning'}" style="font-size:10px">${roleLabel[al.role]||al.role}</span></td>
+      <td>${al.label||'—'}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="editAdminLogin('${id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteAdminLogin('${id}')">Excluir</button>
+      </td>
+    </tr>`).join('');
+  }
+  // Logins fixos
+  const fixedEl = document.getElementById('fixed-logins-list');
+  if (fixedEl) {
+    fixedEl.innerHTML = ADMIN_LOGINS.map(a =>
+      `<span style="font-size:12px;background:var(--white);border:1px solid var(--gray-200);border-radius:6px;padding:4px 10px"><strong>${a.login}</strong> — ${a.label}</span>`
+    ).join('');
+  }
+}
+
+function saveAdminLogin() {
+  const login = document.getElementById('al-login').value.trim();
+  const senha = document.getElementById('al-senha').value.trim();
+  const role  = document.getElementById('al-role').value;
+  const label = document.getElementById('al-label').value.trim();
+  if (!login || !senha) { toast('Preencha login e senha.', 'error'); return; }
+  // Não permitir sobrescrever logins fixos
+  if (ADMIN_LOGINS.find(a => a.login === login) && !editAdminLoginId) {
+    toast('Esse login já existe como fixo do sistema.', 'error'); return;
+  }
+  const data = { login, senha, role, label };
+  const ref = editAdminLoginId ? db.ref('adminLogins/' + editAdminLoginId) : db.ref('adminLogins').push();
+  (editAdminLoginId ? ref.set(data) : ref.set(data)).then(() => {
+    registrarTransacao('login_admin', editAdminLoginId ? `Login editado: ${login}` : `Novo login criado: ${login}`);
+    toast('Login salvo!', 'success');
+    closeModal('modal-admin-login');
+    editAdminLoginId = null;
+    ['al-login','al-senha','al-label'].forEach(i => document.getElementById(i).value = '');
+  });
+}
+
+function editAdminLogin(id) {
+  const al = STATE.adminLogins[id];
+  editAdminLoginId = id;
+  document.getElementById('al-login').value = al.login;
+  document.getElementById('al-senha').value = al.senha;
+  document.getElementById('al-role').value  = al.role || 'admin';
+  document.getElementById('al-label').value = al.label || '';
+  document.getElementById('admin-login-modal-title').textContent = 'Editar Login Admin';
+  openModal('modal-admin-login');
+}
+
+function deleteAdminLogin(id) {
+  const al = STATE.adminLogins[id];
+  if (!confirm(`Excluir login "${al?.login}"?`)) return;
+  db.ref('adminLogins/' + id).remove().then(() => {
+    registrarTransacao('login_admin', `Login excluído: ${al?.login}`);
+    toast('Login excluído.');
+  });
+}
+
+// ===================== LOG DE TRANSAÇÕES =====================
+function registrarTransacao(tipo, descricao, extra) {
+  if (!currentUser) return;
+  const entrada = {
+    ts: Date.now(),
+    login: currentUser.login || '—',
+    label: currentUser.label || currentUser.empresaNome || currentUser.login || '—',
+    role: currentUser.role || '—',
+    tipo,
+    descricao,
+    ...(extra || {})
+  };
+  db.ref('transacoes').push(entrada).catch(() => {});
+}
+
+function renderLog() {
+  const container = document.getElementById('log-container');
+  if (!container) return;
+
+  const filtLogin = document.getElementById('log-filter-login')?.value || '';
+  const filtTipo  = document.getElementById('log-filter-tipo')?.value  || '';
+  const filtData  = document.getElementById('log-filter-data')?.value  || '';
+
+  // Popula filtro de login
+  const loginSel = document.getElementById('log-filter-login');
+  if (loginSel) {
+    const logins = [...new Set(Object.values(STATE.transacoes || {}).map(t => t.login).filter(Boolean))].sort();
+    const cur = loginSel.value;
+    loginSel.innerHTML = '<option value="">Todos</option>' + logins.map(l => `<option value="${l}">${l}</option>`).join('');
+    if (cur) loginSel.value = cur;
+  }
+
+  let items = Object.entries(STATE.transacoes || {})
+    .map(([id, t]) => ({ id, ...t }))
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  if (filtLogin) items = items.filter(t => t.login === filtLogin);
+  if (filtTipo)  items = items.filter(t => t.tipo === filtTipo);
+  if (filtData)  items = items.filter(t => t.ts && new Date(t.ts).toISOString().startsWith(filtData));
+
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div><div class="empty-text">Nenhuma transação encontrada.</div></div>';
+    return;
+  }
+
+  const tipoIcon = { vaga:'📋', empresa:'🏢', motorista:'🚛', aviso:'📢', acompanhamento:'📝', login_admin:'🔐' };
+  const tipoColor = { vaga:'var(--info)', empresa:'var(--success)', motorista:'var(--yellow-dark)', aviso:'var(--warning)', acompanhamento:'var(--navy)', login_admin:'var(--danger)' };
+
+  container.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Data / Hora</th><th>Login</th><th>Perfil</th><th>Tipo</th><th>Descrição</th>
+    </tr></thead>
+    <tbody>
+    ${items.map(t => {
+      const dt = t.ts ? new Date(t.ts).toLocaleString('pt-BR') : '—';
+      const icon = tipoIcon[t.tipo] || '🔸';
+      const cor  = tipoColor[t.tipo] || 'var(--gray-600)';
+      return `<tr>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap">${dt}</td>
+        <td class="td-mono">${t.login||'—'}</td>
+        <td style="font-size:11px;color:var(--gray-600)">${t.label||t.role||'—'}</td>
+        <td><span style="font-size:11px;background:var(--gray-100);padding:2px 8px;border-radius:10px;white-space:nowrap;border-left:3px solid ${cor}">${icon} ${t.tipo||'—'}</span></td>
+        <td style="font-size:12px">${t.descricao||'—'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function limparLogAntigo() {
+  if (!confirm('Excluir transações com mais de 30 dias?')) return;
+  const limite = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const antigos = Object.entries(STATE.transacoes || {}).filter(([,t]) => (t.ts||0) < limite);
+  if (!antigos.length) { toast('Nenhum registro com mais de 30 dias.'); return; }
+  const upd = {};
+  antigos.forEach(([id]) => { upd[id] = null; });
+  db.ref('transacoes').update(upd).then(() => toast(`${antigos.length} registros removidos.`, 'success'));
 }
 </script>
 </body>
