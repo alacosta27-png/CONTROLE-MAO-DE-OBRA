@@ -2499,77 +2499,95 @@ function renderMural() {
   grid.style.display = 'block';
   grid.innerHTML = Object.entries(porData).sort(([a],[b])=>a.localeCompare(b)).map(([data, vagasData]) => {
     const vagasPorData = vagasData;
-    // Coleta todas as linhas de todas as vagas nessa data
-    let todasLinhas = [];
-    vagasPorData.forEach(([vagaId, vaga]) => {
-      const hora = vaga.hora || '';
-      (vaga.linhas || []).forEach((linha, li) => {
-        const atribs = Object.values(linha.atribuicoes || {});
-        const minhasAtribs = atribs.filter(a => a.empresaId === currentUser.empresaId);
-        todasLinhas.push({ vagaId, vagaHora: hora, linha, li, atribs, minhasAtribs, vagaStatus: vaga.status });
+
+    // Totais gerais do dia (para o cabeçalho)
+    let totalNecDia = 0, totalAtribDia = 0, totalLinhasDia = 0;
+    vagasPorData.forEach(([, vaga]) => {
+      (vaga.linhas || []).forEach(linha => {
+        totalNecDia += linha.qtd || 0;
+        totalAtribDia += Object.values(linha.atribuicoes || {}).length;
+        totalLinhasDia++;
       });
     });
+    const pct = totalNecDia ? Math.min(100, Math.round(totalAtribDia/totalNecDia*100)) : 0;
     const hora = vagasPorData[0]?.[1]?.hora || '';
-    const totalNec = todasLinhas.reduce((s,l) => s + (l.linha.qtd||0), 0);
-    const totalAtrib = todasLinhas.reduce((s,l) => s + l.atribs.length, 0);
-    const pct = totalNec ? Math.min(100, Math.round(totalAtrib/totalNec*100)) : 0;
-    const linhasHTML = todasLinhas.map(({ vagaId, linha, li, atribs, minhasAtribs }) => {
-      const filled = atribs.length;
-      const needed = linha.qtd || 0;
-      const completo = filled >= needed;
-      const vagasRestantes = needed - filled;
-      // Quantas já indiquei nessa linha
-      const minhasQtd = minhasAtribs.length;
-      const podeIndicarMais = currentUser.role === 'empresa' && !completo;
-      const btnAtribuir = podeIndicarMais
-        ? `<button class="btn btn-yellow btn-sm" style="padding:3px 10px;font-size:11px" onclick="openAtribuir('${vagaId}',${li})">Indicar (${vagasRestantes} restante${vagasRestantes>1?'s':''})</button>`
-        : '';
-      // Lista de nomes já indicados
-      const nomesAtrib = atribs.map(a => {
-        const empTag = (currentUser.role === 'admin' && a.empresaNome)
-          ? `<span style="font-size:9px;color:var(--gray-600);margin-left:2px">(${a.empresaNome})</span>`
-          : '';
-        return `<span style="font-size:10px;background:var(--info-bg);color:var(--info);padding:2px 7px;border-radius:10px;margin:1px;display:inline-block">${a.colNome}${empTag}</span>`;
-      }).join('');
-      const statusCell = completo
-        ? `<span class="badge badge-success" style="font-size:10px">✓ Completo</span>`
-        : filled > 0
-          ? `<span style="font-size:11px;color:var(--warning);font-weight:600">${filled}/${needed} ▸ faltam ${vagasRestantes}</span>`
-          : `<span style="font-size:11px;color:var(--gray-400)">${filled}/${needed}</span>`;
-      const isConf = linha.funcao === 'Conferente';
-      const _muralMot = linha.motoristaNome || (linha.motoristaId && STATE.motoristas[linha.motoristaId] ? STATE.motoristas[linha.motoristaId].nome : '') || '';
-      return `<tr style="${isConf?'background:#F0FDF4;':''}">
-        <td style="font-weight:600;font-size:11px;padding:5px 8px">${linha.opNome||'—'}</td>
-        <td style="padding:5px 8px"><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
-        <td style="padding:5px 8px"><span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${isConf?'⭐ ':''} ${linha.funcao||'—'}</span></td>
-        <td style="font-size:11px;text-align:center;font-weight:600;padding:5px 8px">${needed}</td>
-        <td style="font-size:11px;font-family:'JetBrains Mono',monospace;padding:5px 8px">${linha.hora||'—'}</td>
-        <td style="padding:5px 8px">${statusCell}</td>
-        <td style="padding:5px 8px">${_muralMot ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${_muralMot}</span>` : '<span style="font-size:10px;color:var(--gray-400)">—</span>'}</td>
-        <td style="min-width:180px;padding:5px 8px">${nomesAtrib}</td>
-      </tr>`;
-    }).join('');
-    const btnEncerrar = currentUser.role === 'admin'
-      ? vagasPorData.map(([id]) => `<button class="btn btn-ghost btn-sm" onclick="encerrarVaga('${id}')">Encerrar</button>`).join('')
-      : '';
-    const vagaIdPrincipal = vagasPorData[0][0];
+
+    // Gera linhas agrupadas por vaga — cada vaga tem seu próprio sub-cabeçalho + botão Encerrar
     const todosVagaIds = vagasPorData.map(([id]) => id).join(',');
-    const temVagasAbertas = todasLinhas.some(l => l.atribs.length < (l.linha.qtd||0));
+    let temVagasAbertas = false;
+
+    const blocosPorVaga = vagasPorData.map(([vagaId, vaga], vagaIdx) => {
+      const empsAlvo = vaga.empresasAlvo
+        ? vaga.empresasAlvo.map(eid => (STATE.empresas[eid]||{}).nome||eid).join(', ')
+        : 'Todas';
+      const obsVaga = vaga.obs ? ` &nbsp;|&nbsp; 📝 ${vaga.obs}` : '';
+
+      const linhasVaga = (vaga.linhas || []).map((linha, li) => {
+        const atribs = Object.values(linha.atribuicoes || {});
+        const minhasAtribs = atribs.filter(a => a.empresaId === currentUser.empresaId);
+        const filled = atribs.length;
+        const needed = linha.qtd || 0;
+        const completo = filled >= needed;
+        const vagasRestantes = needed - filled;
+        if (!completo) temVagasAbertas = true;
+
+        const podeIndicarMais = currentUser.role === 'empresa' && !completo;
+        const nomesAtrib = atribs.map(a => {
+          const empTag = (currentUser.role === 'admin' && a.empresaNome)
+            ? `<span style="font-size:9px;color:var(--gray-600);margin-left:2px">(${a.empresaNome})</span>`
+            : '';
+          return `<span style="font-size:10px;background:var(--info-bg);color:var(--info);padding:2px 7px;border-radius:10px;margin:1px;display:inline-block">${a.colNome}${empTag}</span>`;
+        }).join('');
+        const statusCell = completo
+          ? `<span class="badge badge-success" style="font-size:10px">✓ Completo</span>`
+          : filled > 0
+            ? `<span style="font-size:11px;color:var(--warning);font-weight:600">${filled}/${needed} ▸ faltam ${vagasRestantes}</span>`
+            : `<span style="font-size:11px;color:var(--gray-400)">${filled}/${needed}</span>`;
+        const isConf = linha.funcao === 'Conferente';
+        const _muralMot = linha.motoristaNome || (linha.motoristaId && STATE.motoristas[linha.motoristaId] ? STATE.motoristas[linha.motoristaId].nome : '') || '';
+
+        return `<tr style="${isConf?'background:#F0FDF4;':''}">
+          <td style="font-weight:600;font-size:11px;padding:5px 8px">${linha.opNome||'—'}</td>
+          <td style="padding:5px 8px"><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
+          <td style="padding:5px 8px"><span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${isConf?'⭐ ':''} ${linha.funcao||'—'}</span></td>
+          <td style="font-size:11px;text-align:center;font-weight:600;padding:5px 8px">${needed}</td>
+          <td style="font-size:11px;font-family:'JetBrains Mono',monospace;padding:5px 8px">${linha.hora||'—'}</td>
+          <td style="padding:5px 8px">${statusCell}</td>
+          <td style="padding:5px 8px">${_muralMot ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${_muralMot}</span>` : '<span style="font-size:10px;color:var(--gray-400)">—</span>'}</td>
+          <td style="min-width:180px;padding:5px 8px">${nomesAtrib}</td>
+        </tr>`;
+      }).join('');
+
+      // Sub-cabeçalho da vaga com botão Encerrar alinhado à direita (só admin)
+      const btnEncerrarVaga = currentUser.role === 'admin'
+        ? `<button class="btn btn-ghost btn-sm" style="margin-left:auto;flex-shrink:0" onclick="encerrarVaga('${vagaId}')">Encerrar</button>`
+        : '';
+      const subHeader = `<tr>
+        <td colspan="8" style="background:var(--navy-light);padding:6px 10px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="color:var(--yellow);font-size:11px;font-weight:700">📋 Solicitação ${vagasPorData.length > 1 ? vagaIdx+1 : ''}</span>
+            <span style="color:rgba(255,255,255,0.65);font-size:11px">Empresas: ${empsAlvo}${obsVaga}</span>
+            ${btnEncerrarVaga}
+          </div>
+        </td>
+      </tr>`;
+
+      return subHeader + linhasVaga;
+    }).join('');
+
     const btnIndicar = currentUser.role === 'empresa'
       ? temVagasAbertas
         ? `<button class="btn btn-yellow" onclick="openAtribuir('${todosVagaIds}')">👤 Indicar Colaboradores</button>`
         : `<span class="badge badge-success" style="padding:8px 16px">✓ Todas as vagas preenchidas</span>`
       : '';
+
     return `<div style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);margin-bottom:20px;overflow:hidden">
       <div style="background:var(--navy);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
         <div>
           <div style="color:var(--yellow);font-size:15px;font-weight:700">📅 ${formatDate(data)}</div>
-          <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:2px">${hora ? '⏰ Horário previsto: '+hora : ''} &nbsp; ${todasLinhas.length} operações &nbsp; ${totalAtrib}/${totalNec} preenchidos</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:2px">${hora ? '⏰ Horário previsto: '+hora+' &nbsp;' : ''} ${totalLinhasDia} operações &nbsp; ${totalAtribDia}/${totalNecDia} preenchidos</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <div style="background:rgba(255,255,255,0.1);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--white)">${pct}%</div>
-          ${btnEncerrar}
-        </div>
+        <div style="background:rgba(255,255,255,0.1);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--white)">${pct}%</div>
       </div>
       <div style="padding:0">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -2585,69 +2603,14 @@ function renderMural() {
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaboradores</th>
             </tr>
           </thead>
-          <tbody>${linhasHTML}</tbody>
+          <tbody>${blocosPorVaga}</tbody>
         </table>
       </div>
       <div style="padding:12px 18px;border-top:1px solid var(--gray-100);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         ${btnIndicar}
-        ${btnEncerrar}
-        ${vagasPorData[0]?.[1]?.obs ? `<span style="font-size:12px;color:var(--gray-400)">📝 ${vagasPorData[0][1].obs}</span>` : ''}
       </div>
     </div>`;
   }).join('');
-
-  // ── Seção de Vagas Encerradas (visível apenas para admin) ──
-  if (currentUser.role === 'admin') {
-    const encerradas = Object.entries(STATE.vagas).filter(([,vaga]) => vaga.status === 'encerrada');
-    if (encerradas.length) {
-      const encHTML = encerradas
-        .sort(([,a],[,b]) => (b.criadoEm||0) - (a.criadoEm||0))
-        .map(([id, vaga]) => {
-          const linhas = vaga.linhas || [];
-          const linhasHTML = linhas.map(linha => {
-            const atribs = Object.values(linha.atribuicoes || {});
-            const colsHTML = atribs.length
-              ? atribs.map(a => `<span style="font-size:10px;background:var(--gray-100);color:var(--gray-800);padding:2px 7px;border-radius:10px;margin:1px;display:inline-block">${a.colNome}${a.empresaNome ? ` <span style="color:var(--gray-400)">(${a.empresaNome})</span>` : ''}</span>`).join('')
-              : '<span style="font-size:10px;color:var(--gray-400)">Sem preenchimento</span>';
-            const mot = linha.motoristaNome || (linha.motoristaId && STATE.motoristas[linha.motoristaId] ? STATE.motoristas[linha.motoristaId].nome : '') || '';
-            return `<tr style="border-bottom:1px solid var(--gray-100)">
-              <td style="padding:5px 10px;font-size:11px;font-weight:600">${linha.opNome||'—'}</td>
-              <td style="padding:5px 10px;font-size:11px"><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
-              <td style="padding:5px 10px;font-size:11px">${linha.funcao||'—'}</td>
-              <td style="padding:5px 10px;font-size:11px;text-align:center;font-weight:600">${linha.qtd||0}</td>
-              <td style="padding:5px 10px;font-size:11px">${linha.hora||'—'}</td>
-              <td style="padding:5px 10px;font-size:11px">${mot ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${mot}</span>` : '—'}</td>
-              <td style="padding:5px 10px">${colsHTML}</td>
-            </tr>`;
-          }).join('');
-          const empsAlvo = vaga.empresasAlvo ? vaga.empresasAlvo.map(eid => (STATE.empresas[eid]||{}).nome||eid).join(', ') : 'Todas';
-          return `<div style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);margin-bottom:12px;overflow:hidden;opacity:0.85">
-            <div style="background:var(--gray-600);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
-              <div>
-                <div style="color:var(--white);font-size:13px;font-weight:700">📅 ${formatDate(vaga.data||'')} &nbsp;|&nbsp; <span class="badge badge-gray" style="font-size:10px;vertical-align:middle">✓ Encerrada</span></div>
-                <div style="color:rgba(255,255,255,0.6);font-size:11px;margin-top:2px">Empresas: ${empsAlvo}${vaga.obs ? ' &nbsp;|&nbsp; 📝 '+vaga.obs : ''}</div>
-              </div>
-            </div>
-            <table style="width:100%;border-collapse:collapse;font-size:12px">
-              <thead><tr style="background:var(--gray-50)">
-                <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Operação</th>
-                <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">C.Custo</th>
-                <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Função</th>
-                <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Qtd</th>
-                <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Hora</th>
-                <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Motorista</th>
-                <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaboradores (Empresa)</th>
-              </tr></thead>
-              <tbody>${linhasHTML}</tbody>
-            </table>
-          </div>`;
-        }).join('');
-      grid.innerHTML += `<div style="margin-top:28px">
-        <div style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--gray-200)">📁 Vagas Encerradas (${encerradas.length})</div>
-        ${encHTML}
-      </div>`;
-    }
-  }
 }
 
 function openAtribuir(vagaIdsStr) {
