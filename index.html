@@ -1256,12 +1256,12 @@ tbody tr:hover { background: var(--gray-50); }
         <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:10px;">Tabela de Valores por Função</label>
         <div class="func-grid">
           <div class="func-box">
-            <div class="func-box-title">Ajudante Interno</div>
+            <div class="func-box-title">Interno</div>
             <div class="form-group"><label>Valor/dia (R$)</label><input type="number" id="emp-val-ai" placeholder="0,00" step="0.01"></div>
             <div class="form-group" style="margin-top:8px"><label>Hora Extra (R$)</label><input type="number" id="emp-he-ai" placeholder="0,00" step="0.01"></div>
           </div>
           <div class="func-box">
-            <div class="func-box-title">Ajudante Externo</div>
+            <div class="func-box-title">Externo</div>
             <div class="form-group"><label>Valor/dia (R$)</label><input type="number" id="emp-val-ae" placeholder="0,00" step="0.01"></div>
             <div class="form-group" style="margin-top:8px"><label>Hora Extra (R$)</label><input type="number" id="emp-he-ae" placeholder="0,00" step="0.01"></div>
           </div>
@@ -1304,8 +1304,8 @@ tbody tr:hover { background: var(--gray-50); }
           <label>Função padrão</label>
           <select id="op-funcao">
             <option value="">Automático pelo C. Custo</option>
-            <option value="Ajudante Interno">Ajudante Interno</option>
-            <option value="Ajudante Externo">Ajudante Externo</option>
+            <option value="Interno">Interno</option>
+            <option value="Externo">Externo</option>
             <option value="Conferente">Conferente</option>
           </select>
         </div>
@@ -1817,7 +1817,8 @@ let STATE = {
   grStatus: {},
   avisos: {},
   adminLogins: {},
-  transacoes: {}
+  transacoes: {},
+  confirmacoesDia: {}
 };
 let editEmpresaId = null;
 let editVagaId = null;
@@ -1837,20 +1838,20 @@ const GR_LOGIN = { login: 'gr.portoex', senha: 'gr@2024', role: 'gr', label: '�
 // ===================== OPERAÇÕES PADRÃO =====================
 // Mapa fixo: operação → função automática
 const OP_FUNCAO_MAP = {
-  'EXPEDIÇÃO': 'Ajudante Interno',
-  'ROTA':     'Ajudante Externo',
-  'ESTOQUE':  'Ajudante Interno',
-  'BRAFT':    'Ajudante Externo',
-  'SAMSONITE':'Ajudante Externo',
-  'MATTEL':   'Ajudante Interno',
-  'MANOBRA':  'Ajudante Externo',
-  'THOMPSON': 'Ajudante Externo',
-  'S.K.O':    'Ajudante Externo',
-  'N/D':      'Ajudante Interno',
+  'EXPEDIÇÃO': 'Interno',
+  'ROTA':     'Externo',
+  'ESTOQUE':  'Interno',
+  'BRAFT':    'Externo',
+  'SAMSONITE':'Externo',
+  'MATTEL':   'Interno',
+  'MANOBRA':  'Externo',
+  'THOMPSON': 'Externo',
+  'S.K.O':    'Externo',
+  'N/D':      'Interno',
 };
 
 function getFuncaoByOp(opNome) {
-  return OP_FUNCAO_MAP[opNome] || 'Ajudante Externo';
+  return OP_FUNCAO_MAP[opNome] || 'Externo';
 }
 
 function funcaoBadge(funcao) {
@@ -1863,16 +1864,16 @@ function funcaoBadge(funcao) {
 }
 
 const OPERACOES_PADRAO = [
-  { nome: 'EXPEDIÇÃO', cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
-  { nome: 'ROTA',      cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'ESTOQUE',   cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
-  { nome: 'BRAFT',     cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'SAMSONITE', cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'MATTEL',    cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
-  { nome: 'MANOBRA',   cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'THOMPSON',  cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'S.K.O',     cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'N/D',       cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'EXPEDIÇÃO', cc: 'EXPEDIÇÃO', funcao: 'Interno' },
+  { nome: 'ROTA',      cc: 'ROTA',      funcao: 'Externo' },
+  { nome: 'ESTOQUE',   cc: 'EXPEDIÇÃO', funcao: 'Interno' },
+  { nome: 'BRAFT',     cc: 'ROTA',      funcao: 'Externo' },
+  { nome: 'SAMSONITE', cc: 'ROTA',      funcao: 'Externo' },
+  { nome: 'MATTEL',    cc: 'EXPEDIÇÃO', funcao: 'Interno' },
+  { nome: 'MANOBRA',   cc: 'ROTA',      funcao: 'Externo' },
+  { nome: 'THOMPSON',  cc: 'ROTA',      funcao: 'Externo' },
+  { nome: 'S.K.O',     cc: 'ROTA',      funcao: 'Externo' },
+  { nome: 'N/D',       cc: 'EXPEDIÇÃO', funcao: 'Interno' },
 ];
 
 // ===================== LOGIN =====================
@@ -2138,6 +2139,10 @@ function listenFirebase() {
       if (document.getElementById('page-transacoes')?.classList.contains('active')) renderLog();
     });
   }
+  db.ref('confirmacoesDia').on('value', snap => {
+    STATE.confirmacoesDia = snap.val() || {};
+    if (document.getElementById('page-acompanhamento')?.classList.contains('active')) renderAcompanhamento();
+  });
   const colPath = currentUser.role === 'empresa'
     ? 'colaboradores/' + currentUser.empresaId
     : 'colaboradores';
@@ -2225,8 +2230,8 @@ function saveEmpresa() {
   const data = {
     nome, login, senha, status, acesso,
     valores: {
-      'Ajudante Interno': { valor: n('emp-val-ai'), he: n('emp-he-ai') },
-      'Ajudante Externo': { valor: n('emp-val-ae'), he: n('emp-he-ae') },
+      'Interno': { valor: n('emp-val-ai'), he: n('emp-he-ai') },
+      'Externo': { valor: n('emp-val-ae'), he: n('emp-he-ae') },
       'Conferente': { valor: n('emp-val-co'), he: n('emp-he-co') }
     }
   };
@@ -2244,10 +2249,10 @@ function editEmpresa(id) {
   editEmpresaId = id;
   sv('emp-nome', emp.nome); sv('emp-login', emp.login); sv('emp-senha', emp.senha); sv('emp-status', emp.status); sv('emp-acesso', emp.acesso || 'padrao');
   const v2 = emp.valores || {};
-  sv('emp-val-ai', (v2['Ajudante Interno']||{}).valor||'');
-  sv('emp-he-ai', (v2['Ajudante Interno']||{}).he||'');
-  sv('emp-val-ae', (v2['Ajudante Externo']||{}).valor||'');
-  sv('emp-he-ae', (v2['Ajudante Externo']||{}).he||'');
+  sv('emp-val-ai', (v2['Interno']||{}).valor||'');
+  sv('emp-he-ai', (v2['Interno']||{}).he||'');
+  sv('emp-val-ae', (v2['Externo']||{}).valor||'');
+  sv('emp-he-ae', (v2['Externo']||{}).he||'');
   sv('emp-val-co', (v2['Conferente']||{}).valor||'');
   sv('emp-he-co', (v2['Conferente']||{}).he||'');
   openModal('modal-empresa');
@@ -2289,7 +2294,7 @@ function saveOperacao() {
   const nome = v('op-nome'), cc = v('op-cc'), ativa = v('op-ativa');
   if (!nome) { toast('Informe o nome da operação.', 'error'); return; }
   const funcaoManual = v('op-funcao');
-  const funcao = funcaoManual || OP_FUNCAO_MAP[nome.toUpperCase()] || (cc === 'EXPEDIÇÃO' ? 'Ajudante Interno' : 'Ajudante Externo');
+  const funcao = funcaoManual || OP_FUNCAO_MAP[nome.toUpperCase()] || (cc === 'EXPEDIÇÃO' ? 'Interno' : 'Externo');
   db.ref('operacoes').push({ nome, cc, funcao, ativa }).then(() => { toast('Operação salva!', 'success'); closeModal('modal-operacao'); sv('op-nome',''); sv('op-funcao',''); });
 }
 
@@ -2541,8 +2546,8 @@ function renderVagaLinhas() {
     const funcaoSelect = `<select style="padding:5px 8px;border:1px solid ${isConferente?'#6ee7a0':'var(--gray-200)'};border-radius:var(--radius);font-family:Sora,sans-serif;font-size:11px;background:${isConferente?'var(--success-bg)':'white'};color:${isConferente?'var(--success)':'var(--gray-800)'};font-weight:${isConferente?'700':'400'}"
       onchange="vagaLinhas[${li}].funcaoOverride=this.value==='auto'?'':this.value;renderVagaLinhas()">
       <option value="auto" ${!l.funcaoOverride?'selected':''}>Auto (${funcaoAuto||'—'})</option>
-      <option value="Ajudante Interno" ${l.funcaoOverride==='Ajudante Interno'?'selected':''}>Aj. Interno</option>
-      <option value="Ajudante Externo" ${l.funcaoOverride==='Ajudante Externo'?'selected':''}>Aj. Externo</option>
+      <option value="Interno" ${l.funcaoOverride==='Interno'?'selected':''}>Aj. Interno</option>
+      <option value="Externo" ${l.funcaoOverride==='Externo'?'selected':''}>Aj. Externo</option>
       <option value="Conferente" ${l.funcaoOverride==='Conferente'?'selected':''}>⭐ Conferente</option>
     </select>`;
 
@@ -2949,13 +2954,13 @@ function renderVagasAdmin() {
   if (!vagas.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhuma vaga.</td></tr>'; return; }
   tbody.innerHTML = vagas.map(([id,v]) => {
     const atribs = Object.values(v.atribuicoes||{}).length;
-    const total = (v.qtd['Ajudante Interno']||0)+(v.qtd['Ajudante Externo']||0)+(v.qtd['Conferente']||0);
+    const total = (v.qtd['Interno']||0)+(v.qtd['Externo']||0)+(v.qtd['Conferente']||0);
     const emps = v.empresasAlvo ? v.empresasAlvo.map(eid=>(STATE.empresas[eid]||{}).nome||eid).join(', ') : 'Todas';
     return `<tr>
       <td class="td-name">${v.opNome}</td>
       <td>${formatDate(v.data)}</td>
       <td>${v.hora||'—'}</td>
-      <td style="font-size:11px">AI:${v.qtd['Ajudante Interno']||0} AE:${v.qtd['Ajudante Externo']||0} CO:${v.qtd['Conferente']||0}</td>
+      <td style="font-size:11px">AI:${v.qtd['Interno']||0} AE:${v.qtd['Externo']||0} CO:${v.qtd['Conferente']||0}</td>
       <td style="font-size:11px">${emps}</td>
       <td><span class="badge ${v.status==='aberta'?'badge-success':'badge-gray'}">${v.status}</span></td>
       <td style="display:flex;gap:4px">
@@ -3039,8 +3044,52 @@ function renderAcompanhamento() {
   todasOps.forEach((op, i) => { opCorMap[op] = OP_CORES[i % OP_CORES.length]; });
 
   container.innerHTML = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a)).map(([data, rows]) => {
-    // Ordenar linhas por operação para agrupar visualmente
-    const rowsOrdenados = [...rows].sort(([,a],[,b]) => (a.opNome||'').localeCompare(b.opNome||''));
+    // Ordenar por Função (Conferente → Interno → Externo → outros) e depois H. Inicial
+    const _funcaoOrd = f => {
+      const n = (f||'').toLowerCase();
+      if (n.includes('conferente')) return 0;
+      if (n.includes('interno')) return 1;
+      if (n.includes('externo')) return 2;
+      return 9;
+    };
+    const rowsOrdenados = [...rows].sort(([,a],[,b]) => {
+      const fo = _funcaoOrd(a.funcao) - _funcaoOrd(b.funcao);
+      if (fo !== 0) return fo;
+      return (a.horaInicial||'').localeCompare(b.horaInicial||'');
+    });
+    // Seção de confirmação do dia (apenas empresa)
+    let confirmacaoSection = '';
+    if (currentUser.role === 'empresa') {
+      const empKey = currentUser.empresaId || currentUser.login;
+      const conf = (STATE.confirmacoesDia[data] || {})[empKey];
+      if (conf) {
+        const confDate = new Date(conf.confirmedAt).toLocaleString('pt-BR');
+        confirmacaoSection = `
+        <div style="padding:14px 18px;border-top:2px solid var(--success);background:var(--success-bg);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span style="font-size:20px">✅</span>
+          <div>
+            <div style="font-weight:700;color:var(--success);font-size:13px">Dia confirmado</div>
+            <div style="font-size:11px;color:var(--gray-600)">Confirmado em ${confDate} por ${conf.login}${conf.obs ? ` — Obs: ${conf.obs}` : ''}</div>
+          </div>
+        </div>`;
+      } else {
+        confirmacaoSection = `
+        <div style="padding:16px 18px;border-top:2px dashed var(--gray-200)">
+          <div style="background:#F8FAFC;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px">
+            <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">✅ Validação do Fechamento Diário</div>
+            <div style="font-size:12px;color:var(--gray-600);margin-bottom:12px;line-height:1.6">
+              Ao confirmar este dia, você declara estar <strong>ciente de que todas as informações registradas — colaboradores, horários e valores — estão corretas e de acordo com a operação realizada</strong>, autorizando o envio desses dados para o processamento do fechamento financeiro. Esta ação é irreversível. Caso identifique alguma inconsistência, utilize o campo abaixo ou o botão <em>"Sugerir alteração"</em> na linha correspondente antes de confirmar.
+            </div>
+            <textarea id="conf-obs-${data}" rows="2" placeholder="Observações ou inconsistências a registrar (opcional)..." style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;resize:vertical;margin-bottom:10px"></textarea>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <button class="btn btn-yellow" onclick="confirmarDia('${data}')">✅ Confirmar Dia</button>
+              <span style="font-size:11px;color:var(--gray-400)">⚠️ Após confirmar, não será possível desfazer.</span>
+            </div>
+          </div>
+        </div>`;
+      }
+    }
+
     return `
     <div class="acomp-card" style="margin-bottom:20px">
       <div class="acomp-header">
@@ -3056,14 +3105,14 @@ function renderAcompanhamento() {
               <th>Colaborador</th>
               <th>Empresa</th>
               <th>Operação</th>
-              <th>Função</th>
+              <th>Motorista</th>
               <th>H. Inicial</th>
               <th>Entrada</th>
               <th>Ref.</th>
               <th>Saída</th>
               <th>H.Trab.</th>
               <th>Valor</th>
-              <th>Motorista</th>
+              <th>Função</th>
               <th>Aval.</th>
             </tr>
           </thead>
@@ -3072,8 +3121,27 @@ function renderAcompanhamento() {
           </tbody>
         </table>
       </div>
+      ${confirmacaoSection}
     </div>`;
   }).join('');
+}
+
+function confirmarDia(data) {
+  const empKey = currentUser.empresaId || currentUser.login;
+  const conf = (STATE.confirmacoesDia[data] || {})[empKey];
+  if (conf) { toast('Este dia já foi confirmado.', 'error'); return; }
+  const obs = (document.getElementById(`conf-obs-${data}`)?.value || '').trim();
+  if (!confirm(`Confirmar o fechamento do dia ${formatDate(data)}?\n\nEsta ação é irreversível.`)) return;
+  const entrada = {
+    confirmedAt: Date.now(),
+    login: currentUser.login,
+    empresaNome: currentUser.empresaNome || currentUser.login,
+    obs
+  };
+  db.ref(`confirmacoesDia/${data}/${empKey}`).set(entrada).then(() => {
+    toast('Dia confirmado com sucesso! ✅', 'success');
+    registrarTransacao('CONFIRMACAO_DIA', `Confirmou o dia ${data}`, { data, obs });
+  }).catch(() => toast('Erro ao confirmar. Tente novamente.', 'error'));
 }
 
 function renderAcompRow(id, a, opCor) {
@@ -3133,14 +3201,14 @@ function renderAcompRow(id, a, opCor) {
     <td class="td-name">${a.colNome}${desacordoCell ? ' '+desacordoCell : ''}</td>
     <td style="font-size:11px;color:var(--gray-600)">${a.empresaNome||'—'}</td>
     <td><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span></td>
-    <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
+    <td style="font-size:11px">${(() => { const mn = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || ''; return mn ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${mn}</span>` : '<span style="color:var(--gray-400)">—</span>'; })()}</td>
     <td style="font-family:'JetBrains Mono',monospace;color:var(--info);font-weight:600">${a.horaInicial||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace">${a.chegada||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace;color:var(--gray-400)">${a.refeicao||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace">${formatSaida(a.saida)}</td>
     <td><span class="${classe}" style="font-size:11px">${displayH}</span></td>
     <td style="font-weight:600;font-size:11px">${valor}${adicionalBadge}</td>
-    <td style="font-size:11px">${(() => { const mn = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || ''; return mn ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${mn}</span>` : '<span style="color:var(--gray-400)">—</span>'; })()}</td>
+    <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${(a.funcao||'—').replace('Ajudante Interno','Interno').replace('Ajudante Externo','Externo')}</span></td>
     <td>${avalCell}</td>
   </tr>`;
 }
