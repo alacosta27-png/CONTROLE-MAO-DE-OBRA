@@ -2672,7 +2672,9 @@ function renderMural() {
         const isConf = linha.funcao === 'Conferente';
         const _muralMot = linha.motoristaNome || (linha.motoristaId && STATE.motoristas[linha.motoristaId] ? STATE.motoristas[linha.motoristaId].nome : '') || '';
 
-        const empsIndicadas = [...new Set(atribs.map(a => a.empresaNome).filter(Boolean))];
+        const empsIndicadas = [...new Set(atribs.map(a =>
+          a.empresaNome || (a.empresaId && STATE.empresas[a.empresaId] ? STATE.empresas[a.empresaId].nome : '') || ''
+        ).filter(Boolean))];
         const empsIndicadasCell = empsIndicadas.length
           ? empsIndicadas.map(n => `<span style="font-size:10px;background:var(--gray-100);color:var(--navy);padding:2px 7px;border-radius:10px;margin:1px;display:inline-block;font-weight:600">${n}</span>`).join('')
           : '<span style="font-size:10px;color:var(--gray-400)">—</span>';
