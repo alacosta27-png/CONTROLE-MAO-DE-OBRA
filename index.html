@@ -2672,6 +2672,14 @@ function renderMural() {
         const isConf = linha.funcao === 'Conferente';
         const _muralMot = linha.motoristaNome || (linha.motoristaId && STATE.motoristas[linha.motoristaId] ? STATE.motoristas[linha.motoristaId].nome : '') || '';
 
+        const empsIndicadas = [...new Set(atribs.map(a => a.empresaNome).filter(Boolean))];
+        const empsIndicadasCell = empsIndicadas.length
+          ? empsIndicadas.map(n => `<span style="font-size:10px;background:var(--gray-100);color:var(--navy);padding:2px 7px;border-radius:10px;margin:1px;display:inline-block;font-weight:600">${n}</span>`).join('')
+          : '<span style="font-size:10px;color:var(--gray-400)">—</span>';
+        const btnEncerrarLinha = currentUser.role === 'admin'
+          ? `<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 8px" onclick="encerrarVaga('${vagaId}')">Encerrar</button>`
+          : '';
+
         return `<tr style="${isConf?'background:#F0FDF4;':''}">
           <td style="font-weight:600;font-size:11px;padding:5px 8px">${linha.opNome||'—'}</td>
           <td style="padding:5px 8px"><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
@@ -2681,19 +2689,17 @@ function renderMural() {
           <td style="padding:5px 8px">${statusCell}</td>
           <td style="padding:5px 8px">${_muralMot ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${_muralMot}</span>` : '<span style="font-size:10px;color:var(--gray-400)">—</span>'}</td>
           <td style="min-width:180px;padding:5px 8px">${nomesAtrib}</td>
+          <td style="min-width:100px;padding:5px 8px">${empsIndicadasCell}</td>
+          <td style="padding:5px 8px;text-align:center">${btnEncerrarLinha}</td>
         </tr>`;
       }).join('');
 
-      // Sub-cabeçalho da vaga com botão Encerrar alinhado à direita (só admin)
-      const btnEncerrarVaga = currentUser.role === 'admin'
-        ? `<button class="btn btn-ghost btn-sm" style="margin-left:auto;flex-shrink:0" onclick="encerrarVaga('${vagaId}')">Encerrar</button>`
-        : '';
+      // Sub-cabeçalho da vaga (sem botão Encerrar — fica em cada linha)
       const subHeader = `<tr>
-        <td colspan="8" style="background:var(--navy-light);padding:6px 10px">
+        <td colspan="10" style="background:var(--navy-light);padding:6px 10px">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span style="color:var(--yellow);font-size:11px;font-weight:700">📋 Solicitação ${vagasPorData.length > 1 ? vagaIdx+1 : ''}</span>
             <span style="color:rgba(255,255,255,0.65);font-size:11px">Empresas: ${empsAlvo}${obsVaga}</span>
-            ${btnEncerrarVaga}
           </div>
         </td>
       </tr>`;
@@ -2727,6 +2733,8 @@ function renderMural() {
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Status</th>
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Motorista</th>
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaboradores</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Emp. Indicadas</th>
+              <th style="padding:8px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)"></th>
             </tr>
           </thead>
           <tbody>${blocosPorVaga}</tbody>
@@ -3053,6 +3061,7 @@ function renderAcompanhamento() {
               <th>Saída</th>
               <th>H.Trab.</th>
               <th>Valor</th>
+              <th>Motorista</th>
               <th>Aval.</th>
             </tr>
           </thead>
@@ -3129,6 +3138,7 @@ function renderAcompRow(id, a, opCor) {
     <td style="font-family:'JetBrains Mono',monospace">${formatSaida(a.saida)}</td>
     <td><span class="${classe}" style="font-size:11px">${displayH}</span></td>
     <td style="font-weight:600;font-size:11px">${valor}${adicionalBadge}</td>
+    <td style="font-size:11px">${(() => { const mn = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || ''; return mn ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${mn}</span>` : '<span style="color:var(--gray-400)">—</span>'; })()}</td>
     <td>${avalCell}</td>
   </tr>`;
 }
@@ -4163,11 +4173,11 @@ function _buildAcertoRows() {
 function exportarAcertoCSV() {
   if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
   const inicio = v('acerto-inicio'), fim = v('acerto-fim');
-  const header = ['Empresa','Data','Colaborador','CPF','Operação','C. Custo','Função','MD','Motorista','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total'];
+  const header = ['Data','Colaborador','CPF','Empresa','Operação','C. Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','Total','MD','Motorista','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional'];
   const data = _buildAcertoRows().map(r => [
-    r.empresa, r.data, r.colaborador, r.cpf, r.operacao, r.cc, r.funcao,
-    r.md, r.motorista, r.chegada, r.refeicao, r.saida,
-    r.hTrab, r.hExtra, r.adicionalStr, r.valorDiaStr, r.valorHEStr, r.valorAdicStr, r.total
+    r.data, r.colaborador, r.cpf, r.empresa, r.operacao, r.cc, r.funcao,
+    r.chegada, r.refeicao, r.saida, r.hTrab, r.total,
+    r.md, r.motorista, r.hExtra, r.adicionalStr, r.valorDiaStr, r.valorHEStr, r.valorAdicStr
   ]);
   const csv = [header, ...data].map(r => r.map(c => `"${c}"`).join(';')).join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
