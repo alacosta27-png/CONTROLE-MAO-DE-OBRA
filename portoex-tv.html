@@ -201,6 +201,8 @@ body {
   animation: blink 1.5s infinite;
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+@keyframes blink-yellow { 0%,100%{ color:var(--yellow); text-shadow:0 0 10px rgba(245,197,24,0.7); } 50%{ color:rgba(245,197,24,0.15); text-shadow:none; } }
+.entrada-overtime { color: var(--yellow) !important; animation: blink-yellow 1s ease-in-out infinite; }
 
 /* CONTENT */
 .tv-content {
@@ -388,7 +390,6 @@ body {
 // filtro: string que será comparada (case-insensitive) contra empresaNome e opNome do colaborador
 // filtro null = acesso total (admin)
 const CREDENCIAIS = {
-  'ADMIN':  { senha: 'PORTOEXTV', filtro: null },
   'LJA':    { senha: '123456', filtro: 'LJA' },
   'RP':     { senha: 'RP123',  filtro: 'RP'  },
   'IAGO':   { senha: '123456', filtro: 'IAGO' },
@@ -577,9 +578,25 @@ function buildRow(id, a, num, isRota) {
   const nomeClass   = isAtraso ? 'td-nome-atraso' : 'td-nome';
   const atrasoBadge = isAtraso ? `<span class="badge-atraso">⚠ ATRASO</span>` : '';
 
+  // OVERTIME: entrada registrada + mais de 8h trabalhadas
+  let isOvertime = false;
+  if (chegada) {
+    const [hc, mc] = chegada.split(':').map(Number);
+    const chegadaMin = hc * 60 + mc;
+    const [hr, mr] = (refeicao || '01:00').split(':').map(Number);
+    const refMin = hr * 60 + mr;
+    if (saida) {
+      const [hs, ms] = saida.split(':').map(Number);
+      isOvertime = (hs * 60 + ms) - chegadaMin - refMin > 8 * 60;
+    } else {
+      const now = new Date();
+      isOvertime = (now.getHours() * 60 + now.getMinutes()) > (chegadaMin + 8 * 60 + refMin);
+    }
+  }
+
   const tdNome    = `<td><div class="${nomeClass}">${a.colNome||'—'} ${atrasoBadge}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
   const tdOp      = `<td><div class="td-op">${a.opNome||'—'}</div><div class="td-func">${a.funcao||''}</div></td>`;
-  const tdEntrada = `<td class="td-time entrada">${chegada||'——'}</td>`;
+  const tdEntrada = `<td class="td-time entrada${isOvertime ? ' entrada-overtime' : ''}">${chegada||'——'}</td>`;
   const tdPrev    = `<td class="td-time saida-prev">${prevSaida||'——'}</td>`;
   const tdSaida   = `<td class="td-time saida-real">${saida||'——'}</td>`;
   const tdStatus  = `<td><span class="status-pill ${sCls}">${sLabel}</span></td>`;
