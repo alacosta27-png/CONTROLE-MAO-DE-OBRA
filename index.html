@@ -2032,10 +2032,6 @@ function buildNavTabs() {
   if (currentUser.role === 'admin' || currentUser.acesso === 'inserir') {
     document.getElementById('btn-nova-vaga-wrap').style.display = 'block';
   }
-  if (currentUser.acesso === 'inserir') {
-    const colBtn = document.getElementById('btn-colab-inserir-wrap');
-    if (colBtn) colBtn.style.display = 'block';
-  }
   if (currentUser.role === 'empresa') {
     document.getElementById('empresa-nome-sub').textContent = currentUser.empresaNome;
   }
@@ -3198,7 +3194,11 @@ function renderAcompRow(id, a, opCor) {
     </div>`;
   } else if (a.empresaId === currentUser.empresaId ||
              (!a.empresaId && (a.empresaNome||'').trim().toUpperCase() === (currentUser.empresaNome||'').trim().toUpperCase())) {
+    const btnEditar = currentUser.acesso === 'inserir' && a.colId
+      ? `<button class="btn btn-ghost btn-sm" onclick="openEditColab('${a.colId}','${a.empresaId||currentUser.empresaId}')">✏️ Editar</button>`
+      : '';
     acoes = `<div style="display:flex;gap:4px;flex-wrap:wrap">
+      ${btnEditar}
       <button class="btn btn-ghost btn-sm" onclick="openSugestao('${id}')">Sugerir alteração</button>
       <button class="btn btn-ghost btn-sm" onclick="openGerenciarIndicacao('${id}')">Indicação</button>
     </div>`;
