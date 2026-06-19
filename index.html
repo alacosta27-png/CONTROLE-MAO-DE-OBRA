@@ -931,7 +931,10 @@ tbody tr:hover { background: var(--gray-50); }
           <div class="section-title">📜 Log de Transações</div>
           <div class="section-sub">Histórico de ações realizadas por login</div>
         </div>
-        <button class="btn btn-ghost" onclick="limparLogAntigo()">🗑 Limpar +30 dias</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="exportarLogCSV()">⬇️ Exportar CSV</button>
+          <button class="btn btn-ghost" onclick="limparLogAntigo()">🗑 Limpar +30 dias</button>
+        </div>
       </div>
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
@@ -951,6 +954,7 @@ tbody tr:hover { background: var(--gray-50); }
               <option value="aviso">Avisos</option>
               <option value="acompanhamento">Acompanhamento</option>
               <option value="login_admin">Logins Admin</option>
+              <option value="CONFIRMACAO_DIA">Confirmação Dia</option>
             </select>
           </div>
           <div class="form-group" style="margin:0;min-width:140px">
@@ -3352,7 +3356,11 @@ function saveMotorista() {
 
 function deleteMotorista(id) {
   if (!confirm('Excluir este motorista?')) return;
-  db.ref('motoristas/' + id).remove().then(() => toast('Motorista excluído.'));
+  const nome = (STATE.motoristas[id] || {}).nome || id;
+  db.ref('motoristas/' + id).remove().then(() => {
+    registrarTransacao('motorista', `Motorista excluído: ${nome}`);
+    toast('Motorista excluído.');
+  });
 }
 
 function populateMotoristaSelect() {
@@ -3911,7 +3919,17 @@ function saveAcompEdit() {
     data.motoristaNome = motId && STATE.motoristas[motId] ? STATE.motoristas[motId].nome : '';
     data.md = v('ae-md');
   }
+  const _rec = STATE.acompanhamento[currentAcompId] || {};
   db.ref('acompanhamento/' + currentAcompId).update(data).then(() => {
+    const _alteracoes = [];
+    if (data.chegada !== _rec.chegada) _alteracoes.push(`Chegada: ${_rec.chegada||'—'} → ${data.chegada||'—'}`);
+    if (data.saida   !== _rec.saida)   _alteracoes.push(`Saída: ${_rec.saida||'—'} → ${data.saida||'—'}`);
+    if (data.status  !== _rec.status)  _alteracoes.push(`Status: ${_rec.status||'—'} → ${data.status||'—'}`);
+    if (data.opNome  && data.opNome  !== _rec.opNome)  _alteracoes.push(`Op: ${_rec.opNome||'—'} → ${data.opNome}`);
+    registrarTransacao('acompanhamento',
+      `Ponto editado: ${_rec.colNome||'—'} (${formatDate(_rec.data||'')})`,
+      { colaborador: _rec.colNome, data: _rec.data, alteracoes: _alteracoes.join(' | ') || 'sem alterações registradas' }
+    );
     toast('Ponto salvo!', 'success');
     closeModal('modal-acomp-edit');
   });
@@ -4921,8 +4939,8 @@ function renderLog() {
     return;
   }
 
-  const tipoIcon = { vaga:'📋', empresa:'🏢', motorista:'🚛', aviso:'📢', acompanhamento:'📝', login_admin:'🔐' };
-  const tipoColor = { vaga:'var(--info)', empresa:'var(--success)', motorista:'var(--yellow-dark)', aviso:'var(--warning)', acompanhamento:'var(--navy)', login_admin:'var(--danger)' };
+  const tipoIcon = { vaga:'📋', empresa:'🏢', motorista:'🚛', aviso:'📢', acompanhamento:'📝', login_admin:'🔐', CONFIRMACAO_DIA:'✅' };
+  const tipoColor = { vaga:'var(--info)', empresa:'var(--success)', motorista:'var(--yellow-dark)', aviso:'var(--warning)', acompanhamento:'var(--navy)', login_admin:'var(--danger)', CONFIRMACAO_DIA:'var(--success)' };
 
   container.innerHTML = `<div class="table-wrap"><table>
     <thead><tr>
@@ -4943,6 +4961,48 @@ function renderLog() {
     }).join('')}
     </tbody>
   </table></div>`;
+}
+
+function exportarLogCSV() {
+  const filtLogin = document.getElementById('log-filter-login')?.value || '';
+  const filtTipo  = document.getElementById('log-filter-tipo')?.value  || '';
+  const filtData  = document.getElementById('log-filter-data')?.value  || '';
+
+  let items = Object.entries(STATE.transacoes || {})
+    .map(([id, t]) => ({ id, ...t }))
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  if (filtLogin) items = items.filter(t => t.login === filtLogin);
+  if (filtTipo)  items = items.filter(t => t.tipo === filtTipo);
+  if (filtData)  items = items.filter(t => t.ts && new Date(t.ts).toISOString().startsWith(filtData));
+
+  if (!items.length) { toast('Nenhuma transação para exportar.', 'error'); return; }
+
+  const header = ['Data/Hora','Login','Perfil','Tipo','Descrição','Detalhes'];
+  const rows = items.map(t => [
+    t.ts ? new Date(t.ts).toLocaleString('pt-BR') : '—',
+    t.login || '—',
+    t.label || t.role || '—',
+    t.tipo || '—',
+    t.descricao || '—',
+    t.alteracoes || t.obs || ''
+  ]);
+  const csv = '﻿' + [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `transacoes_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+
+  // Após exportar, oferece limpeza de registros com mais de 5 dias
+  setTimeout(() => {
+    const limite5 = Date.now() - 5 * 24 * 60 * 60 * 1000;
+    const antigos5 = Object.entries(STATE.transacoes || {}).filter(([,t]) => (t.ts||0) < limite5);
+    if (antigos5.length && confirm(`Exportação concluída! ✅\n\nExistem ${antigos5.length} registro(s) com mais de 5 dias.\nDeseja apagá-los para manter o log limpo?`)) {
+      const upd = {};
+      antigos5.forEach(([id]) => { upd[id] = null; });
+      db.ref('transacoes').update(upd).then(() => toast(`${antigos5.length} registros antigos removidos.`, 'success'));
+    }
+  }, 500);
 }
 
 function limparLogAntigo() {
