@@ -783,8 +783,13 @@ tbody tr:hover { background: var(--gray-50); }
           <div class="section-title">📋 Mural de Vagas</div>
           <div class="section-sub">Vagas disponíveis para atribuição pelas empresas</div>
         </div>
-        <div id="btn-nova-vaga-wrap" style="display:none">
-          <button class="btn btn-yellow" onclick="openModal('modal-vaga')">+ Nova Vaga</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="btn-colab-inserir-wrap" style="display:none">
+            <button class="btn btn-ghost" onclick="switchPage('page-colaboradores')">👥 Colaboradores</button>
+          </div>
+          <div id="btn-nova-vaga-wrap" style="display:none">
+            <button class="btn btn-yellow" onclick="openModal('modal-vaga')">+ Nova Vaga</button>
+          </div>
         </div>
       </div>
       <div class="mural-grid" id="mural-grid">
@@ -1830,11 +1835,11 @@ let currentAtribuirVagaId = null;
 let currentAcompId = null;
 
 // Admin logins — a senha ADMIN_SENHA é a master (usada para ações sensíveis)
-const ADMIN_SENHA = 'admin@2024';
+const ADMIN_SENHA = 'ADMIN123456';
 const ADMIN_LOGINS = [
-  { login: 'portoex.admin',        senha: 'admin@2024',   role: 'admin', label: '🔑 Administrador' },
-  { login: 'portoex.controladoria', senha: 'ctrl@2024',   role: 'admin', label: '📊 Controladoria' },
-  { login: 'portoex.logistica',     senha: 'log@2024',    role: 'admin', label: '🚚 Logística' },
+  { login: 'portoex.admin',        senha: 'ADMIN123456',  role: 'admin', label: '🔑 Administrador' },
+  { login: 'portoex.controladoria', senha: 'ADMIN123456', role: 'admin', label: '📊 Controladoria' },
+  { login: 'portoex.logistica',     senha: 'ADMIN123456', role: 'admin', label: '🚚 Logística' },
 ];
 // Login G.R. (Gerenciamento de Risco)
 const GR_LOGIN = { login: 'gr.portoex', senha: 'gr@2024', role: 'gr', label: '🛡️ G.R. – Risco' };
@@ -1979,21 +1984,25 @@ function initApp() {
 function buildNavTabs() {
   const nav = document.getElementById('nav-tabs');
   nav.innerHTML = '';
+  const isSuperAdmin = currentUser.login === 'portoex.admin';
+  const adminTabs = [
+    { id: 'page-mural', label: 'Mural de Vagas' },
+    { id: 'page-acompanhamento', label: 'Acompanhamento' },
+    { id: 'page-dashboard', label: '📊 Dashboard' },
+    { id: 'page-resumo-admin', label: '📋 Resumo Geral' },
+    { id: 'page-resumo-terceirizados', label: '💰 Acerto' },
+    { id: 'page-empresas', label: 'Empresas' },
+    { id: 'page-operacoes', label: 'Operações' },
+    { id: 'page-motoristas', label: 'Motoristas' },
+    { id: 'page-gr', label: '🛡️ G.R.' },
+    { id: 'page-avisos', label: '📢 Avisos' },
+    ...(isSuperAdmin ? [
+      { id: 'page-admin-logins', label: '🔐 Logins' },
+      { id: 'page-transacoes', label: '📜 Transações' },
+    ] : []),
+  ];
   const tabs = currentUser.role === 'admin'
-    ? [
-        { id: 'page-mural', label: 'Mural de Vagas' },
-        { id: 'page-acompanhamento', label: 'Acompanhamento' },
-        { id: 'page-dashboard', label: '📊 Dashboard' },
-        { id: 'page-resumo-admin', label: '📋 Resumo Geral' },
-        { id: 'page-resumo-terceirizados', label: '💰 Acerto' },
-        { id: 'page-empresas', label: 'Empresas' },
-        { id: 'page-operacoes', label: 'Operações' },
-        { id: 'page-motoristas', label: 'Motoristas' },
-        { id: 'page-gr', label: '🛡️ G.R.' },
-        { id: 'page-avisos', label: '📢 Avisos' },
-        { id: 'page-admin-logins', label: '🔐 Logins' },
-        { id: 'page-transacoes', label: '📜 Transações' },
-      ]
+    ? adminTabs
     : currentUser.role === 'gr'
     ? [
         { id: 'page-gr', label: '🛡️ G.R. – Risco' },
@@ -2001,7 +2010,6 @@ function buildNavTabs() {
     : currentUser.acesso === 'inserir'
     ? [
         { id: 'page-mural', label: 'Mural de Vagas' },
-        { id: 'page-colaboradores', label: 'Meus Colaboradores' },
         { id: 'page-acompanhamento', label: 'Acompanhamento' },
         { id: 'page-motoristas', label: '🚛 Motoristas' },
         { id: 'page-avisos', label: '📢 Avisos' },
@@ -2021,8 +2029,12 @@ function buildNavTabs() {
     nav.appendChild(el);
   });
 
-  if (currentUser.role === 'admin') {
+  if (currentUser.role === 'admin' || currentUser.acesso === 'inserir') {
     document.getElementById('btn-nova-vaga-wrap').style.display = 'block';
+  }
+  if (currentUser.acesso === 'inserir') {
+    const colBtn = document.getElementById('btn-colab-inserir-wrap');
+    if (colBtn) colBtn.style.display = 'block';
   }
   if (currentUser.role === 'empresa') {
     document.getElementById('empresa-nome-sub').textContent = currentUser.empresaNome;
@@ -3115,7 +3127,7 @@ function renderAcompanhamento() {
               <th>Ref.</th>
               <th>Saída</th>
               <th>H.Trab.</th>
-              <th>Valor</th>
+              ${currentUser.acesso !== 'inserir' ? '<th>Valor</th>' : ''}
               <th>Função</th>
               <th>Aval.</th>
             </tr>
@@ -3211,7 +3223,7 @@ function renderAcompRow(id, a, opCor) {
     <td style="font-family:'JetBrains Mono',monospace;color:var(--gray-400)">${a.refeicao||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace">${formatSaida(a.saida)}</td>
     <td><span class="${classe}" style="font-size:11px">${displayH}</span></td>
-    <td style="font-weight:600;font-size:11px">${valor}${adicionalBadge}</td>
+    ${currentUser.acesso !== 'inserir' ? `<td style="font-weight:600;font-size:11px">${valor}${adicionalBadge}</td>` : ''}
     <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${(a.funcao||'—').replace('Ajudante Interno','Interno').replace('Ajudante Externo','Externo')}</span></td>
     <td>${avalCell}</td>
   </tr>`;
