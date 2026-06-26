@@ -201,6 +201,8 @@ body {
   animation: blink 1.5s infinite;
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+@keyframes blink-yellow { 0%,100%{ color:var(--yellow); text-shadow:0 0 10px rgba(245,197,24,0.7); } 50%{ color:rgba(245,197,24,0.15); text-shadow:none; } }
+.entrada-overtime { color: var(--yellow) !important; animation: blink-yellow 1s ease-in-out infinite; }
 
 /* CONTENT */
 .tv-content {
@@ -317,6 +319,112 @@ body {
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: #111; }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+/* REMEMBER ME */
+.login-remember {
+  display: flex; align-items: center; gap: 9px;
+  margin-top: 4px; margin-bottom: 0;
+  font-size: 12px; font-weight: 600; color: var(--gray-400);
+  letter-spacing: 1px; cursor: pointer; text-transform: uppercase;
+}
+.login-remember input[type=checkbox] {
+  width: 15px; height: 15px; cursor: pointer; accent-color: var(--yellow);
+}
+
+/* ADMIN BUTTON in header */
+#btn-admin {
+  display: none;
+  background: rgba(245,197,24,.15);
+  color: var(--yellow);
+  border: 1px solid rgba(245,197,24,.35);
+  border-radius: 4px;
+  padding: 5px 13px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; cursor: pointer;
+  transition: background .2s;
+}
+#btn-admin:hover { background: rgba(245,197,24,.28); }
+
+/* LOGOUT BUTTON */
+#btn-logout {
+  display: none;
+  background: rgba(255,255,255,.06);
+  color: var(--gray-400);
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 5px 13px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; cursor: pointer;
+  transition: background .2s;
+}
+#btn-logout:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+/* ADMIN MODAL */
+#admin-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.88); z-index: 8000;
+  align-items: center; justify-content: center;
+}
+#admin-modal.open { display: flex; }
+.adm-box {
+  background: #12121e;
+  border: 1px solid #2a2a4a;
+  border-top: 4px solid var(--yellow);
+  border-radius: 8px;
+  padding: 26px 30px;
+  width: 720px; max-width: 96vw; max-height: 88vh;
+  overflow-y: auto;
+}
+.adm-box h2 {
+  color: var(--yellow); font-size: 18px; font-weight: 900;
+  letter-spacing: 3px; text-transform: uppercase;
+  margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
+}
+.adm-close {
+  background: #333; color: #aaa; border: none; border-radius: 4px;
+  padding: 4px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px;
+}
+.adm-close:hover { background: #555; color: #fff; }
+.adm-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
+.adm-table th {
+  background: #1a1a2e; color: var(--yellow);
+  padding: 7px 10px; text-align: left;
+  font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  border-bottom: 1px solid #333;
+}
+.adm-table td { padding: 7px 10px; border-bottom: 1px solid #1e1e1e; color: #ddd; }
+.adm-table tr:hover td { background: rgba(245,197,24,.04); }
+.adm-form {
+  background: #1a1a2e; border: 1px solid #2a2a4a;
+  border-radius: 6px; padding: 16px 18px;
+}
+.adm-form h3 {
+  color: var(--gray-400); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px;
+}
+.adm-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; align-items: end; }
+.adm-grid label { font-size: 10px; font-weight: 700; color: var(--gray-400); letter-spacing: 1.5px; text-transform: uppercase; display: block; margin-bottom: 5px; }
+.adm-grid input, .adm-grid select {
+  width: 100%; background: #111; border: 1px solid #333;
+  border-radius: 4px; color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none;
+}
+.adm-grid input:focus, .adm-grid select:focus { border-color: var(--yellow); }
+.adm-grid select option { background: #111; }
+.adm-actions { display: flex; gap: 8px; margin-top: 14px; }
+.adm-save { background: var(--yellow); color: var(--navy); border: none; border-radius: 4px; padding: 8px 20px; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 900; letter-spacing: 1px; cursor: pointer; }
+.adm-clear { background: #222; color: #aaa; border: 1px solid #333; border-radius: 4px; padding: 8px 14px; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
+.adm-del { background: rgba(231,76,60,.2); color: #e74c3c; border: 1px solid #e74c3c60; border-radius: 4px; padding: 3px 9px; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; }
+.adm-del:hover { background: rgba(231,76,60,.4); }
+.adm-edit { background: rgba(245,197,24,.15); color: var(--yellow); border: 1px solid rgba(245,197,24,.3); border-radius: 4px; padding: 3px 9px; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; }
+.adm-edit:hover { background: rgba(245,197,24,.3); }
+.badge-admin   { background: rgba(245,197,24,.2); color: var(--yellow); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
+.badge-empresa { background: rgba(46,204,113,.2); color: #2ecc71; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
+.badge-user    { background: rgba(255,255,255,.1); color: #9ba3af; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
 </style>
 </head>
 <body>
@@ -335,6 +443,7 @@ body {
       <label>Senha</label>
       <input type="password" id="login-pass" placeholder="Senha">
     </div>
+    <label class="login-remember"><input type="checkbox" id="login-remember"> Lembrar senha</label>
     <button class="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-error" id="login-error"></div>
   </div>
@@ -348,6 +457,10 @@ body {
       <div class="tv-subtitle">Colaboradores Terceirizados</div>
     </div>
     <span class="tv-empresa-tag" id="tv-empresa-tag" style="display:none"></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button id="btn-admin" onclick="openAdmin()">⚙ Admin</button>
+    <button id="btn-logout" onclick="doLogout()">Sair</button>
   </div>
   <div class="tv-header-right">
     <div class="tv-date" id="tv-date">—</div>
@@ -383,41 +496,89 @@ body {
 </div>
 
 <script>
-// ===== CREDENCIAIS =====
-// Cada entrada: { senha, filtro }
-// filtro: string que será comparada (case-insensitive) contra empresaNome e opNome do colaborador
-// filtro null = acesso total (admin)
-const CREDENCIAIS = {
-  'ADMIN':  { senha: 'PORTOEXTV', filtro: null },
-  'LJA':    { senha: '123456', filtro: 'LJA' },
-  'RP':     { senha: 'RP123',  filtro: 'RP'  },
-  'IAGO':   { senha: '123456', filtro: 'IAGO' },
-  'litoral':{ senha: '123456', filtro: 'litoral' },
-};
+// ===== AUTH — SISTEMA DE USUÁRIOS PORTOEX-TV =====
+const TV_USERS_KEY   = 'portoex_tv_users_v1';
+const TV_SESSION_KEY = 'portoex_tv_session';
 
-let filtroEmpresa = null; // definido após login
+const DEFAULT_USERS = [
+  { login: 'ADMIN',     senha: 'ADMIN@2024', tipo: 'admin',   filtro: null },
+  { login: 'RAFA',      senha: 'RAFA123',    tipo: 'user',    filtro: null },
+  { login: 'VALMI',     senha: '654321',     tipo: 'user',    filtro: null },
+  { login: 'JOAOG',     senha: '123321',     tipo: 'user',    filtro: null },
+  { login: 'EXPEDICAO', senha: 'EXP2026',    tipo: 'user',    filtro: null },
+  { login: 'JANA',      senha: 'JANA123',    tipo: 'user',    filtro: null },
+  { login: 'MIRIAN',    senha: 'MIRIAN2026', tipo: 'user',    filtro: null },
+  { login: 'RODRIGO',   senha: 'ROD123',     tipo: 'user',    filtro: null },
+  { login: 'FRANCISCO', senha: 'CHICO2026',  tipo: 'user',    filtro: null },
+  { login: 'EXPEDICAO2',senha: 'EXP123',     tipo: 'user',    filtro: null },
+  { login: 'LJA',       senha: '123456',     tipo: 'empresa', filtro: 'LJA' },
+  { login: 'RP',        senha: 'RP123',      tipo: 'empresa', filtro: 'RP' },
+  { login: 'IAGO',      senha: '123456',     tipo: 'empresa', filtro: 'IAGO' },
+  { login: 'LITORAL',   senha: '123456',     tipo: 'empresa', filtro: 'litoral' }
+];
 
-// ===== LOGIN =====
+function getUsers() {
+  try { const s=localStorage.getItem(TV_USERS_KEY); return s?JSON.parse(s):null; } catch{ return null; }
+}
+function ensureUsers() {
+  if (!getUsers()) localStorage.setItem(TV_USERS_KEY, JSON.stringify(DEFAULT_USERS));
+}
+function saveUsers(u) { localStorage.setItem(TV_USERS_KEY, JSON.stringify(u)); }
+
+function getSession() {
+  try {
+    return JSON.parse(localStorage.getItem(TV_SESSION_KEY) || sessionStorage.getItem(TV_SESSION_KEY) || 'null');
+  } catch { return null; }
+}
+function setSession(login, remember) {
+  const d = JSON.stringify({ login });
+  if (remember) localStorage.setItem(TV_SESSION_KEY, d);
+  else sessionStorage.setItem(TV_SESSION_KEY, d);
+}
+function clearSession() {
+  localStorage.removeItem(TV_SESSION_KEY);
+  sessionStorage.removeItem(TV_SESSION_KEY);
+}
+
+let filtroEmpresa = null;
+let CURRENT_USER  = null;
+
 function doLogin() {
+  ensureUsers();
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
-  const err  = document.getElementById('login-error');
+  const remember = document.getElementById('login-remember').checked;
+  const err = document.getElementById('login-error');
 
-  const cred = CREDENCIAIS[user] || CREDENCIAIS[user.toUpperCase()] ||
-    Object.entries(CREDENCIAIS).find(([k]) => k.toLowerCase() === user.toLowerCase())?.[1];
+  const users = getUsers();
+  const found = users.find(u => u.login.toUpperCase() === user.toUpperCase() && u.senha === pass);
 
-  if (!cred || cred.senha !== pass) {
+  if (!found) {
     err.textContent = 'Usuário ou senha inválidos.';
     document.getElementById('login-pass').value = '';
     return;
   }
 
-  filtroEmpresa = cred.filtro;
+  onLoginSuccess(found, remember);
+}
 
-  // Mostra tag da empresa no header
+function onLoginSuccess(user, remember) {
+  CURRENT_USER  = user;
+  filtroEmpresa = user.filtro || null;
+  if (remember !== undefined) setSession(user.login, remember);
+
+  // Tag da empresa no header
   const tag = document.getElementById('tv-empresa-tag');
-  tag.textContent = user.toUpperCase();
-  tag.style.display = 'inline-block';
+  if (user.tipo === 'empresa' && user.filtro) {
+    tag.textContent = user.filtro.toUpperCase();
+    tag.style.display = 'inline-block';
+  } else {
+    tag.style.display = 'none';
+  }
+
+  // Botões admin / logout
+  document.getElementById('btn-admin').style.display  = user.tipo === 'admin'  ? 'inline-block' : 'none';
+  document.getElementById('btn-logout').style.display = 'inline-block';
 
   // Remove overlay
   document.getElementById('login-overlay').style.display = 'none';
@@ -426,13 +587,108 @@ function doLogin() {
   initFirebase();
 }
 
-// Enter no campo de senha dispara login
-document.getElementById('login-pass').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-document.getElementById('login-user').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('login-pass').focus();
-});
+function doLogout() {
+  clearSession();
+  CURRENT_USER = null; filtroEmpresa = null;
+  document.getElementById('btn-admin').style.display  = 'none';
+  document.getElementById('btn-logout').style.display = 'none';
+  document.getElementById('tv-empresa-tag').style.display = 'none';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+
+// Auto-login se tiver sessão salva
+(function checkSession() {
+  ensureUsers();
+  const sess = getSession();
+  if (sess && sess.login) {
+    const found = getUsers().find(u => u.login.toUpperCase() === sess.login.toUpperCase());
+    if (found) { onLoginSuccess(found); return; }
+  }
+  document.getElementById('login-user').focus();
+})();
+
+// Enter nos campos
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
+
+// ===== ADMIN PANEL =====
+let _editLogin = null;
+
+function openAdmin() {
+  if (!CURRENT_USER || CURRENT_USER.tipo !== 'admin') return;
+  renderAdmTable();
+  clearAdmForm();
+  document.getElementById('admin-modal').classList.add('open');
+}
+function closeAdmin() { document.getElementById('admin-modal').classList.remove('open'); }
+
+function renderAdmTable() {
+  const users = getUsers();
+  document.getElementById('adm-tbody').innerHTML = users.map(u => `
+    <tr>
+      <td><b>${u.login}</b></td>
+      <td style="font-family:monospace;color:#666">${u.login==='ADMIN'?'••••••••':u.senha}</td>
+      <td><span class="badge-${u.tipo}">${u.tipo.toUpperCase()}</span></td>
+      <td style="color:#2ecc71">${u.filtro||'—'}</td>
+      <td style="display:flex;gap:6px">
+        <button class="adm-edit" onclick="editAdmUser('${u.login}')">✏ Editar</button>
+        ${u.login!=='ADMIN'?`<button class="adm-del" onclick="delAdmUser('${u.login}')">🗑</button>`:''}
+      </td>
+    </tr>`).join('');
+}
+
+function editAdmUser(login) {
+  const u = getUsers().find(x => x.login === login);
+  if (!u) return;
+  _editLogin = login;
+  document.getElementById('adm-login').value  = u.login;
+  document.getElementById('adm-senha').value  = u.senha;
+  document.getElementById('adm-tipo').value   = u.tipo;
+  document.getElementById('adm-filtro').value = u.filtro || '';
+  document.getElementById('adm-filtro-wrap').style.display = u.tipo === 'empresa' ? 'block' : 'none';
+  document.getElementById('adm-form-title').textContent = '✏ Editando: ' + login;
+}
+
+function delAdmUser(login) {
+  if (login === 'ADMIN') { alert('Não é possível excluir o ADMIN.'); return; }
+  if (!confirm('Excluir usuário ' + login + '?')) return;
+  saveUsers(getUsers().filter(u => u.login !== login));
+  renderAdmTable();
+}
+
+function saveAdmUser() {
+  const login   = document.getElementById('adm-login').value.trim().toUpperCase();
+  const senha   = document.getElementById('adm-senha').value.trim();
+  const tipo    = document.getElementById('adm-tipo').value;
+  const filtro  = document.getElementById('adm-filtro').value.trim() || null;
+  if (!login || !senha) { alert('Preencha login e senha.'); return; }
+  if (tipo === 'empresa' && !filtro) { alert('Informe o filtro para usuário Empresa.'); return; }
+  const users = getUsers();
+  const entry = { login, senha, tipo, filtro: tipo === 'empresa' ? filtro : null };
+  if (_editLogin) {
+    const idx = users.findIndex(u => u.login === _editLogin);
+    if (idx >= 0) users[idx] = entry;
+  } else {
+    if (users.find(u => u.login === login)) { alert('Login já existe. Use Editar.'); return; }
+    users.push(entry);
+  }
+  saveUsers(users);
+  clearAdmForm();
+  renderAdmTable();
+}
+
+function clearAdmForm() {
+  _editLogin = null;
+  document.getElementById('adm-login').value = '';
+  document.getElementById('adm-senha').value = '';
+  document.getElementById('adm-tipo').value  = 'user';
+  document.getElementById('adm-filtro').value = '';
+  document.getElementById('adm-filtro-wrap').style.display = 'none';
+  document.getElementById('adm-form-title').textContent = '➕ Novo Usuário';
+}
 
 // ===== FIREBASE =====
 const firebaseConfig = {
@@ -577,9 +833,25 @@ function buildRow(id, a, num, isRota) {
   const nomeClass   = isAtraso ? 'td-nome-atraso' : 'td-nome';
   const atrasoBadge = isAtraso ? `<span class="badge-atraso">⚠ ATRASO</span>` : '';
 
+  // OVERTIME: entrada registrada + mais de 8h trabalhadas
+  let isOvertime = false;
+  if (chegada) {
+    const [hc, mc] = chegada.split(':').map(Number);
+    const chegadaMin = hc * 60 + mc;
+    const [hr, mr] = (refeicao || '01:00').split(':').map(Number);
+    const refMin = hr * 60 + mr;
+    if (saida) {
+      const [hs, ms] = saida.split(':').map(Number);
+      isOvertime = (hs * 60 + ms) - chegadaMin - refMin > 8 * 60;
+    } else {
+      const now = new Date();
+      isOvertime = (now.getHours() * 60 + now.getMinutes()) > (chegadaMin + 8 * 60 + refMin);
+    }
+  }
+
   const tdNome    = `<td><div class="${nomeClass}">${a.colNome||'—'} ${atrasoBadge}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
   const tdOp      = `<td><div class="td-op">${a.opNome||'—'}</div><div class="td-func">${a.funcao||''}</div></td>`;
-  const tdEntrada = `<td class="td-time entrada">${chegada||'——'}</td>`;
+  const tdEntrada = `<td class="td-time entrada${isOvertime ? ' entrada-overtime' : ''}">${chegada||'——'}</td>`;
   const tdPrev    = `<td class="td-time saida-prev">${prevSaida||'——'}</td>`;
   const tdSaida   = `<td class="td-time saida-real">${saida||'——'}</td>`;
   const tdStatus  = `<td><span class="status-pill ${sCls}">${sLabel}</span></td>`;
@@ -619,5 +891,38 @@ function attachMdEvents() {
   });
 }
 </script>
+
+<!-- ADMIN MODAL -->
+<div id="admin-modal">
+  <div class="adm-box">
+    <h2>⚙ Gerenciador de Usuários <button class="adm-close" onclick="closeAdmin()">✕ Fechar</button></h2>
+    <table class="adm-table">
+      <thead><tr><th>Login</th><th>Senha</th><th>Tipo</th><th>Filtro Empresa</th><th>Ações</th></tr></thead>
+      <tbody id="adm-tbody"></tbody>
+    </table>
+    <div class="adm-form">
+      <h3 id="adm-form-title">➕ Novo Usuário</h3>
+      <div class="adm-grid">
+        <div><label>Login</label><input id="adm-login" placeholder="LOGIN"></div>
+        <div><label>Senha</label><input id="adm-senha" placeholder="SENHA"></div>
+        <div><label>Tipo</label>
+          <select id="adm-tipo" onchange="document.getElementById('adm-filtro-wrap').style.display=this.value==='empresa'?'block':'none'">
+            <option value="user">Usuário</option>
+            <option value="empresa">Empresa</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div id="adm-filtro-wrap" style="display:none">
+          <label>Filtro (palavra-chave)</label>
+          <input id="adm-filtro" placeholder="ex: LJA">
+        </div>
+      </div>
+      <div class="adm-actions">
+        <button class="adm-save" onclick="saveAdmUser()">💾 Salvar</button>
+        <button class="adm-clear" onclick="clearAdmForm()">Limpar</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
