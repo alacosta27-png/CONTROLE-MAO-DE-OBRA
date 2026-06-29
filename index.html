@@ -2901,6 +2901,8 @@ function indicarNaLinha(gIdx, vagaId, linhaIdx) {
       opCC: linha.opCC,
       data: vaga.data,
       horaInicial: linha.hora || '',
+      motoristaId: linha.motoristaId || '',
+      motoristaNome: linha.motoristaNome || '',
     }).then(() => {
       // Feedback visual — usa gIdx para os IDs do DOM
       const listaEl = document.getElementById(`lista-atribs-${gIdx}`);
@@ -3574,14 +3576,19 @@ function aceitarExclusaoIndicacao(nid, acompId) {
 }
 
 function aceitarAlteracaoIndicacao(nid, acompId, novoColId, novoColNome) {
-  const keyStatus = 'notificacoes/' + nid + '/status';
-  const keyColId = 'acompanhamento/' + acompId + '/colId';
-  const keyColNome = 'acompanhamento/' + acompId + '/colNome';
   const updates = {};
-  updates[keyStatus] = 'aceito';
+  updates['notificacoes/' + nid + '/status'] = 'aceito';
   if (novoColId && novoColId !== 'undefined') {
-    updates[keyColId] = novoColId;
-    updates[keyColNome] = novoColNome;
+    updates['acompanhamento/' + acompId + '/colId'] = novoColId;
+    updates['acompanhamento/' + acompId + '/colNome'] = novoColNome;
+  }
+  // Garantir que o motorista da vaga seja sempre preservado
+  const aRec = STATE.acompanhamento[acompId] || {};
+  const vagaRec = STATE.vagas[aRec.vagaId] || {};
+  const linhaRec = (vagaRec.linhas || [])[aRec.linhaIdx] || {};
+  if (linhaRec.motoristaId) {
+    updates['acompanhamento/' + acompId + '/motoristaId'] = linhaRec.motoristaId;
+    updates['acompanhamento/' + acompId + '/motoristaNome'] = linhaRec.motoristaNome || '';
   }
   db.ref().update(updates).then(() => {
     toast('Alteração de indicação aplicada!', 'success');
