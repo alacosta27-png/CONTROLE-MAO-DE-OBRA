@@ -497,24 +497,26 @@ body {
 
 <script>
 // ===== AUTH — SISTEMA DE USUÁRIOS PORTOEX-TV =====
-const TV_USERS_KEY   = 'portoex_tv_users_v1';
+const TV_USERS_KEY   = 'portoex_tv_users_v2';
 const TV_SESSION_KEY = 'portoex_tv_session';
 
 const DEFAULT_USERS = [
-  { login: 'ADMIN',     senha: 'ADMIN@2024', tipo: 'admin',   filtro: null },
-  { login: 'RAFA',      senha: 'RAFA123',    tipo: 'user',    filtro: null },
-  { login: 'VALMI',     senha: '654321',     tipo: 'user',    filtro: null },
-  { login: 'JOAOG',     senha: '123321',     tipo: 'user',    filtro: null },
-  { login: 'EXPEDICAO', senha: 'EXP2026',    tipo: 'user',    filtro: null },
-  { login: 'JANA',      senha: 'JANA123',    tipo: 'user',    filtro: null },
-  { login: 'MIRIAN',    senha: 'MIRIAN2026', tipo: 'user',    filtro: null },
-  { login: 'RODRIGO',   senha: 'ROD123',     tipo: 'user',    filtro: null },
-  { login: 'FRANCISCO', senha: 'CHICO2026',  tipo: 'user',    filtro: null },
-  { login: 'EXPEDICAO2',senha: 'EXP123',     tipo: 'user',    filtro: null },
-  { login: 'LJA',       senha: '123456',     tipo: 'empresa', filtro: 'LJA' },
-  { login: 'RP',        senha: 'RP123',      tipo: 'empresa', filtro: 'RP' },
-  { login: 'IAGO',      senha: '123456',     tipo: 'empresa', filtro: 'IAGO' },
-  { login: 'LITORAL',   senha: '123456',     tipo: 'empresa', filtro: 'litoral' }
+  { login: 'ADMIN',                senha: 'ADMIN@2024', tipo: 'admin',   filtro: null },
+  { login: 'RAFA',                 senha: 'RAFA123',    tipo: 'user',    filtro: null },
+  { login: 'VALMI',                senha: '654321',     tipo: 'user',    filtro: null },
+  { login: 'JOAOG',                senha: '123321',     tipo: 'user',    filtro: null },
+  { login: 'EXPEDICAO',            senha: 'EXP2026',    tipo: 'user',    filtro: null },
+  { login: 'JANA',                 senha: 'JANA123',    tipo: 'user',    filtro: null },
+  { login: 'MIRIAN',               senha: 'MIRIAN2026', tipo: 'user',    filtro: null },
+  { login: 'RODRIGO',              senha: 'ROD123',     tipo: 'user',    filtro: null },
+  { login: 'FRANCISCO',            senha: 'CHICO2026',  tipo: 'user',    filtro: null },
+  { login: 'EXPEDICAO2',           senha: 'EXP123',     tipo: 'user',    filtro: null },
+  { login: 'portoex.logistica',    senha: '185166',     tipo: 'user',    filtro: null },
+  { login: 'portoex.controladoria',senha: '185166',     tipo: 'user',    filtro: null },
+  { login: 'LJA',                  senha: '123456',     tipo: 'empresa', filtro: 'LJA' },
+  { login: 'RP',                   senha: 'RP123',      tipo: 'empresa', filtro: 'RP' },
+  { login: 'IAGO',                 senha: '123456',     tipo: 'empresa', filtro: 'IAGO' },
+  { login: 'LITORAL',              senha: '123456',     tipo: 'empresa', filtro: 'litoral' }
 ];
 
 function getUsers() {
