@@ -152,7 +152,7 @@ body {
 .tv-subtitle { color: var(--yellow); font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
 .tv-header-right { text-align: right; }
 .tv-date { color: var(--white); font-size: 18px; font-weight: 700; }
-.tv-time { color: var(--yellow); font-size: 30px; font-weight: 900; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+.tv-time { color: var(--yellow); font-size: 45px; font-weight: 900; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
 .tv-empresa-tag {
   margin-left: 16px;
   background: rgba(245,197,24,.15);
@@ -202,7 +202,9 @@ body {
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 @keyframes blink-yellow { 0%,100%{ color:var(--yellow); text-shadow:0 0 10px rgba(245,197,24,0.7); } 50%{ color:rgba(245,197,24,0.15); text-shadow:none; } }
+@keyframes blink-red    { 0%,100%{ color:#e74c3c; text-shadow:0 0 8px rgba(231,76,60,0.7); } 50%{ color:rgba(231,76,60,0.15); text-shadow:none; } }
 .entrada-overtime { color: var(--yellow) !important; animation: blink-yellow 1s ease-in-out infinite; }
+.td-nome-overtime { animation: blink-yellow 1s ease-in-out infinite; }
 
 /* CONTENT */
 .tv-content {
@@ -305,7 +307,7 @@ body {
 .tv-empty { text-align: center; padding: 40px; color: #333; font-size: 18px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
 
 /* ATRASO */
-.td-nome-atraso { font-size: 16px; font-weight: 700; color: #e74c3c !important; }
+.td-nome-atraso { font-size: 16px; font-weight: 700; animation: blink-red 1s ease-in-out infinite; }
 .badge-atraso {
   display: inline-flex; align-items: center; gap: 4px;
   background: rgba(231,76,60,.2); color: #e74c3c;
@@ -757,12 +759,10 @@ function render() {
   const expedicao = items.filter(([,a]) => { const c=(a.opCC||'').toUpperCase(); return c==='EXPEDIÇÃO'||c==='EXPEDICAO'; });
   const outros    = items.filter(([,a]) => { const c=(a.opCC||'').toUpperCase(); return c!=='ROTA'&&c!=='EXPEDIÇÃO'&&c!=='EXPEDICAO'; });
 
-  const temRota = rota.length > 0, temExp = expedicao.length > 0;
-  const gridClass = (temRota && temExp) ? 'two-col' : 'two-col single';
-
-  let gridHtml = `<div class="${gridClass}">`;
-  if (temRota) gridHtml += buildSection('ROTA',      rota,      'rota');
-  if (temExp)  gridHtml += buildSection('EXPEDIÇÃO', expedicao, 'expedicao');
+  // Sempre dois quadros lado a lado: ROTA e EXPEDIÇÃO
+  let gridHtml = `<div class="two-col">`;
+  gridHtml += buildSection('ROTA',      rota,      'rota');
+  gridHtml += buildSection('EXPEDIÇÃO', expedicao, 'expedicao');
   gridHtml += '</div>';
 
   let extrasHtml = '';
@@ -832,8 +832,6 @@ function buildRow(id, a, num, isRota) {
     const [hi, mi] = a.horaInicial.split(':').map(Number);
     isAtraso = (now.getHours() * 60 + now.getMinutes()) > (hi * 60 + mi);
   }
-  const nomeClass   = isAtraso ? 'td-nome-atraso' : 'td-nome';
-  const atrasoBadge = isAtraso ? `<span class="badge-atraso">⚠ ATRASO</span>` : '';
 
   // OVERTIME: entrada registrada + mais de 8h trabalhadas
   let isOvertime = false;
@@ -850,6 +848,10 @@ function buildRow(id, a, num, isRota) {
       isOvertime = (now.getHours() * 60 + now.getMinutes()) > (chegadaMin + 8 * 60 + refMin);
     }
   }
+
+  // Prioridade: atraso (vermelho) > hora extra (amarelo) > normal
+  const nomeClass   = isAtraso ? 'td-nome-atraso' : (isOvertime ? 'td-nome td-nome-overtime' : 'td-nome');
+  const atrasoBadge = isAtraso ? `<span class="badge-atraso">⚠ ATRASO</span>` : '';
 
   const tdNome    = `<td><div class="${nomeClass}">${a.colNome||'—'} ${atrasoBadge}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
   const tdOp      = `<td><div class="td-op">${a.opNome||'—'}</div><div class="td-func">${a.funcao||''}</div></td>`;
@@ -919,12 +921,4 @@ function attachMdEvents() {
           <input id="adm-filtro" placeholder="ex: LJA">
         </div>
       </div>
-      <div class="adm-actions">
-        <button class="adm-save" onclick="saveAdmUser()">💾 Salvar</button>
-        <button class="adm-clear" onclick="clearAdmForm()">Limpar</button>
-      </div>
-    </div>
-  </div>
-</div>
-</body>
-</html>
+    
