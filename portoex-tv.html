@@ -280,14 +280,7 @@ body {
 .td-time.saida-prev { color: var(--gray-400); }
 .td-time.saida-real { color: #2ecc71; }
 .td-motorista { font-size: 13px; font-weight: 600; color: #a78bfa; }
-.md-input {
-  background: transparent; border: 1px solid #444; border-radius: 4px;
-  color: var(--yellow); font-family: 'Barlow Condensed', sans-serif;
-  font-size: 15px; font-weight: 700; width: 80px; padding: 3px 6px;
-  text-align: center; outline: none;
-}
-.md-input:focus { border-color: var(--yellow); background: rgba(245,197,24,.05); }
-.md-input::placeholder { color: #444; font-size: 11px; }
+.td-prev-entrada { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; text-align: center; color: #f59e0b; }
 
 /* STATUS */
 .status-pill {
@@ -499,9 +492,7 @@ body {
   </div>
 </div>
 
-<div class="tv-content" id="tv-content">
-  <div class="tv-empty">Carregando dados...</div>
-</div>
+<div class="tv-content" id="tv-content"><div class="tv-empty">Carregando dados...</div></div>
 </div><!-- /app-root -->
 
 <script>
@@ -748,6 +739,24 @@ function pertenceAEmpresa(a) {
   );
 }
 
+// ===== AUTO-SCALE: preenche a tela inteira (sobe e desce) sem cortar nada =====
+function autoScale() {
+  const root = document.getElementById('app-root');
+  if (!root) return;
+  // Reset para medir tamanho natural
+  root.style.transform = 'none';
+  root.style.width     = window.innerWidth + 'px';
+  const naturalH = root.scrollHeight;
+  if (!naturalH) return;
+  const viewW = window.innerWidth;
+  const viewH = window.innerHeight;
+  const scale  = viewH / naturalH;
+  root.style.transform       = `scale(${scale})`;
+  root.style.transformOrigin = 'top left';
+  root.style.width           = Math.ceil(viewW / scale) + 'px';
+}
+window.addEventListener('resize', autoScale);
+
 // ===== RENDER =====
 function render() {
   const content = document.getElementById('tv-content');
@@ -759,6 +768,7 @@ function render() {
   if (!items.length) {
     content.innerHTML = '<div class="tv-empty">Nenhum colaborador cadastrado para hoje.</div>';
     updateTotais([], [], []);
+    setTimeout(autoScale, 0);
     return;
   }
 
@@ -781,15 +791,14 @@ function render() {
 
   content.innerHTML = gridHtml + extrasHtml;
   updateTotais(rota, expedicao, outros);
-  attachMdEvents();
-  setTimeout(autoScale, 0); // após o DOM renderizar
+  setTimeout(autoScale, 0);
 }
 
 function buildSection(titulo, items, tipo) {
   const presentes = items.filter(([,a]) => a.status === 'Presente').length;
   const isRota = tipo === 'rota';
   const ths = isRota
-    ? `<th>Nº</th><th>Nome</th><th>Operação</th><th class="center">Entrada</th><th class="center">Prev.Saída</th><th class="center">Saída</th><th>Motorista</th><th class="center">MD</th><th>Status</th>`
+    ? `<th>Nº</th><th>Nome</th><th>Operação</th><th class="center">Prev.Entrada</th><th class="center">Entrada</th><th class="center">Prev.Saída</th><th class="center">Saída</th><th>Motorista</th><th>Status</th>`
     : `<th>Nº</th><th>Nome</th><th>Operação</th><th class="center">Entrada</th><th class="center">Prev.Saída</th><th class="center">Saída</th><th>Status</th>`;
 
   const sorted = [...items].sort(([,a],[,b]) => {
@@ -859,8 +868,8 @@ function buildRow(id, a, num, isRota) {
 
   // Prioridade: atraso (vermelho) > hora extra (amarelo) > normal
   const nomeClass   = isAtraso ? 'td-nome-atraso' : (isOvertime ? 'td-nome td-nome-overtime' : 'td-nome');
-  const atrasoBadge = isAtraso    ? `<span class="badge-atraso">⚠ ATRASO</span>` : '';
-  const extraBadge  = isOvertime  ? `<span class="badge-extra">⏱ EXTRA</span>`  : '';
+  const atrasoBadge = isAtraso   ? `<span class="badge-atraso">⚠ ATRASO</span>` : '';
+  const extraBadge  = isOvertime ? `<span class="badge-extra">⏱ EXTRA</span>`   : '';
 
   const tdNome    = `<td><div class="${nomeClass}">${a.colNome||'—'} ${atrasoBadge}${extraBadge}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
   const tdOp      = `<td><div class="td-op">${a.opNome||'—'}</div><div class="td-func">${a.funcao||''}</div></td>`;
@@ -869,11 +878,11 @@ function buildRow(id, a, num, isRota) {
   const tdSaida   = `<td class="td-time saida-real">${saida||'——'}</td>`;
   const tdStatus  = `<td><span class="status-pill ${sCls}">${sLabel}</span></td>`;
 
+  const tdPrevEntrada = `<td class="td-prev-entrada">${a.horaInicial||'——'}</td>`;
   if (isRota) {
     return `<tr>
-      <td class="td-num">${num}</td>${tdNome}${tdOp}${tdEntrada}${tdPrev}${tdSaida}
+      <td class="td-num">${num}</td>${tdNome}${tdOp}${tdPrevEntrada}${tdEntrada}${tdPrev}${tdSaida}
       <td class="td-motorista">${motNome}</td>
-      <td><input class="md-input" data-id="${id}" value="${md}" placeholder="MD nº"></td>
       ${tdStatus}</tr>`;
   }
   return `<tr><td class="td-num">${num}</td>${tdNome}${tdOp}${tdEntrada}${tdPrev}${tdSaida}${tdStatus}</tr>`;
@@ -894,41 +903,32 @@ function updateTotais(rota, expedicao, outros) {
   document.getElementById('tot-expedicao').textContent = expedicao.length;
 }
 
-function attachMdEvents() {
-  document.querySelectorAll('.md-input').forEach(inp => {
-    inp.addEventListener('input', () => {
-      const id = inp.dataset.id;
-      clearTimeout(mdSaveTimeout[id]);
-      mdSaveTimeout[id] = setTimeout(() => db.ref(`acompanhamento/${id}/md`).set(inp.value.trim()), 800);
-    });
-  });
-}
-
-// ===== AUTO-SCALE: preenche a tela inteira sem cortar nada =====
-function autoScale() {
-  const root = document.getElementById('app-root');
-  if (!root) return;
-
-  // Reset para medir tamanho natural
-  root.style.transform = 'none';
-  root.style.width = window.innerWidth + 'px';
-
-  const naturalH = root.scrollHeight;
-  if (!naturalH) return;
-
-  const viewW = window.innerWidth;
-  const viewH = window.innerHeight;
-  const scale  = viewH / naturalH;
-
-  root.style.transform      = `scale(${scale})`;
-  root.style.transformOrigin = 'top left';
-  // Ajusta largura para que, após scale, visual = viewW
-  root.style.width = Math.ceil(viewW / scale) + 'px';
-}
-
-window.addEventListener('resize', autoScale);
+// attachMdEvents removido (coluna MD substituída por Prev. Entrada)
 </script>
 
 <!-- ADMIN MODAL -->
 <div id="admin-modal">
-  <div clas
+  <div class="adm-box">
+    <h2>⚙ Gerenciador de Usuários <button class="adm-close" onclick="closeAdmin()">✕ Fechar</button></h2>
+    <table class="adm-table">
+      <thead><tr><th>Login</th><th>Senha</th><th>Tipo</th><th>Filtro Empresa</th><th>Ações</th></tr></thead>
+      <tbody id="adm-tbody"></tbody>
+    </table>
+    <div class="adm-form">
+      <h3 id="adm-form-title">➕ Novo Usuário</h3>
+      <div class="adm-grid">
+        <div><label>Login</label><input id="adm-login" placeholder="LOGIN"></div>
+        <div><label>Senha</label><input id="adm-senha" placeholder="SENHA"></div>
+        <div><label>Tipo</label>
+          <select id="adm-tipo" onchange="document.getElementById('adm-filtro-wrap').style.display=this.value==='empresa'?'block':'none'">
+            <option value="user">Usuário</option>
+            <option value="empresa">Empresa</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div id="adm-filtro-wrap" style="display:none">
+          <label>Filtro (palavra-chave)</label>
+          <input id="adm-filtro" placeholder="ex: LJA">
+        </div>
+      </div>
+    
