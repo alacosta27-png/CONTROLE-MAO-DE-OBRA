@@ -25,8 +25,13 @@ html, body {
 body {
   background: #111;
   font-family: 'Barlow Condensed', sans-serif;
+}
+
+#app-root {
   display: flex;
   flex-direction: column;
+  transform-origin: top left;
+  background: #111;
 }
 
 /* ===== LOGIN OVERLAY ===== */
@@ -208,23 +213,17 @@ body {
 
 /* CONTENT */
 .tv-content {
-  flex: 1;
-  min-height: 0;
   padding: 12px 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow: hidden;
 }
 
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  flex: 1;
-  min-height: 0;
 }
-.two-col.single { grid-template-columns: 1fr; }
 
 .extra-sections {
   display: flex;
@@ -239,8 +238,6 @@ body {
   border: 1px solid #333;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
 }
 .cc-header { padding: 8px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .cc-rota      { background: var(--navy);  border-bottom: 2px solid var(--yellow); }
@@ -253,7 +250,7 @@ body {
 .cc-expedicao .cc-count { background: rgba(46,204,113,.15); color: #2ecc71; }
 
 /* TABLE */
-.table-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+.table-scroll { overflow: visible; }
 .tv-table { width: 100%; border-collapse: collapse; }
 .tv-table thead tr { background: #111; position: sticky; top: 0; z-index: 1; }
 .tv-table thead th {
@@ -315,6 +312,14 @@ body {
   padding: 2px 7px; border-radius: 4px;
   font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
   animation: pulse-red 1.5s infinite;
+}
+.badge-extra {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(245,197,24,.2); color: var(--yellow);
+  border: 1px solid rgba(245,197,24,.6);
+  padding: 2px 7px; border-radius: 4px;
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  animation: blink-yellow 1s ease-in-out infinite;
 }
 @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
@@ -451,6 +456,7 @@ body {
   </div>
 </div>
 
+<div id="app-root">
 <header class="tv-header">
   <div class="tv-logo">
     <div class="tv-logo-box">PORTOEX</div>
@@ -496,6 +502,7 @@ body {
 <div class="tv-content" id="tv-content">
   <div class="tv-empty">Carregando dados...</div>
 </div>
+</div><!-- /app-root -->
 
 <script>
 // ===== AUTH — SISTEMA DE USUÁRIOS PORTOEX-TV =====
@@ -775,6 +782,7 @@ function render() {
   content.innerHTML = gridHtml + extrasHtml;
   updateTotais(rota, expedicao, outros);
   attachMdEvents();
+  setTimeout(autoScale, 0); // após o DOM renderizar
 }
 
 function buildSection(titulo, items, tipo) {
@@ -851,9 +859,10 @@ function buildRow(id, a, num, isRota) {
 
   // Prioridade: atraso (vermelho) > hora extra (amarelo) > normal
   const nomeClass   = isAtraso ? 'td-nome-atraso' : (isOvertime ? 'td-nome td-nome-overtime' : 'td-nome');
-  const atrasoBadge = isAtraso ? `<span class="badge-atraso">⚠ ATRASO</span>` : '';
+  const atrasoBadge = isAtraso    ? `<span class="badge-atraso">⚠ ATRASO</span>` : '';
+  const extraBadge  = isOvertime  ? `<span class="badge-extra">⏱ EXTRA</span>`  : '';
 
-  const tdNome    = `<td><div class="${nomeClass}">${a.colNome||'—'} ${atrasoBadge}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
+  const tdNome    = `<td><div class="${nomeClass}">${a.colNome||'—'} ${atrasoBadge}${extraBadge}</div><div class="td-empresa">${a.empresaNome||''}</div></td>`;
   const tdOp      = `<td><div class="td-op">${a.opNome||'—'}</div><div class="td-func">${a.funcao||''}</div></td>`;
   const tdEntrada = `<td class="td-time entrada${isOvertime ? ' entrada-overtime' : ''}">${chegada||'——'}</td>`;
   const tdPrev    = `<td class="td-time saida-prev">${prevSaida||'——'}</td>`;
@@ -894,31 +903,32 @@ function attachMdEvents() {
     });
   });
 }
+
+// ===== AUTO-SCALE: preenche a tela inteira sem cortar nada =====
+function autoScale() {
+  const root = document.getElementById('app-root');
+  if (!root) return;
+
+  // Reset para medir tamanho natural
+  root.style.transform = 'none';
+  root.style.width = window.innerWidth + 'px';
+
+  const naturalH = root.scrollHeight;
+  if (!naturalH) return;
+
+  const viewW = window.innerWidth;
+  const viewH = window.innerHeight;
+  const scale  = viewH / naturalH;
+
+  root.style.transform      = `scale(${scale})`;
+  root.style.transformOrigin = 'top left';
+  // Ajusta largura para que, após scale, visual = viewW
+  root.style.width = Math.ceil(viewW / scale) + 'px';
+}
+
+window.addEventListener('resize', autoScale);
 </script>
 
 <!-- ADMIN MODAL -->
 <div id="admin-modal">
-  <div class="adm-box">
-    <h2>⚙ Gerenciador de Usuários <button class="adm-close" onclick="closeAdmin()">✕ Fechar</button></h2>
-    <table class="adm-table">
-      <thead><tr><th>Login</th><th>Senha</th><th>Tipo</th><th>Filtro Empresa</th><th>Ações</th></tr></thead>
-      <tbody id="adm-tbody"></tbody>
-    </table>
-    <div class="adm-form">
-      <h3 id="adm-form-title">➕ Novo Usuário</h3>
-      <div class="adm-grid">
-        <div><label>Login</label><input id="adm-login" placeholder="LOGIN"></div>
-        <div><label>Senha</label><input id="adm-senha" placeholder="SENHA"></div>
-        <div><label>Tipo</label>
-          <select id="adm-tipo" onchange="document.getElementById('adm-filtro-wrap').style.display=this.value==='empresa'?'block':'none'">
-            <option value="user">Usuário</option>
-            <option value="empresa">Empresa</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <div id="adm-filtro-wrap" style="display:none">
-          <label>Filtro (palavra-chave)</label>
-          <input id="adm-filtro" placeholder="ex: LJA">
-        </div>
-      </div>
-    
+  <div clas
