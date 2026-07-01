@@ -30,7 +30,7 @@ body {
 #app-root {
   display: flex;
   flex-direction: column;
-  transform-origin: top left;
+  height: 100%;
   background: #111;
 }
 
@@ -213,10 +213,19 @@ body {
 
 /* CONTENT */
 .tv-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+#tv-scaler {
+  transform-origin: top left;
+  width: 100%;
   padding: 12px 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-sizing: border-box;
 }
 
 .two-col {
@@ -492,7 +501,7 @@ body {
   </div>
 </div>
 
-<div class="tv-content" id="tv-content"><div class="tv-empty">Carregando dados...</div></div>
+<div class="tv-content" id="tv-content"><div id="tv-scaler"><div class="tv-empty">Carregando dados...</div></div></div>
 </div><!-- /app-root -->
 
 <script>
@@ -739,27 +748,35 @@ function pertenceAEmpresa(a) {
   );
 }
 
-// ===== AUTO-SCALE: preenche a tela inteira (sobe e desce) sem cortar nada =====
+// ===== AUTO-SCALE: escala só o conteúdo interno (header e stats ficam fixos) =====
 function autoScale() {
-  const root = document.getElementById('app-root');
-  if (!root) return;
+  const scaler    = document.getElementById('tv-scaler');
+  const container = document.getElementById('tv-content');
+  if (!scaler || !container) return;
   // Reset para medir tamanho natural
-  root.style.transform = 'none';
-  root.style.width     = window.innerWidth + 'px';
-  const naturalH = root.scrollHeight;
-  if (!naturalH) return;
-  const viewW = window.innerWidth;
-  const viewH = window.innerHeight;
-  const scale  = viewH / naturalH;
-  root.style.transform       = `scale(${scale})`;
-  root.style.transformOrigin = 'top left';
-  root.style.width           = Math.ceil(viewW / scale) + 'px';
+  scaler.style.transform = 'none';
+  scaler.style.width     = container.clientWidth + 'px';
+  const natH = scaler.scrollHeight;
+  const natW = scaler.scrollWidth;
+  if (!natH || !natW) return;
+  const availH = container.clientHeight;
+  const availW = container.clientWidth;
+  const scaleH = availH / natH;
+  const scaleW = availW / natW;
+  const scale  = Math.min(scaleH, scaleW);
+  if (scale < 0.999) {
+    scaler.style.transform = `scale(${scale})`;
+    scaler.style.width     = Math.ceil(availW / scale) + 'px';
+  } else {
+    scaler.style.transform = 'none';
+    scaler.style.width     = '100%';
+  }
 }
-window.addEventListener('resize', autoScale);
+window.addEventListener('resize', () => setTimeout(autoScale, 50));
 
 // ===== RENDER =====
 function render() {
-  const content = document.getElementById('tv-content');
+  const content = document.getElementById('tv-scaler');
   const hoje = new Date().toISOString().split('T')[0];
 
   let items = Object.entries(STATE.acompanhamento)
