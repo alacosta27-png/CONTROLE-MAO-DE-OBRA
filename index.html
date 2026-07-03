@@ -3314,6 +3314,41 @@ function salvarAvaliacao() {
   }).then(() => { toast('Avaliação salva e bloqueada!', 'success'); closeModal('modal-avaliacao'); });
 }
 
+// Apelidos/variações de nome usados em registros antigos, que devem ser
+// tratados como a mesma empresa cadastrada hoje (confirmado com o Andre).
+const EMPRESA_APELIDOS = {
+  'LJA': 'L.J.A.',
+  'J.L.A.': 'L.J.A.',
+  'LJA CONF': 'L.J.A.',
+  'BODÓ': 'BODO',
+  'RP - CONF': 'RP'
+};
+
+// Resolve a empresa de um registro de acompanhamento. Registros antigos não
+// têm empresaId vinculado (só o nome), então cai para busca por nome,
+// já considerando os apelidos conhecidos.
+function getEmpresaFor(a) {
+  if (a.empresaId && STATE.empresas[a.empresaId]) return STATE.empresas[a.empresaId];
+  let nome = (a.empresaNome || '').trim().toUpperCase();
+  if (!nome) return {};
+  if (EMPRESA_APELIDOS[nome]) nome = EMPRESA_APELIDOS[nome].toUpperCase();
+  const found = Object.values(STATE.empresas).find(e => (e.nome || '').trim().toUpperCase() === nome);
+  return found || {};
+}
+
+// Busca valor/dia e hora extra da empresa para uma função, aceitando tanto o
+// nome curto ('Interno') quanto o antigo ('Ajudante Interno') usado em registros
+// mais antigos, já que os dois formatos convivem na base.
+function getValoresFuncao(emp, funcao) {
+  const v = emp.valores || {};
+  if (v[funcao]) return v[funcao];
+  const curto = (funcao || '').replace(/^Ajudante\s+/i, '').trim();
+  if (v[curto]) return v[curto];
+  const longo = 'Ajudante ' + curto;
+  if (v[longo]) return v[longo];
+  return {};
+}
+
 function calcHoras(a) {
   if (!a.chegada || !a.saida) return { hTrab: null, displayH: '—', classe: '', valor: '—', valorNum: 0 };
   const chegMin = timeToMin(a.chegada);
@@ -3324,8 +3359,8 @@ function calcHoras(a) {
   const heMin = Math.max(0, totalMin - joHorasMin);
   const negMin = totalMin < joHorasMin ? joHorasMin - totalMin : 0;
 
-  const emp = STATE.empresas[a.empresaId] || {};
-  const valores = (emp.valores || {})[a.funcao] || {};
+  const emp = getEmpresaFor(a);
+  const valores = getValoresFuncao(emp, a.funcao);
   const valorDia = parseFloat(valores.valor) || 0;
   const valorHE = parseFloat(valores.he) || 0;
 
@@ -3425,8 +3460,8 @@ function updateAdicionalPreview() {
   const a = STATE.acompanhamento[currentAcompId] || {};
   const adicionalSel = document.querySelector('input[name="ae-adicional"]:checked');
   const adicional = parseInt(adicionalSel?.value) || 0;
-  const emp = STATE.empresas[a.empresaId] || {};
-  const valores = (emp.valores || {})[a.funcao] || {};
+  const emp = getEmpresaFor(a);
+  const valores = getValoresFuncao(emp, a.funcao);
   const valorDia = parseFloat(valores.valor) || 0;
   const previewEl = document.getElementById('ae-adicional-preview');
   if (!previewEl) return;
@@ -4284,8 +4319,8 @@ function gerarAcerto() {
 
 function _buildAcertoRows() {
   return acertoDados.map(([,a]) => {
-    const emp = STATE.empresas[a.empresaId] || {};
-    const valores = (emp.valores || {})[a.funcao] || {};
+    const emp = getEmpresaFor(a);
+    const valores = getValoresFuncao(emp, a.funcao);
     const valorDia = parseFloat(valores.valor) || 0;
     let hTrabMin = 0, heMin = 0, valorTotal = valorDia;
     if (a.chegada && a.saida) {
@@ -4604,8 +4639,8 @@ function renderDashboard() {
   const custoEmp = {}, qtFunc = {}, custoData = {}, horasEmp = {}, custoOp = {}, custoMes = {};
 
   rows.forEach(([,a]) => {
-    const emp = STATE.empresas[a.empresaId] || {};
-    const valores = (emp.valores || {})[a.funcao] || {};
+    const emp = getEmpresaFor(a);
+    const valores = getValoresFuncao(emp, a.funcao);
     const valorDia = parseFloat(valores.valor) || 0;
     let hTrabMin = 0, heMin = 0, valorTotal = valorDia;
     if (a.chegada && a.saida) {
