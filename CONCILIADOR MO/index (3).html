@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conciliador MO — Portoexpress</title>
+<style>
+:root {
+  --bg:       #f5f4f0;
+  --white:    #ffffff;
+  --border:   #e0ddd6;
+  --text:     #1a1a18;
+  --muted:    #6b6967;
+  --accent:   #1a5fa8;
+  --ok:       #1a7a46;  --ok-bg:   #e6f5ec;
+  --warn:     #7a5500;  --warn-bg: #fdf5db;
+  --diff:     #971f1f;  --diff-bg: #fdf0ef;
+  --ptx:      #1a3f88;  --ptx-bg:  #e6eefa;
+  --terc:     #3d0e6e;  --terc-bg: #f3e8ff;
+  --r: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui,-apple-system,sans-serif; background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; }
+.app { max-width: 1640px; margin: 0 auto; padding: 1rem 1.25rem 4rem; }
+
+/* ── HEADER ── */
+header { display: flex; align-items: baseline; gap: 12px; padding-bottom: 1rem; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
+header h1 { font-size: 17px; font-weight: 600; }
+.sub { font-size: 12px; color: var(--muted); }
+
+/* ── IMPORT ── */
+.import-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.ic { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r); padding: 1rem 1.25rem; transition: border-color .2s; }
+.ic.loaded { border-color: var(--ok); }
+.ic h3 { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; }
+.ic.loaded h3 { color: var(--ok); }
+.file-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; user-select: none; }
+.file-btn:hover { opacity: .85; }
+input[type=file] { display: none; }
+.file-info { margin-top: 8px; font-size: 12px; color: var(--muted); min-height: 18px; }
+
+/* ── FILTER BAR ── */
+.filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem; padding: 10px 14px; background: var(--white); border: 1px solid var(--border); border-radius: var(--r); }
+.filter-bar label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.filter-bar select { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 12px; cursor: pointer; }
+
+/* ── GLOBAL SUMMARY ── */
+.global-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap: 10px; margin-bottom: 1.5rem; }
+.sum-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 16px; }
+.sc-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.sc-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.sc-val { font-size: 20px; font-weight: 600; }
+.sc-val.ptx { color: var(--ptx); }
+.sc-val.terc { color: var(--terc); }
+.sc-src { font-size: 10px; color: var(--muted); }
+.sc-diff { font-size: 12px; font-weight: 500; margin-top: 4px; }
+.sc-diff.bad { color: var(--diff); }
+.sc-diff.ok  { color: var(--ok); }
+
+/* ── SUPPLIER CARD ── */
+.sup-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 1.5rem; overflow: hidden; }
+.sup-hdr { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; background: #eceae3; cursor: pointer; user-select: none; border-bottom: 1px solid var(--border); }
+.sup-hdr:hover { background: #e4e2db; }
+.sup-name { font-size: 14px; font-weight: 600; margin-right: 10px; }
+.sup-hdr-l { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.sup-hdr-r { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.chevron { font-size: 11px; color: var(--muted); transition: transform .2s; display: inline-block; }
+.chevron.open { transform: rotate(180deg); }
+
+/* ── SUPPLIER SUMMARY BAR ── */
+.ssb { display: flex; border-bottom: 1px solid var(--border); }
+.ssb-half { flex: 1; padding: 10px 16px; }
+.ssb-ptx  { background: #edf3fc; border-right: 2px solid #c8d8f4; }
+.ssb-terc { background: #f6eeff; }
+.ssb-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px; }
+.ssb-ptx  .ssb-lbl { color: var(--ptx); }
+.ssb-terc .ssb-lbl { color: var(--terc); }
+.ssb-metrics { display: flex; gap: 2rem; flex-wrap: wrap; }
+.ssb-m .m-lbl { font-size: 10px; color: var(--muted); }
+.ssb-m .m-val { font-size: 15px; font-weight: 600; line-height: 1.2; }
+
+/* ── DIFF SUMMARY (conciliado) ── */
+.ssb-diff { padding: 8px 16px; background: #fafaf7; border-bottom: 1px solid var(--border); display: flex; gap: 2rem; flex-wrap: wrap; align-items: center; }
+.ssb-diff .d-item { font-size: 12px; }
+.ssb-diff .d-lbl { color: var(--muted); margin-right: 4px; }
+.ssb-diff .d-ok  { color: var(--ok); font-weight: 500; }
+.ssb-diff .d-bad { color: var(--diff); font-weight: 500; }
+
+/* ── DAY CARD ── */
+.day-card { border-bottom: 1px solid var(--border); }
+.day-card:last-child { border-bottom: none; }
+.day-hdr { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: #faf9f5; cursor: pointer; user-select: none; }
+.day-hdr:hover { background: #f2f1eb; }
+.day-hdr-l { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.day-hdr-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.day-date { font-weight: 600; font-size: 13px; }
+.day-dow  { font-size: 11px; color: var(--muted); }
+.day-extra-info { font-size: 11px; color: var(--muted); }
+.day-body { overflow-x: auto; }
+
+/* ── RECON TABLE ── */
+table.rt { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 960px; }
+.rt th { padding: 6px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; border-bottom: 1px solid var(--border); }
+.rt th.h-ptx  { background: #d6e8f8; color: var(--ptx);  text-align: center; }
+.rt th.h-terc { background: #e0d0f8; color: var(--terc); text-align: center; }
+.rt th.h-st   { background: #eeecea; color: var(--muted); text-align: center; width: 100px; }
+.rt th.s-ptx  { background: #edf4fc; color: var(--ptx);  font-weight: 500; }
+.rt th.s-terc { background: #f5ecff; color: var(--terc); font-weight: 500; }
+.rt th.s-mid  { background: #eeecea; color: var(--muted); font-weight: 400; }
+.rt td { padding: 6px 10px; border-bottom: .5px solid #eeecea; vertical-align: middle; white-space: nowrap; }
+.rt tr:last-child td { border-bottom: none; }
+.rt tr.ok   { background: var(--white); }
+.rt tr.warn { background: #fffef0; }
+.rt tr.diff { background: #fff8f7; }
+.rt tr.po   { background: #f2edff; }
+.rt tr.to   { background: #edf3ff; }
+.rt tr.ttl  td { background: #f3f2ec; font-weight: 600; font-size: 11px; border-top: 1.5px solid var(--border); }
+.rt td.div-ptx  { border-right: 2px solid #b8cef0; }
+.rt td.div-terc { border-left:  2px solid #c8b0f0; }
+.rt td.stcol { text-align: center; background: #f8f7f3; border-left: 1px solid #e8e6de; border-right: 1px solid #e8e6de; }
+.cd { color: var(--diff); font-weight: 600; }
+.cm { color: #bbb; font-style: italic; font-size: 11px; }
+
+/* ── BADGES ── */
+.badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.b-ok   { background: var(--ok-bg);   color: var(--ok); }
+.b-warn { background: var(--warn-bg); color: var(--warn); }
+.b-diff { background: var(--diff-bg); color: var(--diff); }
+.b-ptx  { background: var(--ptx-bg);  color: var(--ptx); }
+.b-terc { background: var(--terc-bg); color: var(--terc); }
+.b-neu  { background: #eeecea; color: var(--muted); }
+
+.empty { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+
+/* ── ACTIONS BAR ── */
+.actions-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
+.btn:hover { opacity: .85; }
+.btn-xlsx   { background: #1a7a46; color: #fff; }
+.btn-pdf    { background: #1a3f88; color: #fff; }
+.btn-sheets { background: #0f5132; color: #fff; }
+.btn-snap   { background: #6b4f00; color: #fff; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+/* ── SNAPSHOT BANNER ── */
+.snap-banner { display: none; background: #1a3f88; color: #fff; border-radius: var(--r); padding: 10px 16px; margin-bottom: 1.25rem; font-size: 13px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.snap-banner b { font-size: 14px; }
+.snap-banner .snap-period { background: rgba(255,255,255,.15); padding: 3px 10px; border-radius: 20px; font-size: 12px; }
+.snap-banner .snap-date   { font-size: 11px; opacity: .75; margin-left: auto; }
+
+/* ── DIVERGENCE PANEL ── */
+.divg-panel { background: var(--white); border: 1.5px solid #f0c4c0; border-radius: var(--r); margin-bottom: 1.5rem; overflow: hidden; }
+.divg-hdr { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; background: #fff4f2; border-bottom: 1px solid #f0c4c0; cursor: pointer; user-select: none; }
+.divg-hdr:hover { background: #ffe9e6; }
+.divg-hdr.clean { background: #e6f5ec; border-bottom-color: #b6dec8; cursor: default; }
+.divg-title { font-size: 14px; font-weight: 600; color: var(--diff); }
+.divg-title.ok { color: var(--ok); }
+.divg-impact { display: flex; gap: 2rem; flex-wrap: wrap; padding: 12px 16px; background: #fff9f8; border-bottom: 1px solid var(--border); align-items: flex-start; }
+.divg-impact-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--diff); align-self: center; margin-right: .5rem; }
+.di-item { display: flex; flex-direction: column; gap: 2px; }
+.di-lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.di-val { font-size: 15px; font-weight: 600; }
+.di-val.bad  { color: var(--diff); }
+.di-val.ok   { color: var(--ok); }
+.di-val.warn { color: var(--warn); }
+.divg-table-wrap { overflow-x: auto; }
+table.dt { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 820px; }
+.dt th { padding: 7px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; background: #fdf0ef; color: var(--diff); border-bottom: 1px solid var(--border); text-align: left; }
+.dt td { padding: 5px 10px; border-bottom: .5px solid #eeecea; vertical-align: middle; white-space: nowrap; }
+.dt tr.day-sep td { background: #f1f0eb; font-size: 11px; font-weight: 700; color: var(--muted); padding: 5px 10px; border-top: 1.5px solid #d8d5cc; }
+.dt tr.ok   td { background: var(--white); }
+.dt tr.warn td { background: #fffef0; }
+.dt tr.diff td { background: #fff8f7; }
+.dt tr.po   td { background: #f2edff; }
+.dt tr.to   td { background: #edf3ff; }
+
+/* ── PRINT ── */
+@media print {
+  .import-grid, .filter-bar, .actions-bar { display: none !important; }
+  body { background: #fff; font-size: 11px; }
+  .app { max-width: 100%; padding: .5rem; }
+  .sup-card, .divg-panel { break-inside: avoid; page-break-inside: avoid; }
+  .sup-hdr, .day-hdr { cursor: default; }
+  header { margin-bottom: .75rem; }
+  .day-body, #divg-body { display: block !important; }
+  [id$="chev"] { display: none; }
+  .print-period { display: block !important; font-size: 12px; color: #555; margin-left: auto; }
+}
+.print-period { display: none; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script></head>
+<body>
+<div class="app">
+  <header>
+    <h1>Conciliador de Mão de Obra</h1>
+    <span class="sub">Portoexpress Logística</span>
+    <span class="print-period" id="print-period">Maio 2026 — 2ª Quinzena · Gerado em 29/05/2026</span>
+  </header>
+
+  <!-- IMPORT -->
+  <div class="import-grid">
+    <div class="ic loaded" id="ic-ptx">
+      <h3>PLANILHA PORTOEX</h3>
+      <label class="file-btn" for="f-ptx">📂 Selecionar arquivo</label>
+      <input type="file" id="f-ptx" accept=".xlsx,.xls,.csv">
+      <div class="file-info" id="fi-ptx">✓ PLANILHA MÃO DE OBRA 2026 (4).xlsx [DADOS] — 1437 reg. · 112 dias · RICARDO, DANIMAR, RP, RP -, LJA, BODÓ, ORELHA</div>
+    </div>
+    <div class="ic loaded" id="ic-terc">
+      <h3>PLANILHA TERCEIRIZADA</h3>
+      <label class="file-btn" for="f-terc">📂 Selecionar arquivo</label>
+      <input type="file" id="f-terc" accept=".xlsx,.xls,.csv">
+      <div class="file-info" id="fi-terc">✓ Segunda Quinzena de maio 16-05 a 31-05-PORTOEX.xlsx [L J A -2-2 ] — 140 reg. · 10 dias</div>
+    </div>
+  </div>
+
+  <!-- RECON VIEW -->
+  <div id="recon" style="">
+    <div id="snap-banner" class="snap-banner" style="display:none"></div>
+    <div class="actions-bar" id="actions-bar">
+      <button class="btn btn-sheets" onclick="exportSheets()">Exportar Google Sheets</button>
+      <button class="btn btn-xlsx" onclick="exportXlsx()">📥 Exportar XLSX</button>
+      <button class="btn btn-pdf" onclick="printPDF()">🖨️ Imprimir / PDF</button>
+      <button class="btn btn-snap" onclick="saveSnapshot()">💾 Salvar index.html</button>
+    </div>
+    <div class="filter-bar">
+      <label>Mês:</label>
+      <select id="sel-mes" onchange="render()"><option value="01/2026">Janeiro 2026</option><option value="02/2026">Fevereiro 2026</option><option value="03/2026">Março 2026</option><option value="04/2026">Abril 2026</option><option value="05/2026">Maio 2026</option></select>
+      <label>Quinzena:</label>
+      <select id="sel-qz" onchange="render()">
+        <option value="1">1ª Quinzena — dias 01 a 15</option>
+        <option value="2">2ª Quinzena — dias 16 a 31</option>
+      </select>
+      <label>Fornecedor:</label>
+      <select id="sel-forn" onchange="render()"><option value="">Todos os fornecedores</option><option value="BODÓ">BODÓ</option><option value="DANIMAR">DANIMAR</option><option value="LJA">LJA</option><option value="ORELHA">ORELHA</option><option value="RICARDO">RICARDO</option><option value="RP">RP</option><option value="RP -">RP -</option></select>
+    </div>
+
+    <div id="global-sum" class="global-sum"></div>
+    <div id="divg"></div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let ptxRows = [], tercRows = [];
+let lastPtxQ = [], lastTercQ = [], lastPeriodLabel = '';
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function normCPF(v) { if (v===null||v===undefined||v==='') return ''; return String(v).replace(/\D/g,''); }
+function normHeader(v) { return String(v||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(); }
+function normName(v) { if (!v) return ''; return String(v).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z ]/g,'').trim(); }
+function nameMatch(a,b) {
+  if (!a||!b) return false;
+  const ta=normName(a).split(' ').filter(s=>s.length>2);
+  const tb=normName(b).split(' ').filter(s=>s.length>2);
+  if (!ta.length||!tb.length) return false;
+  return ta.some(t=>tb.includes(t));
+}
+function normSupplier(v) {
+  if (!v) return '';
+  return String(v).toUpperCase().trim().replace(/\s*(CONF(ERENTE[S]?)?)\s*$/gi,'').trim();
+}
+function parseDate(v) {
+  if (v===null||v===undefined||v==='') return '';
+  if (typeof v==='number') {
+    const d=new Date(Math.round((v-25569)*86400000));
+    return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
+  }
+  const s=String(v).trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  if (/^\d{2}\/\d{2}\/\d{2}$/.test(s)) return s.replace(/(\d{2})\/(\d{2})\/(\d{2})$/,'$1/$2/20$3');
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return s;
+}
+function parseTime(v) {
+  if (v===null||v===undefined||v==='') return '';
+  if (typeof v==='number') { const mins=Math.round(v*1440); return `${String(Math.floor(mins/60)%24).padStart(2,'0')}:${String(mins%60).padStart(2,'0')}`; }
+  const s=String(v).trim(); const m=s.match(/(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2,'0')}:${m[2]}` : '';
+}
+function parseHorarioRange(v) {
+  if (!v) return {e:'',s:''};
+  const s=String(v).trim();
+  const r=s.match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+  if (r) return {e:r[1].padStart(5,'0'),s:r[2].padStart(5,'0')};
+  const t=s.match(/(\d{1,2}:\d{2})/);
+  return t ? {e:t[1].padStart(5,'0'),s:''} : {e:s,s:''};
+}
+function parseHoraExtra(v) {
+  if (v===null||v===undefined||v===''||v===0||v==='0') return '0:00';
+  if (typeof v==='number') { if (v<=0) return '0:00'; const mins=Math.round(v*1440); return mins>0?`${Math.floor(mins/60)}:${String(mins%60).padStart(2,'0')}`:'0:00'; }
+  const s=String(v).trim(); if (!s||s==='-'||s.startsWith('-')) return '0:00';
+  const m=s.match(/^(\d+):(\d{2})/); return m?`${m[1]}:${m[2]}`:'0:00';
+}
+function heToMins(v) { if (!v||v==='0:00') return 0; const m=String(v).match(/(\d+):(\d{2})/); return m?parseInt(m[1])*60+parseInt(m[2]):0; }
+function minsToHe(m) { return m>0?`${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`:'0:00'; }
+function parseNum(v) { if (v===null||v===undefined||v==='') return 0; if (typeof v==='number') return v; return parseFloat(String(v).replace(/[R$\s.]/g,'').replace(',','.'))||0; }
+function dateDay(d) { const m=String(d).match(/^(\d{2})/); return m?parseInt(m[1]):0; }
+function fmtR$(v) { const n=parseNum(v); return n===0?'—':'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtCPF(v) { const s=String(v||'').replace(/\D/g,''); return s.length===11?`${s.slice(0,3)}.${s.slice(3,6)}.${s.slice(6,9)}-${s.slice(9)}`:s||'—'; }
+const DOW=['dom.','seg.','ter.','qua.','qui.','sex.','sáb.'];
+function getDow(d) { if (!d) return ''; const [dd,mm,yy]=d.split('/'); return DOW[new Date(parseInt(yy),parseInt(mm)-1,parseInt(dd)).getDay()]||''; }
+function dateSort(a,b) { const [da,ma,ya]=a.split('/'), [db,mb,yb]=b.split('/'); return new Date(`${ya}-${ma}-${da}`)-new Date(`${yb}-${mb}-${db}`); }
+function getMonthKey(d) { if (!d||d.length<10) return ''; return d.slice(3,5)+'/'+d.slice(6); }
+function getMonthLabel(k) {
+  if (!k) return '';
+  const [mm,yy]=k.split('/');
+  const names=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return (names[parseInt(mm)-1]||mm)+' '+yy;
+}
+function monthSort(a,b) {
+  const [ma,ya]=a.split('/'), [mb,yb]=b.split('/');
+  return (parseInt(ya)*100+parseInt(ma))-(parseInt(yb)*100+parseInt(mb));
+}
+
+// ═══════════════════════════════════════════════════════
+// COLUMN DETECTION
+// ═══════════════════════════════════════════════════════
+function findCol(h,...kws) { return h.findIndex(x=>kws.every(kw=>x.includes(kw))); }
+function findAny(h,...kws) { return h.findIndex(x=>kws.some(kw=>x.includes(kw))); }
+
+function detectPtxCols(hdr) {
+  const h=hdr.map(normHeader);
+  return {
+    data:      findAny(h,'DATA'),
+    cpf:       findAny(h,'CPF','RG'),
+    nome:      findAny(h,'NOME'),
+    entrada:   findCol(h,'ENTRADA'),
+    prevSaida: findCol(h,'PREV','SAIDA'),
+    saida:     h.findIndex(x=>x.includes('SAIDA')&&!x.includes('PREV')),
+    operacao:  findAny(h,'OPERA'),
+    fornecedor:findAny(h,'FORNEC'),
+    horaExtra: h.findIndex(x=>x.includes('EXTRA')&&!x.includes('VALOR')&&!x.includes('R$')),
+    vlHExtra:  h.findIndex(x=>(x.includes('R$')||x.includes('VALOR'))&&x.includes('HORA')&&x.includes('EXTRA')),
+    vlTotal:   h.findIndex(x=>x.includes('VALOR')&&x.includes('TOTAL')),
+  };
+}
+function detectTercCols(hdr) {
+  const h=hdr.map(normHeader);
+  return {
+    data:     findAny(h,'DATA'),
+    operacao: findAny(h,'OPERA'),
+    nome:     findAny(h,'NOME'),
+    cpf:      findAny(h,'CPF'),
+    horario:  h.findIndex(x=>/^HORARI?O$/.test(x)),
+    horaExtra:h.findIndex(x=>x.includes('EXTRA')&&!x.includes('VALOR')),
+    vlDiaria: h.findIndex(x=>x.includes('DIARI')&&!x.includes('MEDIA')),
+    vlHExtra: h.findIndex(x=>x.includes('VALOR')&&x.includes('HORA')&&x.includes('EXTRA')),
+    descontos:findAny(h,'DESCONTO'),
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// SHEET / FILE LOADING
+// ═══════════════════════════════════════════════════════
+function findHeaderRow(data) {
+  for (let i=0;i<Math.min(20,data.length);i++) {
+    const texts=data[i].map(c=>String(c||'').toUpperCase());
+    if (texts.some(t=>t.includes('DATA'))&&texts.some(t=>t.includes('NOME'))) return i;
+  }
+  for (let i=0;i<Math.min(20,data.length);i++) { if (data[i].some(c=>/DATA|NOME|CPF/i.test(String(c)))) return i; }
+  return 0;
+}
+
+function loadXlsx(file, cb) {
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
+      let chosen=wb.SheetNames[0];
+      for (const n of wb.SheetNames) if (n.toUpperCase()==='DADOS'){chosen=n;break;}
+      if (chosen===wb.SheetNames[0]) {
+        for (const n of wb.SheetNames) {
+          const rows=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''});
+          const flat=rows.slice(0,20).map(r=>r.map(c=>String(c||'').toUpperCase()));
+          if (flat.some(row=>row.some(c=>c.includes('DATA'))&&row.some(c=>c.includes('NOME')))){chosen=n;break;}
+        }
+      }
+      cb(null, XLSX.utils.sheet_to_json(wb.Sheets[chosen],{header:1,defval:''}), chosen);
+    } catch(err){cb(err);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function normalizePtx(data) {
+  const hi=findHeaderRow(data); const cols=detectPtxCols(data[hi]); const rows=[];
+  for (let i=hi+1;i<data.length;i++) {
+    const r=data[i];
+    if (!r.some(c=>c!==''&&c!==null&&c!==undefined)) continue;
+    const dt=parseDate(r[cols.data]); if (!dt) continue;
+    rows.push({ data:dt, cpf:normCPF(r[cols.cpf]), nome:String(r[cols.nome]||'').trim(),
+      entrada:parseTime(r[cols.entrada]), saida:parseTime(r[cols.saida]),
+      operacao:String(r[cols.operacao]||'').trim(), fornecedor:String(r[cols.fornecedor]||'').trim(),
+      fornecedorNorm:normSupplier(r[cols.fornecedor]),
+      horaExtra:parseHoraExtra(r[cols.horaExtra]),
+      vlHExtra:parseNum(r[cols.vlHExtra]), vlTotal:parseNum(r[cols.vlTotal]),
+    });
+  }
+  return rows;
+}
+function normalizeTerc(data) {
+  const hi=findHeaderRow(data); const cols=detectTercCols(data[hi]); const rows=[];
+  for (let i=hi+1;i<data.length;i++) {
+    const r=data[i];
+    if (!r.some(c=>c!==''&&c!==null&&c!==undefined)) continue;
+    const dt=parseDate(r[cols.data]); if (!dt) continue;
+    const hor=parseHorarioRange(r[cols.horario]);
+    const vlD=parseNum(r[cols.vlDiaria]), vlH=parseNum(r[cols.vlHExtra]), desc=parseNum(r[cols.descontos]);
+    rows.push({ data:dt, nome:String(r[cols.nome]||'').trim(), cpf:normCPF(r[cols.cpf]),
+      horarioRaw:String(r[cols.horario]||'').trim(), entrada:hor.e, saida:hor.s,
+      horaExtra:parseHoraExtra(r[cols.horaExtra]),
+      vlDiaria:vlD, vlHExtra:vlH, descontos:desc, vlTotal:vlD+vlH-desc,
+    });
+  }
+  return rows;
+}
+
+// ═══════════════════════════════════════════════════════
+// MATCHING
+// ═══════════════════════════════════════════════════════
+function matchDay(ptxList, tercList) {
+  const pairs=[], usedP=new Set(), usedT=new Set();
+  // Pass 1 – CPF exato
+  ptxList.forEach((p,pi)=>{
+    if (!p.cpf) return;
+    tercList.forEach((t,ti)=>{
+      if (usedT.has(ti)||usedP.has(pi)||!t.cpf) return;
+      if (p.cpf===t.cpf){pairs.push({ptx:p,terc:t,by:'cpf'});usedP.add(pi);usedT.add(ti);}
+    });
+  });
+  // Pass 2 – nome
+  ptxList.forEach((p,pi)=>{
+    if (usedP.has(pi)) return;
+    tercList.forEach((t,ti)=>{
+      if (usedT.has(ti)||usedP.has(pi)) return;
+      if (nameMatch(p.nome,t.nome)){pairs.push({ptx:p,terc:t,by:'nome'});usedP.add(pi);usedT.add(ti);}
+    });
+  });
+  ptxList.forEach((p,pi)=>{ if (!usedP.has(pi)) pairs.push({ptx:p,terc:null,by:'ptx-only'}); });
+  tercList.forEach((t,ti)=>{ if (!usedT.has(ti)) pairs.push({ptx:null,terc:t,by:'terc-only'}); });
+  return pairs;
+}
+
+function getStatus(pair) {
+  const {by,ptx:p,terc:t}=pair;
+  if (by==='ptx-only')  return {code:'po',  label:'← Só PTX',  cls:'b-ptx'};
+  if (by==='terc-only') return {code:'to',  label:'→ Só TERC', cls:'b-terc'};
+  const d=[];
+  if (by==='nome') d.push('nome');
+  if (p.entrada&&t.entrada&&p.entrada!==t.entrada) d.push('entrada');
+  if (p.saida  &&t.saida  &&p.saida  !==t.saida)   d.push('saída');
+  const xp=heToMins(p.horaExtra),xt=heToMins(t.horaExtra);
+  if (xp>0&&xt>0&&xp!==xt) d.push('h.extra');
+  if (!d.length) return {code:'ok',  label:'✓ OK',         cls:'b-ok'};
+  if (d.some(x=>x!=='nome')) return {code:'diff',label:'⚠ '+d.join(' · '),cls:'b-diff'};
+  return {code:'warn',label:'△ nome',cls:'b-warn'};
+}
+
+// ═══════════════════════════════════════════════════════
+// FILE EVENTS
+// ═══════════════════════════════════════════════════════
+$('f-ptx').addEventListener('change',e=>{
+  const f=e.target.files[0]; if (!f) return;
+  $('fi-ptx').textContent='Carregando...';
+  loadXlsx(f,(err,data,sheet)=>{
+    if (err){$('fi-ptx').textContent='⚠ '+err.message;return;}
+    ptxRows=normalizePtx(data);
+    const dias=new Set(ptxRows.map(r=>r.data)).size;
+    const forn=[...new Set(ptxRows.map(r=>r.fornecedorNorm).filter(Boolean))].join(', ');
+    $('fi-ptx').textContent=`✓ ${f.name} [${sheet}] — ${ptxRows.length} reg. · ${dias} dias · ${forn}`;
+    $('ic-ptx').classList.add('loaded');
+    tryShow();
+  });
+});
+$('f-terc').addEventListener('change',e=>{
+  const f=e.target.files[0]; if (!f) return;
+  $('fi-terc').textContent='Carregando...';
+  loadXlsx(f,(err,data,sheet)=>{
+    if (err){$('fi-terc').textContent='⚠ '+err.message;return;}
+    tercRows=normalizeTerc(data);
+    const dias=new Set(tercRows.map(r=>r.data)).size;
+    $('fi-terc').textContent=`✓ ${f.name} [${sheet}] — ${tercRows.length} reg. · ${dias} dias`;
+    $('ic-terc').classList.add('loaded');
+    tryShow();
+  });
+});
+
+function tryShow() {
+  if (!ptxRows.length&&!tercRows.length) return;
+  $('recon').style.display='';
+  populateFilters();
+  render();
+}
+function populateFilters() {
+  // Months — from both sources, chronological order, default to most recent
+  const months=[...new Set([...ptxRows,...tercRows].map(r=>getMonthKey(r.data)).filter(Boolean))].sort(monthSort);
+  const sm=$('sel-mes');
+  const prevMes=sm.value;
+  sm.innerHTML='';
+  months.forEach(k=>sm.insertAdjacentHTML('beforeend',`<option value="${esc(k)}">${esc(getMonthLabel(k))}</option>`));
+  if (prevMes&&months.includes(prevMes)) sm.value=prevMes;
+  else if (months.length) sm.value=months[months.length-1]; // most recent
+
+  // Suppliers
+  const forn=[...new Set(ptxRows.map(r=>r.fornecedorNorm).filter(Boolean))].sort();
+  const sf=$('sel-forn');
+  sf.innerHTML='<option value="">Todos os fornecedores</option>';
+  forn.forEach(f=>sf.insertAdjacentHTML('beforeend',`<option value="${esc(f)}">${esc(f)}</option>`));
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER — MAIN
+// ═══════════════════════════════════════════════════════
+function render() {
+  const mes=$('sel-mes').value;
+  const qz=parseInt($('sel-qz').value);
+  const fornFil=$('sel-forn').value;
+  const dMin=qz===1?1:16, dMax=qz===1?15:31;
+
+  let ptxQ=ptxRows.filter(r=>{
+    const d=dateDay(r.data);
+    return (!mes||getMonthKey(r.data)===mes)&&d>=dMin&&d<=dMax;
+  });
+  let tercQ=tercRows.filter(r=>{
+    const d=dateDay(r.data);
+    return (!mes||getMonthKey(r.data)===mes)&&d>=dMin&&d<=dMax;
+  });
+  if (fornFil) ptxQ=ptxQ.filter(r=>r.fornecedorNorm===fornFil);
+
+  lastPtxQ=ptxQ; lastTercQ=tercQ;
+  const qzLabel=qz===1?'1ª Quinzena':'2ª Quinzena';
+  lastPeriodLabel=`${getMonthLabel(mes)} — ${qzLabel}`;
+  const pp=$('print-period'); if(pp) pp.textContent=lastPeriodLabel+' · Gerado em '+new Date().toLocaleDateString('pt-BR');
+
+  renderGlobal(ptxQ, tercQ);
+  renderDivergencias(ptxQ, tercQ);
+
+  const supMap={};
+  ptxQ.forEach(r=>{const s=r.fornecedorNorm||'SEM FORNECEDOR';if(!supMap[s])supMap[s]=[];supMap[s].push(r);});
+
+  let html='';
+  Object.entries(supMap).sort(([a],[b])=>a.localeCompare(b)).forEach(([sup,ptxSup])=>{
+    html+=renderSupCard(sup,ptxSup,tercQ);
+  });
+  $('content').innerHTML=html||'<div class="empty">Carregue as planilhas para iniciar a conciliação.</div>';
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER — RESUMO GLOBAL
+// ═══════════════════════════════════════════════════════
+function renderGlobal(ptxQ, tercQ) {
+  const ppl_p=new Set(ptxQ.map(r=>r.cpf||normName(r.nome)).filter(Boolean)).size;
+  const ppl_t=new Set(tercQ.map(r=>r.cpf||normName(r.nome)).filter(Boolean)).size;
+  const he_p=ptxQ.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+  const he_t=tercQ.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+  const vl_p=ptxQ.reduce((s,r)=>s+r.vlTotal,0);
+  const vl_t=tercQ.reduce((s,r)=>s+r.vlTotal,0);
+
+  function diffBadge(ptxVal, tercVal, isMoney) {
+    const diff=ptxVal-tercVal;
+    if (Math.abs(diff)<0.01) return `<div class="sc-diff ok">✓ igual</div>`;
+    const sign=diff>0?'+':'';
+    let s=isMoney?`${sign}R$ ${Math.abs(diff).toLocaleString('pt-BR',{minimumFractionDigits:2})}`:`${sign}${diff}`;
+    if (isMoney) s=diff>0?`+R$ ${Math.abs(diff).toLocaleString('pt-BR',{minimumFractionDigits:2})}`:
+                          `-R$ ${Math.abs(diff).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+    return `<div class="sc-diff bad">${s} vs TERC</div>`;
+  }
+  function heDiffBadge(pm,tm) {
+    if (pm===tm) return `<div class="sc-diff ok">✓ igual</div>`;
+    const d=pm-tm; const sign=d>0?'+':'-';
+    return `<div class="sc-diff bad">${sign}${minsToHe(Math.abs(d))} vs TERC</div>`;
+  }
+
+  $('global-sum').innerHTML=`
+    <div class="sum-card">
+      <div class="sc-label">Pessoas únicas</div>
+      <div class="sc-row"><span class="sc-val ptx">${ppl_p}</span><span class="sc-src">PTX</span></div>
+      <div class="sc-row"><span class="sc-val terc">${ppl_t}</span><span class="sc-src">TERC</span></div>
+      ${diffBadge(ppl_p,ppl_t,false)}
+    </div>
+    <div class="sum-card">
+      <div class="sc-label">Dias · pessoa</div>
+      <div class="sc-row"><span class="sc-val ptx">${ptxQ.length}</span><span class="sc-src">PTX</span></div>
+      <div class="sc-row"><span class="sc-val terc">${tercQ.length}</span><span class="sc-src">TERC</span></div>
+      ${diffBadge(ptxQ.length,tercQ.length,false)}
+    </div>
+    <div class="sum-card">
+      <div class="sc-label">H.Extra total</div>
+      <div class="sc-row"><span class="sc-val ptx">${minsToHe(he_p)}</span><span class="sc-src">PTX</span></div>
+      <div class="sc-row"><span class="sc-val terc">${minsToHe(he_t)}</span><span class="sc-src">TERC</span></div>
+      ${heDiffBadge(he_p,he_t)}
+    </div>
+    <div class="sum-card">
+      <div class="sc-label">Valor total</div>
+      <div class="sc-row"><span class="sc-val ptx" style="font-size:14px">${fmtR$(vl_p)}</span><span class="sc-src">PTX</span></div>
+      <div class="sc-row"><span class="sc-val terc" style="font-size:14px">${fmtR$(vl_t)}</span><span class="sc-src">TERC</span></div>
+      ${diffBadge(vl_p,vl_t,true)}
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER — CARD FORNECEDOR
+// ═══════════════════════════════════════════════════════
+function renderSupCard(sup, ptxSup, tercQ) {
+  const supDates=[...new Set([...ptxSup,...tercQ].map(r=>r.data))].sort(dateSort);
+
+  // Contagem de pares para badges
+  let allPairs=[];
+  supDates.forEach(dt=>{
+    const pD=ptxSup.filter(r=>r.data===dt), tD=tercQ.filter(r=>r.data===dt);
+    allPairs=allPairs.concat(matchDay(pD,tD));
+  });
+  const cnt={ok:0,warn:0,diff:0,po:0,to:0};
+  allPairs.forEach(p=>{const s=getStatus(p).code; cnt[s]=(cnt[s]||0)+1;});
+
+  // Totais do fornecedor
+  const ppl_p=new Set(ptxSup.map(r=>r.cpf||normName(r.nome)).filter(Boolean)).size;
+  const ppl_t=new Set(tercQ.map(r=>r.cpf||normName(r.nome)).filter(Boolean)).size;
+  const he_p=minsToHe(ptxSup.reduce((s,r)=>s+heToMins(r.horaExtra),0));
+  const he_t=minsToHe(tercQ.reduce((s,r)=>s+heToMins(r.horaExtra),0));
+  const vl_p=ptxSup.reduce((s,r)=>s+r.vlTotal,0);
+  const vl_t=tercQ.reduce((s,r)=>s+r.vlTotal,0);
+  const heOk=he_p===he_t, vlOk=Math.abs(vl_p-vl_t)<0.01, pplOk=ppl_p===ppl_t;
+  const vlDiff=vl_p-vl_t;
+
+  const badges=[
+    cnt.ok>0   ? `<span class="badge b-ok">✓ ${cnt.ok}</span>`:'',
+    cnt.warn>0 ? `<span class="badge b-warn">△ ${cnt.warn}</span>`:'',
+    cnt.diff>0 ? `<span class="badge b-diff">⚠ ${cnt.diff}</span>`:'',
+    cnt.po>0   ? `<span class="badge b-ptx">← ${cnt.po} só PTX</span>`:'',
+    cnt.to>0   ? `<span class="badge b-terc">→ ${cnt.to} só TERC</span>`:'',
+  ].filter(Boolean).join(' ');
+
+  const id='s'+sup.replace(/[^a-zA-Z0-9]/g,'');
+
+  let html=`<div class="sup-card">
+    <div class="sup-hdr" onclick="togSup('${id}')">
+      <div class="sup-hdr-l">
+        <span class="sup-name">${esc(sup)}</span>
+        ${badges}
+      </div>
+      <div class="sup-hdr-r">
+        <span class="badge b-neu">${supDates.length} dias</span>
+        <span class="chevron open" id="${id}chev">▼</span>
+      </div>
+    </div>
+    <div id="${id}">`;
+
+  // ── Resumo duplo (PTX | TERC) ──────────────────────
+  html+=`<div class="ssb">
+    <div class="ssb-half ssb-ptx">
+      <div class="ssb-lbl">Portoex</div>
+      <div class="ssb-metrics">
+        <div class="ssb-m"><div class="m-lbl">Pessoas</div><div class="m-val">${ppl_p}</div></div>
+        <div class="ssb-m"><div class="m-lbl">Dias · pessoa</div><div class="m-val">${ptxSup.length}</div></div>
+        <div class="ssb-m"><div class="m-lbl">H.Extra</div><div class="m-val">${he_p}</div></div>
+        <div class="ssb-m"><div class="m-lbl">Valor Total</div><div class="m-val" style="font-size:13px">${fmtR$(vl_p)}</div></div>
+      </div>
+    </div>
+    <div class="ssb-half ssb-terc">
+      <div class="ssb-lbl">Terceirizada</div>
+      <div class="ssb-metrics">
+        <div class="ssb-m"><div class="m-lbl">Pessoas</div><div class="m-val">${ppl_t}</div></div>
+        <div class="ssb-m"><div class="m-lbl">Dias · pessoa</div><div class="m-val">${tercQ.length}</div></div>
+        <div class="ssb-m"><div class="m-lbl">H.Extra</div><div class="m-val">${he_t}</div></div>
+        <div class="ssb-m"><div class="m-lbl">Valor Total</div><div class="m-val" style="font-size:13px">${fmtR$(vl_t)}</div></div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Linha conciliada ───────────────────────────────
+  html+=`<div class="ssb-diff">
+    <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Conciliação</span>
+    <span class="d-item"><span class="d-lbl">Pessoas:</span><span class="${pplOk?'d-ok':'d-bad'}">${pplOk?'✓ igual':(ppl_p>ppl_t?`+${ppl_p-ppl_t} PTX`:`+${ppl_t-ppl_p} TERC`)}</span></span>
+    <span class="d-item"><span class="d-lbl">H.Extra:</span><span class="${heOk?'d-ok':'d-bad'}">${heOk?'✓ igual':`PTX ${he_p} / TERC ${he_t}`}</span></span>
+    <span class="d-item"><span class="d-lbl">Valor:</span><span class="${vlOk?'d-ok':'d-bad'}">${vlOk?'✓ igual':`diff ${vlDiff>0?'+':''}${fmtR$(Math.abs(vlDiff))}`}</span></span>
+    <span class="d-item"><span class="d-lbl">Divergências:</span><span class="${cnt.diff+cnt.warn+cnt.po+cnt.to===0?'d-ok':'d-bad'}">${cnt.diff+cnt.warn+cnt.po+cnt.to===0?'✓ nenhuma':cnt.diff+cnt.warn+cnt.po+cnt.to+' registro(s)'}</span></span>
+  </div>`;
+
+  // ── Um card por dia ────────────────────────────────
+  supDates.forEach(dt=>{
+    html+=renderDayCard(dt, ptxSup.filter(r=>r.data===dt), tercQ.filter(r=>r.data===dt), id);
+  });
+
+  html+=`</div></div>`;
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER — CARD DIA
+// ═══════════════════════════════════════════════════════
+function renderDayCard(dt, ptxDay, tercDay, supId) {
+  const pairs=matchDay(ptxDay, tercDay);
+  const cnt={ok:0,warn:0,diff:0,po:0,to:0};
+  pairs.forEach(p=>{const s=getStatus(p).code; cnt[s]=(cnt[s]||0)+1;});
+  const diverg=cnt.diff+cnt.warn+cnt.po+cnt.to;
+
+  const he_p=ptxDay.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+  const he_t=tercDay.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+  const heOk=he_p===he_t;
+
+  const dow=getDow(dt);
+  const dayId=supId+dt.replace(/\//g,'');
+
+  const pillsHtml=[
+    `<span class="badge b-neu">${ptxDay.length} PTX</span>`,
+    `<span class="badge b-neu">${tercDay.length} TERC</span>`,
+    diverg>0 ? `<span class="badge b-diff">⚠ ${diverg} diverg.</span>` : `<span class="badge b-ok">✓ sem divergências</span>`,
+  ].join('');
+
+  let html=`<div class="day-card">
+    <div class="day-hdr" onclick="togDay('${dayId}')">
+      <div class="day-hdr-l">
+        <span class="day-date">${dt}</span>
+        <span class="day-dow">${dow}</span>
+        ${pillsHtml}
+      </div>
+      <div class="day-hdr-r">
+        <span class="day-extra-info">H.Extra PTX <b>${minsToHe(he_p)}</b> / TERC <b>${minsToHe(he_t)}</b> ${heOk?'<span style="color:var(--ok)">✓</span>':'<span style="color:var(--diff)">⚠</span>'}</span>
+        <span class="chevron open" id="${dayId}chev">▼</span>
+      </div>
+    </div>
+    <div class="day-body" id="${dayId}">`;
+
+  html+=`<div style="overflow-x:auto"><table class="rt">
+    <thead>
+      <tr>
+        <th colspan="5" class="h-ptx">PORTOEX</th>
+        <th class="h-st">Status</th>
+        <th colspan="5" class="h-terc">TERCEIRIZADA</th>
+      </tr>
+      <tr>
+        <th class="s-ptx">Nome</th>
+        <th class="s-ptx">Entrada</th>
+        <th class="s-ptx">Saída</th>
+        <th class="s-ptx">H.Extra</th>
+        <th class="s-ptx">Valor</th>
+        <th class="s-mid h-st"></th>
+        <th class="s-terc">Nome</th>
+        <th class="s-terc">Horário</th>
+        <th class="s-terc">Saída</th>
+        <th class="s-terc">H.Extra</th>
+        <th class="s-terc">Valor</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  let tHe_p=0, tHe_t=0, tVl_p=0, tVl_t=0;
+
+  pairs.forEach(pair=>{
+    const st=getStatus(pair);
+    const p=pair.ptx, t=pair.terc;
+    const eD=p?.entrada&&t?.entrada&&p.entrada!==t.entrada;
+    const sD=p?.saida  &&t?.saida  &&p.saida  !==t.saida;
+    const xp=heToMins(p?.horaExtra), xt=heToMins(t?.horaExtra);
+    const xD=xp>0&&xt>0&&xp!==xt;
+    tHe_p+=xp; tHe_t+=xt;
+    tVl_p+=p?.vlTotal||0; tVl_t+=t?.vlTotal||0;
+    const horTerc=t?(t.horarioRaw||(t.entrada+(t.saida?' – '+t.saida:''))):'';
+
+    html+=`<tr class="${st.code}">
+      <td>${esc(p?.nome||'')||'<span class="cm">—</span>'}</td>
+      <td class="${eD?'cd':''}">${p?.entrada||'<span class="cm">—</span>'}</td>
+      <td class="${sD?'cd':''}">${p?.saida  ||'<span class="cm">—</span>'}</td>
+      <td class="${xD?'cd':''}">${p?.horaExtra||'<span class="cm">—</span>'}</td>
+      <td class="div-ptx">${p?fmtR$(p.vlTotal):'<span class="cm">—</span>'}</td>
+      <td class="stcol"><span class="badge ${st.cls}">${esc(st.label)}</span></td>
+      <td class="div-terc">${esc(t?.nome||'')||'<span class="cm">—</span>'}</td>
+      <td class="${eD?'cd':''}">${esc(horTerc)||'<span class="cm">—</span>'}</td>
+      <td class="${sD?'cd':''}">${t?.saida||'<span class="cm">—</span>'}</td>
+      <td class="${xD?'cd':''}">${t?.horaExtra||'<span class="cm">—</span>'}</td>
+      <td>${t?fmtR$(t.vlTotal):'<span class="cm">—</span>'}</td>
+    </tr>`;
+  });
+
+  // Linha de totais do dia
+  const heOkDay=tHe_p===tHe_t, vlOkDay=Math.abs(tVl_p-tVl_t)<0.01;
+  html+=`<tr class="ttl">
+    <td>Totais — ${ptxDay.length} reg.</td>
+    <td>—</td><td>—</td>
+    <td class="${heOkDay?'':'cd'}">${minsToHe(tHe_p)}</td>
+    <td class="div-ptx ${vlOkDay?'':'cd'}">${fmtR$(tVl_p)}</td>
+    <td class="stcol" style="font-size:10px">${heOkDay&&vlOkDay?'<span style="color:var(--ok)">✓ bateu</span>':'<span style="color:var(--diff)">⚠ diferença</span>'}</td>
+    <td class="div-terc">${tercDay.length} reg.</td>
+    <td>—</td><td>—</td>
+    <td class="${heOkDay?'':'cd'}">${minsToHe(tHe_t)}</td>
+    <td>${fmtR$(tVl_t)}</td>
+  </tr>`;
+
+  html+=`</tbody></table></div></div></div>`;
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER — PAINEL DE DIVERGÊNCIAS
+// ═══════════════════════════════════════════════════════
+function renderDivergencias(ptxQ, tercQ) {
+  // Rebuild same supMap as render() so we get per-supplier matching
+  const supMap={};
+  ptxQ.forEach(r=>{const s=r.fornecedorNorm||'SEM FORNECEDOR';if(!supMap[s])supMap[s]=[];supMap[s].push(r);});
+
+  // Collect ALL pairs (with date + supplier context)
+  const allPairs=[];
+  Object.entries(supMap).forEach(([sup,ptxSup])=>{
+    const dates=[...new Set([...ptxSup,...tercQ].map(r=>r.data))].sort(dateSort);
+    dates.forEach(dt=>{
+      const pD=ptxSup.filter(r=>r.data===dt), tD=tercQ.filter(r=>r.data===dt);
+      matchDay(pD,tD).forEach(pair=>allPairs.push({...pair,dt,sup}));
+    });
+  });
+
+  // Impact totals
+  let onlyPtxN=0,onlyPtxV=0,onlyTercN=0,onlyTercV=0,heDiffM=0,nomeDiffs=0;
+  allPairs.forEach(({ptx:p,terc:t,by})=>{
+    if      (by==='ptx-only')  { onlyPtxN++;  onlyPtxV +=p?.vlTotal||0; }
+    else if (by==='terc-only') { onlyTercN++; onlyTercV+=t?.vlTotal||0; }
+    else {
+      if (by==='nome') nomeDiffs++;
+      const xp=heToMins(p?.horaExtra), xt=heToMins(t?.horaExtra);
+      heDiffM+=Math.abs(xp-xt);
+    }
+  });
+
+  const divergPairs=allPairs.filter(pair=>getStatus(pair).code!=='ok');
+  const panel=$('divg');
+
+  // ── Sem divergências ──────────────────────────────────
+  if (!divergPairs.length) {
+    panel.innerHTML=`<div class="divg-panel"><div class="divg-hdr clean"><span class="divg-title ok">✓ Sem divergências no período</span></div></div>`;
+    return;
+  }
+
+  // ── Barra de impacto ──────────────────────────────────
+  const impHtml=`<div class="divg-impact">
+    <span class="divg-impact-lbl">Impacto</span>
+    <div class="di-item">
+      <span class="di-lbl">Só PTX</span>
+      <span class="di-val ${onlyPtxN?'bad':'ok'}">${onlyPtxN?`${onlyPtxN} reg. · ${fmtR$(onlyPtxV)}`:'✓ 0'}</span>
+    </div>
+    <div class="di-item">
+      <span class="di-lbl">Só TERC</span>
+      <span class="di-val ${onlyTercN?'bad':'ok'}">${onlyTercN?`${onlyTercN} reg. · ${fmtR$(onlyTercV)}`:'✓ 0'}</span>
+    </div>
+    <div class="di-item">
+      <span class="di-lbl">Var. H.Extra</span>
+      <span class="di-val ${heDiffM?'warn':'ok'}">${heDiffM?minsToHe(heDiffM):'✓ igual'}</span>
+    </div>
+    <div class="di-item">
+      <span class="di-lbl">Difs de nome</span>
+      <span class="di-val ${nomeDiffs?'warn':'ok'}">${nomeDiffs?`${nomeDiffs} par(es)`:'✓ nenhuma'}</span>
+    </div>
+  </div>`;
+
+  // ── Tabela por dia ────────────────────────────────────
+  let rows='';
+  let lastKey='';
+  divergPairs.sort((a,b)=>{
+    const dc=dateSort(a.dt,b.dt); return dc!==0?dc:a.sup.localeCompare(b.sup);
+  }).forEach(pair=>{
+    const key=pair.dt+'|'+pair.sup;
+    if (key!==lastKey) {
+      lastKey=key;
+      rows+=`<tr class="day-sep"><td colspan="8">${pair.dt} ${getDow(pair.dt)}&ensp;·&ensp;${esc(pair.sup)}</td></tr>`;
+    }
+    const st=getStatus(pair);
+    const p=pair.ptx, t=pair.terc;
+    const xp=heToMins(p?.horaExtra), xt=heToMins(t?.horaExtra);
+    const xD=xp!==xt&&(xp||xt);
+    const vD=Math.abs((p?.vlTotal||0)-(t?.vlTotal||0))>0.01;
+    // descrição
+    const diffs=[];
+    if      (pair.by==='ptx-only')  diffs.push('ausente na TERC');
+    else if (pair.by==='terc-only') diffs.push('ausente na PTX');
+    else {
+      if (pair.by==='nome') diffs.push('nome');
+      if (p?.entrada&&t?.entrada&&p.entrada!==t.entrada) diffs.push('entrada');
+      if (p?.saida  &&t?.saida  &&p.saida  !==t.saida)   diffs.push('saída');
+      if (xD) diffs.push('h.extra');
+      if (vD) diffs.push('valor');
+    }
+    rows+=`<tr class="${st.code}">
+      <td><span class="badge ${st.cls}">${esc(st.label)}</span></td>
+      <td>${esc(p?.nome||'—')}</td>
+      <td>${esc(t?.nome||'—')}</td>
+      <td style="font-size:11px;color:var(--diff)">${esc(diffs.join(' · ')||'—')}</td>
+      <td class="${xD?'cd':''}">${p?p.horaExtra:'—'}</td>
+      <td class="${xD?'cd':''}">${t?t.horaExtra:'—'}</td>
+      <td class="${vD?'cd':''}">${p?fmtR$(p.vlTotal):'—'}</td>
+      <td class="${vD?'cd':''}">${t?fmtR$(t.vlTotal):'—'}</td>
+    </tr>`;
+  });
+
+  const bid='divg-body';
+  panel.innerHTML=`<div class="divg-panel">
+    <div class="divg-hdr" onclick="togDiv('${bid}')">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="divg-title">&#9888; Resumo de Divergências</span>
+        <span class="badge b-diff">${divergPairs.length} registros</span>
+        ${onlyPtxN ?`<span class="badge b-ptx">&larr; ${onlyPtxN} só PTX</span>`:''}
+        ${onlyTercN?`<span class="badge b-terc">&rarr; ${onlyTercN} só TERC</span>`:''}
+        ${nomeDiffs?`<span class="badge b-warn">&#9651; ${nomeDiffs} nome</span>`:''}
+      </div>
+      <span class="chevron open" id="${bid}chev">&#9660;</span>
+    </div>
+    <div id="${bid}">
+      ${impHtml}
+      <div class="divg-table-wrap">
+        <table class="dt">
+          <thead><tr>
+            <th>Status</th><th>Nome PTX</th><th>Nome TERC</th>
+            <th>O que divergiu</th>
+            <th>H.Extra PTX</th><th>H.Extra TERC</th>
+            <th>Valor PTX</th><th>Valor TERC</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// TOGGLE COLLAPSE
+// ═══════════════════════════════════════════════════════
+function togDiv(id) {
+  const b=document.getElementById(id), c=document.getElementById(id+'chev');
+  if (!b) return;
+  const open=b.style.display!=='none'&&b.style.display!=='';
+  b.style.display=open?'none':'';
+  if (c){c.textContent=open?'▶':'▼'; c.classList.toggle('open',!open);}
+}
+function togSup(id) {
+  const b=document.getElementById(id), c=document.getElementById(id+'chev');
+  if (!b) return;
+  const open=b.style.display!=='none'&&b.style.display!=='';
+  b.style.display=open?'none':'';
+  if (c){c.textContent=open?'▶':'▼'; c.classList.toggle('open',!open);}
+}
+function togDay(id) {
+  const b=document.getElementById(id), c=document.getElementById(id+'chev');
+  if (!b) return;
+  const open=b.style.display!=='none'&&b.style.display!=='';
+  b.style.display=open?'none':'';
+  if (c){c.textContent=open?'▶':'▼'; c.classList.toggle('open',!open);}
+}
+
+
+// ═══════════════════════════════════════════════════════
+// EXPORT XLSX (dados brutos, 3 abas)
+// ═══════════════════════════════════════════════════════
+function exportXlsx() {
+  const ptxQ=lastPtxQ, tercQ=lastTercQ;
+  if (!ptxQ.length&&!tercQ.length) { alert('Carregue as planilhas antes de exportar.'); return; }
+  const wb=XLSX.utils.book_new();
+  const gerado=new Date().toLocaleDateString('pt-BR')+' '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  const supMap={};
+  ptxQ.forEach(r=>{const s=r.fornecedorNorm||'SEM FORNECEDOR';if(!supMap[s])supMap[s]=[];supMap[s].push(r);});
+
+  // ABA 1: RESUMO
+  const ppl_p=new Set(ptxQ.map(r=>r.cpf||normName(r.nome)).filter(Boolean)).size;
+  const ppl_t=new Set(tercQ.map(r=>r.cpf||normName(r.nome)).filter(Boolean)).size;
+  const he_p=ptxQ.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+  const he_t=tercQ.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+  const vl_p=ptxQ.reduce((s,r)=>s+r.vlTotal,0);
+  const vl_t=tercQ.reduce((s,r)=>s+r.vlTotal,0);
+  const resumoData=[
+    ['CONCILIAÇÃO DE MÃO DE OBRA — PORTOEXPRESS'],
+    ['Período:', lastPeriodLabel, '', 'Gerado em:', gerado],
+    [],
+    ['RESUMO GLOBAL','PTX','TERC','Diferença','Status'],
+    ['Pessoas únicas',  ppl_p, ppl_t, ppl_p-ppl_t, ppl_p===ppl_t?'OK':'Diverge'],
+    ['Dias · pessoa',   ptxQ.length, tercQ.length, ptxQ.length-tercQ.length, ptxQ.length===tercQ.length?'OK':'Diverge'],
+    ['H.Extra total',   minsToHe(he_p), minsToHe(he_t), minsToHe(Math.abs(he_p-he_t)), he_p===he_t?'OK':'Diverge'],
+    ['Valor total (R$)', vl_p.toFixed(2), vl_t.toFixed(2), (vl_p-vl_t).toFixed(2), Math.abs(vl_p-vl_t)<0.01?'OK':'Diverge'],
+    [],
+    ['FORNECEDOR','PTX Pess.','TERC Pess.','PTX Dias','TERC Dias','PTX H.Extra','TERC H.Extra','PTX Valor','TERC Valor','Dif. Valor','Diverg.'],
+  ];
+  Object.entries(supMap).sort(([a],[b])=>a.localeCompare(b)).forEach(([sup,ptxSup])=>{
+    const sp_p=new Set(ptxSup.map(r=>r.cpf||normName(r.nome)).filter(Boolean)).size;
+    const sp_t=new Set(tercQ.map(r=>r.cpf||normName(r.nome)).filter(Boolean)).size;
+    const sh_p=ptxSup.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+    const sh_t=tercQ.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+    const sv_p=ptxSup.reduce((s,r)=>s+r.vlTotal,0);
+    const sv_t=tercQ.reduce((s,r)=>s+r.vlTotal,0);
+    const dates=[...new Set([...ptxSup,...tercQ].map(r=>r.data))];
+    let divCnt=0;
+    dates.forEach(dt=>{ matchDay(ptxSup.filter(r=>r.data===dt),tercQ.filter(r=>r.data===dt)).forEach(p=>{ if(getStatus(p).code!=='ok') divCnt++; }); });
+    resumoData.push([sup,sp_p,sp_t,ptxSup.length,tercQ.length,minsToHe(sh_p),minsToHe(sh_t),sv_p.toFixed(2),sv_t.toFixed(2),(sv_p-sv_t).toFixed(2),divCnt]);
+  });
+  const wsR=XLSX.utils.aoa_to_sheet(resumoData);
+  wsR['!cols']=[{wch:22},{wch:12},{wch:12},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,wsR,'Resumo');
+
+  // ABA 2: DIVERGÊNCIAS
+  const divData=[['DIVERGENCIAS — '+lastPeriodLabel],[]];
+  divData.push(['Data','Dia','Fornecedor','Status','Nome PTX','Nome TERC','O que divergiu','H.Extra PTX','H.Extra TERC','Valor PTX','Valor TERC']);
+  Object.entries(supMap).sort(([a],[b])=>a.localeCompare(b)).forEach(([sup,ptxSup])=>{
+    const dates=[...new Set([...ptxSup,...tercQ].map(r=>r.data))].sort(dateSort);
+    dates.forEach(dt=>{
+      matchDay(ptxSup.filter(r=>r.data===dt),tercQ.filter(r=>r.data===dt)).forEach(pair=>{
+        const st=getStatus(pair); if(st.code==='ok') return;
+        const p=pair.ptx, t=pair.terc; const diffs=[];
+        if(pair.by==='ptx-only') diffs.push('ausente na TERC');
+        else if(pair.by==='terc-only') diffs.push('ausente na PTX');
+        else {
+          if(pair.by==='nome') diffs.push('nome');
+          if(p?.entrada&&t?.entrada&&p.entrada!==t.entrada) diffs.push('entrada');
+          if(p?.saida&&t?.saida&&p.saida!==t.saida) diffs.push('saida');
+          if(heToMins(p?.horaExtra)!==heToMins(t?.horaExtra)) diffs.push('h.extra');
+          if(Math.abs((p?.vlTotal||0)-(t?.vlTotal||0))>0.01) diffs.push('valor');
+        }
+        divData.push([dt,getDow(dt),sup,st.code,p?.nome||'',t?.nome||'',diffs.join(' / '),
+          p?p.horaExtra:'',t?t.horaExtra:'',p?(p.vlTotal).toFixed(2):'',t?(t.vlTotal).toFixed(2):'']);
+      });
+    });
+  });
+  const wsD=XLSX.utils.aoa_to_sheet(divData);
+  wsD['!cols']=[{wch:11},{wch:6},{wch:16},{wch:10},{wch:26},{wch:26},{wch:22},{wch:11},{wch:11},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,wsD,'Divergencias');
+
+  // ABA 3: DETALHAMENTO
+  const detData=[['DETALHAMENTO — '+lastPeriodLabel],[]];
+  detData.push(['Data','Fornecedor','Status','Nome PTX','CPF PTX','Entrada PTX','Saida PTX','H.Extra PTX','Valor PTX','Nome TERC','Horario TERC','H.Extra TERC','Valor TERC']);
+  Object.entries(supMap).sort(([a],[b])=>a.localeCompare(b)).forEach(([sup,ptxSup])=>{
+    const dates=[...new Set([...ptxSup,...tercQ].map(r=>r.data))].sort(dateSort);
+    dates.forEach(dt=>{
+      matchDay(ptxSup.filter(r=>r.data===dt),tercQ.filter(r=>r.data===dt)).forEach(pair=>{
+        const st=getStatus(pair); const p=pair.ptx, t=pair.terc;
+        const horTerc=t?(t.horarioRaw||(t.entrada+(t.saida?' - '+t.saida:''))):'';
+        detData.push([dt,sup,st.code,p?.nome||'',p?fmtCPF(p.cpf):'',p?.entrada||'',p?.saida||'',p?p.horaExtra:'',p?(p.vlTotal).toFixed(2):'',
+          t?.nome||'',horTerc||'',t?t.horaExtra:'',t?(t.vlTotal).toFixed(2):'']);
+      });
+    });
+  });
+  const wsDet=XLSX.utils.aoa_to_sheet(detData);
+  wsDet['!cols']=[{wch:11},{wch:16},{wch:10},{wch:26},{wch:15},{wch:10},{wch:10},{wch:11},{wch:12},{wch:26},{wch:14},{wch:11},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,wsDet,'Detalhamento');
+
+  const label=lastPeriodLabel.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_');
+  XLSX.writeFile(wb,'Conciliacao_MO_'+label+'.xlsx');
+}
+
+// ═══════════════════════════════════════════════════════
+// PRINT / PDF
+// ═══════════════════════════════════════════════════════
+function printPDF() {
+  document.querySelectorAll('[id$="chev"]').forEach(chev=>{
+    const id=chev.id.replace(/chev$/,'');
+    const body=document.getElementById(id);
+    if (body&&body.style.display==='none') { body.style.display=''; chev.textContent='v'; chev.classList.add('open'); }
+  });
+  window.print();
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT GOOGLE SHEETS (XLSX estilizado via ExcelJS)
+// ═══════════════════════════════════════════════════════
+function exportSheets() {
+  if (!lastPtxQ.length&&!lastTercQ.length) { alert('Carregue as planilhas antes de exportar.'); return; }
+  const btn=document.querySelector('.btn-sheets');
+  if (btn) { btn.disabled=true; btn.textContent='Carregando...'; }
+  function go() { _buildSheetsXlsx(); if(btn){btn.disabled=false;btn.textContent='Exportar Google Sheets';} }
+  if (!window.ExcelJS) {
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js';
+    s.onload=go;
+    s.onerror=()=>{ alert('Falha ao carregar ExcelJS. Verifique sua conexao.'); if(btn){btn.disabled=false;btn.textContent='Exportar Google Sheets';} };
+    document.head.appendChild(s);
+  } else { go(); }
+}
+
+function _buildSheetsXlsx() {
+  const ptxQ=lastPtxQ, tercQ=lastTercQ;
+  const wb=new ExcelJS.Workbook();
+  wb.creator='Portoexpress Conciliador MO'; wb.created=new Date();
+
+  const supMap={};
+  ptxQ.forEach(r=>{const s=r.fornecedorNorm||'SEM FORNECEDOR';if(!supMap[s])supMap[s]=[];supMap[s].push(r);});
+
+  // helpers
+  const fl=(c)=>({type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}});
+  const fn=(c,b,sz)=>({color:{argb:'FF'+c},bold:!!b,name:'Calibri',size:sz||10});
+  const al=(h,v)=>({horizontal:h||'left',vertical:v||'middle'});
+  const numFmtBRL='"R$" #,##0.00';
+
+  function applyCell(row,colIdx,opts) {
+    const cell=row.getCell(colIdx);
+    if(opts.fill) cell.fill=fl(opts.fill);
+    if(opts.font) { const a=Array.isArray(opts.font)?opts.font:[opts.font,false,10]; cell.font=fn(...a); }
+    if(opts.align) { const a=Array.isArray(opts.align)?opts.align:[opts.align]; cell.alignment=al(...a); }
+    if(opts.numFmt) cell.numFmt=opts.numFmt;
+    if(opts.borderTop) cell.border={...cell.border,top:{style:'medium',color:{argb:'FF'+opts.borderTop}}};
+    if(opts.borderBottom) cell.border={...cell.border,bottom:{style:'medium',color:{argb:'FF'+opts.borderBottom}}};
+    if(opts.borderLeft) cell.border={...cell.border,left:{style:'medium',color:{argb:'FF'+opts.borderLeft}}};
+    if(opts.borderRight) cell.border={...cell.border,right:{style:'medium',color:{argb:'FF'+opts.borderRight}}};
+  }
+
+  const STATUS_FILL={ok:'FFFFFF',warn:'FFFEF0',diff:'FFF8F7',po:'F2EDFF',to:'EDF3FF'};
+  const STATUS_FONT={ok:'1A7A46',warn:'7A5500',diff:'971F1F',po:'1A3F88',to:'3D0E6E'};
+
+  Object.entries(supMap).sort(([a],[b])=>a.localeCompare(b)).forEach(([sup,ptxSup])=>{
+    const ws=wb.addWorksheet(sup.slice(0,31),{views:[{state:'frozen',ySplit:4}]});
+    ws.columns=[{width:28},{width:10},{width:10},{width:10},{width:14},{width:18},{width:28},{width:16},{width:10},{width:14}];
+
+    // Row 1 — titulo
+    ws.addRow(['PORTOEXPRESS — Conciliacao MO — '+sup+' — '+lastPeriodLabel,'','','','','','','','','']);
+    ws.mergeCells(1,1,1,10);
+    const r1=ws.getRow(1); r1.height=22;
+    applyCell(r1,1,{fill:'1A3F88',font:['FFFFFF',true,12],align:['left','middle']});
+
+    // Row 2 — gerado
+    ws.addRow(['Gerado em: '+new Date().toLocaleString('pt-BR'),'','','','','','','','','']);
+    ws.mergeCells(2,1,2,10);
+    applyCell(ws.getRow(2),1,{fill:'1A3F88',font:['AAC4EE',false,9],align:['left','middle']});
+
+    // Row 3 — vazia
+    ws.addRow([]);
+
+    // Row 4 — headers coluna
+    ws.addRow(['PORTOEX — Nome','Entrada','Saida','H.Extra','Valor (R$)','STATUS','TERC — Nome','Horario','H.Extra','Valor (R$)']);
+    const r4=ws.getRow(4); r4.height=16;
+    for(let c=1;c<=5;c++) applyCell(r4,c,{fill:'D6E8F8',font:['1A3F88',true],align:['center','middle'],borderBottom:'1A3F88'});
+    applyCell(r4,6,{fill:'EEECEA',font:['6B6967',true],align:['center','middle']});
+    for(let c=7;c<=10;c++) applyCell(r4,c,{fill:'E0D0F8',font:['3D0E6E',true],align:['center','middle'],borderBottom:'3D0E6E'});
+
+    const dates=[...new Set([...ptxSup,...tercQ].map(r=>r.data))].sort(dateSort);
+
+    dates.forEach(dt=>{
+      const pD=ptxSup.filter(r=>r.data===dt), tD=tercQ.filter(r=>r.data===dt);
+      const pairs=matchDay(pD,tD);
+      const he_p=pD.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+      const he_t=tD.reduce((s,r)=>s+heToMins(r.horaExtra),0);
+      const heOkDay=he_p===he_t;
+      const divCnt=pairs.filter(p=>getStatus(p).code!=='ok').length;
+
+      // Day header
+      ws.addRow([dt+'  '+getDow(dt)+'  —  PTX: '+pD.length+'  TERC: '+tD.length+'  Diverg: '+divCnt,
+        '','','','','H.Extra PTX '+minsToHe(he_p)+' / TERC '+minsToHe(he_t)+(heOkDay?' OK':' DIFERENCA'),'','','','']);
+      const dr=ws.getRow(ws.rowCount);
+      ws.mergeCells(dr.number,1,dr.number,5); ws.mergeCells(dr.number,6,dr.number,10);
+      dr.height=14;
+      for(let c=1;c<=10;c++) applyCell(dr,c,{fill:'F0EFE9',align:['left','middle']});
+      applyCell(dr,1,{font:['1A1A18',true]}); applyCell(dr,6,{font:['6B6967',false],align:['right','middle']});
+
+      let tHe_p=0,tHe_t=0,tVl_p=0,tVl_t=0;
+      pairs.forEach(pair=>{
+        const st=getStatus(pair); const p=pair.ptx, t=pair.terc;
+        const xp=heToMins(p?p.horaExtra:''), xt=heToMins(t?t.horaExtra:'');
+        const xD=xp!==xt&&(xp||xt);
+        const vD=Math.abs((p?p.vlTotal:0)-(t?t.vlTotal:0))>0.01;
+        tHe_p+=xp; tHe_t+=xt; tVl_p+=p?p.vlTotal:0; tVl_t+=t?t.vlTotal:0;
+        const horTerc=t?(t.horarioRaw||(t.entrada+(t.saida?' - '+t.saida:''))):'';
+        const stLabel=st.code.toUpperCase();
+        ws.addRow([p?p.nome:'',p?p.entrada:'',p?p.saida:'',p?p.horaExtra:'',p?p.vlTotal:null,
+          stLabel,t?t.nome:'',horTerc,t?t.horaExtra:'',t?t.vlTotal:null]);
+        const row=ws.getRow(ws.rowCount);
+        const rf=STATUS_FILL[st.code]||'FFFFFF';
+        for(let c=1;c<=10;c++) applyCell(row,c,{fill:rf,align:['left','middle']});
+        applyCell(row,6,{font:[STATUS_FONT[st.code]||'1A1A18',true],align:['center','middle']});
+        if(xD){applyCell(row,4,{font:['971F1F',true]});applyCell(row,9,{font:['971F1F',true]});}
+        if(vD){applyCell(row,5,{font:['971F1F',true]});applyCell(row,10,{font:['971F1F',true]});}
+        if(p&&p.vlTotal!=null) row.getCell(5).numFmt=numFmtBRL;
+        if(t&&t.vlTotal!=null) row.getCell(10).numFmt=numFmtBRL;
+        row.getCell(5).border={...row.getCell(5).border,right:{style:'medium',color:{argb:'FFB8CEF0'}}};
+        row.getCell(6).border={left:{style:'medium',color:{argb:'FFB8CEF0'}},right:{style:'medium',color:{argb:'FFC8B0F0'}}};
+      });
+
+      // Totais dia
+      const heOk=tHe_p===tHe_t, vlOk=Math.abs(tVl_p-tVl_t)<0.01;
+      ws.addRow(['Totais — '+pD.length+' PTX / '+tD.length+' TERC','','',minsToHe(tHe_p),tVl_p,
+        heOk&&vlOk?'BATEU':'DIFERENCA','','',minsToHe(tHe_t),tVl_t]);
+      const tot=ws.getRow(ws.rowCount); tot.height=14;
+      for(let c=1;c<=10;c++) applyCell(tot,c,{fill:'F3F2EC',font:['1A1A18',true],align:['left','middle'],borderTop:'C0BDB5'});
+      applyCell(tot,4,{font:[heOk?'1A7A46':'971F1F',true]});
+      applyCell(tot,5,{font:[vlOk?'1A7A46':'971F1F',true],numFmt:numFmtBRL});
+      applyCell(tot,6,{font:[heOk&&vlOk?'1A7A46':'971F1F',true],align:['center','middle']});
+      applyCell(tot,9,{font:[heOk?'1A7A46':'971F1F',true]});
+      applyCell(tot,10,{numFmt:numFmtBRL});
+      ws.addRow([]);
+    });
+  });
+
+  wb.xlsx.writeBuffer().then(buf=>{
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    const label=lastPeriodLabel.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_');
+    a.download='ConciliacaoSheets_'+label+'.xlsx';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// SALVAR SNAPSHOT index.html
+// ═══════════════════════════════════════════════════════
+function saveSnapshot() {
+  if (!lastPtxQ.length&&!lastTercQ.length) { alert('Carregue as planilhas antes de salvar.'); return; }
+
+  const gs=document.getElementById('global-sum').innerHTML;
+  const dv=document.getElementById('divg').innerHTML;
+  const ct=document.getElementById('content').innerHTML;
+  document.getElementById('global-sum').innerHTML='';
+  document.getElementById('divg').innerHTML='';
+  document.getElementById('content').innerHTML='';
+
+  let html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+
+  document.getElementById('global-sum').innerHTML=gs;
+  document.getElementById('divg').innerHTML=dv;
+  document.getElementById('content').innerHTML=ct;
+
+  const mes=document.getElementById('sel-mes').value;
+  const qz=document.getElementById('sel-qz').value;
+  const forn=document.getElementById('sel-forn').value;
+  const SD=JSON.stringify({ptxRows:lastPtxQ,tercRows:lastTercQ,mes:mes,qz:qz,forn:forn,period:lastPeriodLabel,generated:new Date().toLocaleString('pt-BR')});
+
+  const boot='<scr'+'ipt>\n(function(){\nvar SD='+SD+';\nfunction init(){\nptxRows=SD.ptxRows;tercRows=SD.tercRows;lastPeriodLabel=SD.period;\nvar ig=document.querySelector(".import-grid");if(ig)ig.style.display="none";\nvar ab=document.getElementById("actions-bar");if(ab)ab.style.display="none";\nvar bn=document.getElementById("snap-banner");\nif(bn){bn.style.display="flex";bn.innerHTML="<b>Snapshot</b><span class=\'snap-period\'>"+SD.period+"</span><span class=\'snap-date\'>Gerado em "+SD.generated+"</span>";}\ndocument.getElementById("recon").style.display="";\npopulateFilters();\nvar sm=document.getElementById("sel-mes");\nif(sm){sm.innerHTML="";sm.insertAdjacentHTML("beforeend","<option value=\'"+SD.mes+"\'>"+getMonthLabel(SD.mes)+"</option>");sm.value=SD.mes;sm.disabled=true;}\nvar sq=document.getElementById("sel-qz");if(sq){sq.value=SD.qz;sq.disabled=true;}\nvar sf=document.getElementById("sel-forn");if(sf&&SD.forn)sf.value=SD.forn;\nrender();\n}\nif(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();\n})();\n<\/scr'+'ipt>';
+
+  html=html.replace('<script>
+(function(){
+var SD={"ptxRows":[{"data":"16/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"07:00","saida":"11:24","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-138,"vlTotal":285},{"data":"16/05/2026","cpf":"07665417205","nome":"WELINGTON","entrada":"07:00","saida":"11:24","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-138,"vlTotal":285},{"data":"16/05/2026","cpf":"07936914277","nome":"MARCUS VINICIUS","entrada":"07:00","saida":"11:24","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-138,"vlTotal":285},{"data":"16/05/2026","cpf":"03345855208","nome":"ANTONIO CARLOS","entrada":"07:00","saida":"11:24","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-138,"vlTotal":285},{"data":"16/05/2026","cpf":"12761743903","nome":"JOAO VICTOR BOTELHO","entrada":"07:00","saida":"11:24","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-138,"vlTotal":285},{"data":"18/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"07:00","saida":"18:45","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:45","vlHExtra":82.5,"vlTotal":272.5},{"data":"18/05/2026","cpf":"06225184961","nome":"PEDRO","entrada":"06:00","saida":"19:20","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"4:20","vlHExtra":130,"vlTotal":320},{"data":"18/05/2026","cpf":"89516257291","nome":"RAIMUNDO GOMES","entrada":"06:00","saida":"19:20","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"4:20","vlHExtra":130,"vlTotal":320},{"data":"18/05/2026","cpf":"10744360919","nome":"WILLIAN GOMES","entrada":"08:05","saida":"17:35","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"18/05/2026","cpf":"8434162970","nome":"KAIQUE","entrada":"08:05","saida":"17:35","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"18/05/2026","cpf":"12983051528","nome":"ALEXANDRE RIBEIRO","entrada":"08:00","saida":"17:54","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:24","vlHExtra":12,"vlTotal":202},{"data":"18/05/2026","cpf":"70857277219","nome":"NEWFHAR","entrada":"08:00","saida":"17:27","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-1.5,"vlTotal":190},{"data":"18/05/2026","cpf":"03029445917","nome":"ANTÔNIO PREIS","entrada":"13:30","saida":"22:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"18/05/2026","cpf":"07936914277","nome":"MARCUS VINICIUS","entrada":"13:30","saida":"22:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"18/05/2026","cpf":"80368878900","nome":"ARNALDO PREIS","entrada":"13:30","saida":"22:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"18/05/2026","cpf":"15575417956","nome":"CLEBERSON JUNIOR","entrada":"14:00","saida":"23:55","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:55","vlHExtra":27.5,"vlTotal":217.5},{"data":"18/05/2026","cpf":"37985607811","nome":"DONOVAN","entrada":"14:00","saida":"23:55","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:55","vlHExtra":27.5,"vlTotal":217.5},{"data":"18/05/2026","cpf":"62811788310","nome":"PEDRO HENRIQUE","entrada":"14:00","saida":"23:55","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:55","vlHExtra":27.5,"vlTotal":217.5},{"data":"18/05/2026","cpf":"13236204940","nome":"THIERRY HENRY","entrada":"14:05","saida":"23:55","operacao":"EXPEDIÇÃO","fornecedor":"LJA CONF","fornecedorNorm":"LJA","horaExtra":"0:50","vlHExtra":21.875,"vlTotal":231.875},{"data":"18/05/2026","cpf":"03598172036","nome":"PABLO FERNANDO","entrada":"14:05","saida":"23:55","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:50","vlHExtra":25,"vlTotal":215},{"data":"18/05/2026","cpf":"12761743903","nome":"JOAO VICTOR","entrada":"14:08","saida":"22:55","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-6.5,"vlTotal":190},{"data":"19/05/2026","cpf":"06225184961","nome":"PEDRO","entrada":"07:00","saida":"20:13","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"3:43","vlHExtra":111.5,"vlTotal":301.5},{"data":"19/05/2026","cpf":"89516257291","nome":"RAIMUNDO GOMES","entrada":"07:00","saida":"20:32","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"4:02","vlHExtra":121,"vlTotal":311},{"data":"19/05/2026","cpf":"10744360919","nome":"WILLIAN GOMES","entrada":"08:00","saida":"17:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"19/05/2026","cpf":"70857277219","nome":"NEWFHAR","entrada":"08:00","saida":"17:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"19/05/2026","cpf":"12983051528","nome":"ALEXANDRE RIBEIRO","entrada":"08:00","saida":"17:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"19/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"08:00","saida":"17:38","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:08","vlHExtra":4,"vlTotal":194},{"data":"19/05/2026","cpf":"13236204940","nome":"THIERRY HENRY","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA CONF","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":210},{"data":"19/05/2026","cpf":"62811788310","nome":"PEDRO HENRIQUE","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"19/05/2026","cpf":"15575417956","nome":"CLEBERSON JUNIOR","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"19/05/2026","cpf":"37985607811","nome":"DONAVAN","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"19/05/2026","cpf":"03598172036","nome":"PABLO FERNANDO","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"19/05/2026","cpf":"10526996420","nome":"GENILSON SILVA","entrada":"17:45","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-100,"vlTotal":190},{"data":"20/05/2026","cpf":"06225184961","nome":"PEDRO","entrada":"07:00","saida":"19:28","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"3:28","vlHExtra":104,"vlTotal":294},{"data":"20/05/2026","cpf":"89516257291","nome":"RAIMUNDO GOMES","entrada":"07:00","saida":"19:28","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"3:28","vlHExtra":104,"vlTotal":294},{"data":"20/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"06:00","saida":"16:15","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:15","vlHExtra":37.5,"vlTotal":227.5},{"data":"20/05/2026","cpf":"10744360919","nome":"WILLIAN GOMES","entrada":"08:00","saida":"09:25","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":35.625},{"data":"20/05/2026","cpf":"70857277219","nome":"NEWFHAR","entrada":"08:00","saida":"18:15","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:45","vlHExtra":22.5,"vlTotal":212.5},{"data":"20/05/2026","cpf":"12983051528","nome":"ALEXANDRE RIBEIRO","entrada":"08:00","saida":"20:15","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:45","vlHExtra":82.5,"vlTotal":272.5},{"data":"20/05/2026","cpf":"80368878900","nome":"ARNALDO PREIS","entrada":"13:30","saida":"18:00","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-135,"vlTotal":190},{"data":"20/05/2026","cpf":"07936914277","nome":"MARCOS VINICIUS","entrada":"13:30","saida":"18:00","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-135,"vlTotal":190},{"data":"20/05/2026","cpf":"09715162940","nome":"DARLAN OLIVEIRA","entrada":"08:00","saida":"12:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":95},{"data":"20/05/2026","cpf":"15575417956","nome":"CLEBERSON JUNIOR","entrada":"14:00","saida":"23:27","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:27","vlHExtra":13.5,"vlTotal":203.5},{"data":"20/05/2026","cpf":"13236204940","nome":"THIERRY HENRY","entrada":"14:00","saida":"23:27","operacao":"EXPEDIÇÃO","fornecedor":"LJA CONF","fornecedorNorm":"LJA","horaExtra":"0:27","vlHExtra":11.8125,"vlTotal":221.8125},{"data":"20/05/2026","cpf":"15238056923","nome":"BRYAN","entrada":"14:00","saida":"23:27","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:27","vlHExtra":13.5,"vlTotal":203.5},{"data":"20/05/2026","cpf":"06843020399","nome":"DAVI DOS SANTOS","entrada":"14:00","saida":"23:27","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:27","vlHExtra":13.5,"vlTotal":203.5},{"data":"20/05/2026","cpf":"62811788310","nome":"PEDRO HENRIQUE","entrada":"14:00","saida":"23:27","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:27","vlHExtra":13.5,"vlTotal":203.5},{"data":"20/05/2026","cpf":"10526996420","nome":"GENILSON SILVA","entrada":"17:45","saida":"23:27","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-84,"vlTotal":190},{"data":"21/05/2026","cpf":"10744360919","nome":"WILLIAN GOMES","entrada":"08:00","saida":"11:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-135,"vlTotal":190},{"data":"21/05/2026","cpf":"70857277219","nome":"NEWFHAR","entrada":"08:00","saida":"17:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"21/05/2026","cpf":"06843020399","nome":"","entrada":"08:10","saida":"17:40","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"21/05/2026","cpf":"07384414067","nome":"GONZALO","entrada":"08:10","saida":"12:00","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-170,"vlTotal":190},{"data":"21/05/2026","cpf":"12761743903","nome":"JOAO VICTOR","entrada":"13:30","saida":"17:40","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-115,"vlTotal":190},{"data":"21/05/2026","cpf":"06225184961","nome":"PEDRO","entrada":"07:00","saida":"18:59","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:29","vlHExtra":74.5,"vlTotal":264.5},{"data":"21/05/2026","cpf":"89516257291","nome":"RAIMUNDO GOMES","entrada":"07:00","saida":"17:30","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:00","vlHExtra":30,"vlTotal":220},{"data":"21/05/2026","cpf":"71885864469","nome":"DIEGO","entrada":"07:00","saida":"16:30","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"21/05/2026","cpf":"03598172036","nome":"PABLO FERNANDO","entrada":"07:00","saida":"16:30","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"21/05/2026","cpf":"12983051528","nome":"ALEXANDRE RIBEIRO","entrada":"07:00","saida":"17:30","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:00","vlHExtra":30,"vlTotal":220},{"data":"21/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"06:00","saida":"18:10","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:40","vlHExtra":80,"vlTotal":270},{"data":"21/05/2026","cpf":"15238056923","nome":"BRYAN","entrada":"06:00","saida":"18:10","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:40","vlHExtra":80,"vlTotal":270},{"data":"21/05/2026","cpf":"70963705288","nome":"FAGNER GOMES","entrada":"14:00","saida":"01:31","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:31","vlHExtra":75.5,"vlTotal":265.5},{"data":"21/05/2026","cpf":"08887866201","nome":"DIEGO","entrada":"14:00","saida":"01:31","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:31","vlHExtra":75.5,"vlTotal":265.5},{"data":"21/05/2026","cpf":"15575417956","nome":"CLEBERSON JUNIOR","entrada":"14:00","saida":"01:31","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:31","vlHExtra":75.5,"vlTotal":265.5},{"data":"21/05/2026","cpf":"37985607811","nome":"DONAVAN","entrada":"14:00","saida":"01:31","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:31","vlHExtra":75.5,"vlTotal":265.5},{"data":"21/05/2026","cpf":"10526996420","nome":"GENILSON SILVA","entrada":"15:25","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-42.5,"vlTotal":190},{"data":"22/05/2026","cpf":"62811788310","nome":"PEDRO HENRIQUE","entrada":"14:00","saida":"00:38","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:08","vlHExtra":34,"vlTotal":224},{"data":"22/05/2026","cpf":"37985607811","nome":"DONAVAN","entrada":"14:00","saida":"00:38","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:08","vlHExtra":34,"vlTotal":224},{"data":"22/05/2026","cpf":"15575417956","nome":"CLEBERSON JUNIOR","entrada":"14:00","saida":"00:38","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:08","vlHExtra":34,"vlTotal":224},{"data":"22/05/2026","cpf":"13236204940","nome":"THIERRY HENRY","entrada":"06:00","saida":"15:37","operacao":"EXPEDIÇÃO","fornecedor":"LJA CONF","fornecedorNorm":"LJA","horaExtra":"0:37","vlHExtra":16.1875,"vlTotal":226.1875},{"data":"22/05/2026","cpf":"07936914277","nome":"MARCUS VINICIUS","entrada":"13:30","saida":"21:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"22/05/2026","cpf":"80368878900","nome":"ARNALDO PREIS","entrada":"13:30","saida":"21:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"22/05/2026","cpf":"03598172036","nome":"PABLO FERNANDO","entrada":"07:30","saida":"16:00","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:15","vlHExtra":7.5,"vlTotal":197.5},{"data":"22/05/2026","cpf":"70857277219","nome":"NEWFHAR","entrada":"07:40","saida":"17:10","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"22/05/2026","cpf":"06225184961","nome":"PEDRO","entrada":"06:00","saida":"17:00","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:30","vlHExtra":45,"vlTotal":235},{"data":"22/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"06:00","saida":"18:13","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"3:13","vlHExtra":96.5,"vlTotal":286.5},{"data":"22/05/2026","cpf":"08887866201","nome":"DIEGO","entrada":"06:00","saida":"00:38","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"9:38","vlHExtra":289,"vlTotal":479},{"data":"22/05/2026","cpf":"8434162970","nome":"KAIQUE","entrada":"06:00","saida":"00:38","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"9:38","vlHExtra":289,"vlTotal":479},{"data":"22/05/2026","cpf":"89516257291","nome":"RAIMUNDO GOMES","entrada":"06:00","saida":"16:48","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:48","vlHExtra":54,"vlTotal":244},{"data":"22/05/2026","cpf":"12983051528","nome":"ALEXANDRE RIBEIRO","entrada":"06:00","saida":"16:48","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:48","vlHExtra":54,"vlTotal":244},{"data":"22/05/2026","cpf":"15238056923","nome":"BRYAN","entrada":"07:00","saida":"00:38","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"8:38","vlHExtra":259,"vlTotal":449},{"data":"25/05/2026","cpf":"71885864469","nome":"DIEGO","entrada":"06:00","saida":"00:40","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"9:40","vlHExtra":290,"vlTotal":480},{"data":"25/05/2026","cpf":"70963705288","nome":"FAGNER GOMES","entrada":"06:00","saida":"19:37","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"4:37","vlHExtra":138.5,"vlTotal":328.5},{"data":"25/05/2026","cpf":"08887866201","nome":"DIEGO PASTANA","entrada":"06:00","saida":"19:37","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"4:37","vlHExtra":138.5,"vlTotal":328.5},{"data":"25/05/2026","cpf":"8434162970","nome":"KAIQUE","entrada":"06:00","saida":"00:40","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"9:40","vlHExtra":290,"vlTotal":480},{"data":"25/05/2026","cpf":"89516257291","nome":"RAIMUNDO GOMES","entrada":"06:00","saida":"00:24","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"9:24","vlHExtra":282,"vlTotal":472},{"data":"25/05/2026","cpf":"12983051528","nome":"ALEXANDRE RIBEIRO","entrada":"06:00","saida":"00:24","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"9:24","vlHExtra":282,"vlTotal":472},{"data":"25/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"06:00","saida":"17:17","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:17","vlHExtra":68.5,"vlTotal":258.5},{"data":"25/05/2026","cpf":"06225184961","nome":"PEDRO","entrada":"06:00","saida":"20:44","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"5:44","vlHExtra":172,"vlTotal":362},{"data":"25/05/2026","cpf":"03598172036","nome":"PABLO FERNANDO","entrada":"06:00","saida":"16:27","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:27","vlHExtra":43.5,"vlTotal":233.5},{"data":"25/05/2026","cpf":"15238056923","nome":"BRYAN","entrada":"06:30","saida":"18:00","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:30","vlHExtra":75,"vlTotal":265},{"data":"25/05/2026","cpf":"07384414067","nome":"GONZALO","entrada":"07:00","saida":"17:20","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:20","vlHExtra":40,"vlTotal":230},{"data":"25/05/2026","cpf":"06843020399","nome":"DAVI DOS SANTOS","entrada":"07:00","saida":"17:17","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:17","vlHExtra":38.5,"vlTotal":228.5},{"data":"25/05/2026","cpf":"10605477590","nome":"ELISANDRO","entrada":"08:00","saida":"17:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"25/05/2026","cpf":"07900225242","nome":"CLEITON MEDEIROS","entrada":"08:00","saida":"17:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"25/05/2026","cpf":"70857277219","nome":"NEWFHAR","entrada":"08:00","saida":"17:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"25/05/2026","cpf":"13236204940","nome":"THIERRY HENRY","entrada":"14:00","saida":"00:40","operacao":"EXPEDIÇÃO","fornecedor":"LJA CONF","fornecedorNorm":"LJA","horaExtra":"1:40","vlHExtra":43.75,"vlTotal":253.75},{"data":"25/05/2026","cpf":"62811788310","nome":"PEDRO HENRIQUE","entrada":"14:00","saida":"00:40","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:40","vlHExtra":50,"vlTotal":240},{"data":"25/05/2026","cpf":"37985607811","nome":"DONAVAN","entrada":"14:00","saida":"00:40","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"1:40","vlHExtra":50,"vlTotal":240},{"data":"25/05/2026","cpf":"12761743903","nome":"JOAO VITOR BOTELHO","entrada":"15:25","saida":"23:30","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-42.5,"vlTotal":190},{"data":"25/05/2026","cpf":"10526996420","nome":"GENILSON SILVA","entrada":"17:45","saida":"21:14","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-158,"vlTotal":190},{"data":"26/05/2026","cpf":"06843020399","nome":"DAVI DOS SANTOS","entrada":"07:00","saida":"18:10","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:10","vlHExtra":65,"vlTotal":255},{"data":"26/05/2026","cpf":"12445971985","nome":"HENRY DOUGLAS","entrada":"07:00","saida":"18:10","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:10","vlHExtra":65,"vlTotal":255},{"data":"26/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"05:00","saida":"20:10","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"6:10","vlHExtra":185,"vlTotal":375},{"data":"26/05/2026","cpf":"15238056923","nome":"BRYAN","entrada":"06:00","saida":"21:10","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"5:10","vlHExtra":155,"vlTotal":345},{"data":"26/05/2026","cpf":"89516257291","nome":"RAIMUNDO GOMES","entrada":"07:00","saida":"18:15","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:15","vlHExtra":67.5,"vlTotal":257.5},{"data":"26/05/2026","cpf":"12983051528","nome":"ALEXANDRE RIBEIRO","entrada":"07:00","saida":"18:15","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:15","vlHExtra":67.5,"vlTotal":257.5},{"data":"26/05/2026","cpf":"08887866201","nome":"DIEGO PASTANA","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"26/05/2026","cpf":"70963705288","nome":"FAGNER GOMES","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"26/05/2026","cpf":"71885864469","nome":"DIEGO","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"26/05/2026","cpf":"62811788310","nome":"PEDRO HENRIQUE","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"26/05/2026","cpf":"37985607811","nome":"DONAVAN","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"26/05/2026","cpf":"13236204940","nome":"THIERRY HENRY","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA CONF","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":210},{"data":"26/05/2026","cpf":"80368878900","nome":"ARNALDO PREIS","entrada":"18:00","saida":"21:00","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-180,"vlTotal":190},{"data":"26/05/2026","cpf":"07936914277","nome":"MARCOS VINICIUS","entrada":"18:00","saida":"21:00","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-180,"vlTotal":190},{"data":"26/05/2026","cpf":"07665417205","nome":"WELINGTON","entrada":"18:00","saida":"21:00","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-180,"vlTotal":190},{"data":"27/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"06:00","saida":"18:20","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"3:20","vlHExtra":100,"vlTotal":290},{"data":"27/05/2026","cpf":"8434162970","nome":"KAIQUE","entrada":"06:50","saida":"16:40","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:50","vlHExtra":25,"vlTotal":215},{"data":"27/05/2026","cpf":"06225184961","nome":"PEDRO DE LARA","entrada":"05:00","saida":"19:00","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"5:00","vlHExtra":150,"vlTotal":340},{"data":"27/05/2026","cpf":"12983051528","nome":"ALEXANDRE RIBEIRO","entrada":"07:00","saida":"16:30","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"27/05/2026","cpf":"89516257291","nome":"RAIMUNDO GOMES","entrada":"07:00","saida":"19:00","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:30","vlHExtra":75,"vlTotal":265},{"data":"27/05/2026","cpf":"71885864469","nome":"DIEGO","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"27/05/2026","cpf":"62811788310","nome":"PEDRO HENRIQUE","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"27/05/2026","cpf":"70963705288","nome":"FAGNER GOMES","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"27/05/2026","cpf":"37985607811","nome":"DONAVAN","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"27/05/2026","cpf":"08887866201","nome":"DIEGO PASTANA","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"27/05/2026","cpf":"13236204940","nome":"THIERRY HENRY","entrada":"14:00","saida":"23:00","operacao":"EXPEDIÇÃO","fornecedor":"LJA CONF","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":210},{"data":"27/05/2026","cpf":"12445971985","nome":"HENRY DOUGLAS","entrada":"08:00","saida":"17:30","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":0,"vlTotal":190},{"data":"27/05/2026","cpf":"70857277219","nome":"NEWFHAR","entrada":"08:00","saida":"16:10","operacao":"MATTEL","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-40,"vlTotal":190},{"data":"28/05/2026","cpf":"11439730466","nome":"LUCIANO RODRIGUES","entrada":"06:00","saida":"17:56","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:56","vlHExtra":88,"vlTotal":278},{"data":"28/05/2026","cpf":"89516257291","nome":"RAIMUNDO GOMES","entrada":"06:00","saida":"17:34","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:04","vlHExtra":62,"vlTotal":252},{"data":"28/05/2026","cpf":"12983051528","nome":"ALEXANDRE RIBEIRO","entrada":"06:00","saida":"17:30","operacao":"ROTA","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:00","vlHExtra":60,"vlTotal":250},{"data":"28/05/2026","cpf":"15238056923","nome":"BRYAN","entrada":"08:12","saida":"19:40","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"2:28","vlHExtra":74,"vlTotal":264},{"data":"28/05/2026","cpf":"06225184961","nome":"PEDRO DE LARA","entrada":"06:00","saida":"19:40","operacao":"BRAFT","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"4:40","vlHExtra":140,"vlTotal":330},{"data":"28/05/2026","cpf":"12495766951","nome":"RAFAEL SANTOS","entrada":"14:00","saida":"23:30","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:30","vlHExtra":15,"vlTotal":205},{"data":"28/05/2026","cpf":"37985607811","nome":"DONAVAN","entrada":"14:00","saida":"23:30","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:30","vlHExtra":15,"vlTotal":205},{"data":"28/05/2026","cpf":"70963705288","nome":"FAGNER GOMES","entrada":"14:00","saida":"23:30","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:30","vlHExtra":15,"vlTotal":205},{"data":"28/05/2026","cpf":"08887866201","nome":"DIEGO PASTANA","entrada":"14:00","saida":"23:30","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:30","vlHExtra":15,"vlTotal":205},{"data":"28/05/2026","cpf":"62811788310","nome":"PEDRO HENRIQUE","entrada":"14:00","saida":"23:30","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:30","vlHExtra":15,"vlTotal":205},{"data":"28/05/2026","cpf":"13236204940","nome":"THIERRY HENRY","entrada":"14:00","saida":"23:30","operacao":"EXPEDIÇÃO","fornecedor":"LJA CONF","fornecedorNorm":"LJA","horaExtra":"0:30","vlHExtra":13.125,"vlTotal":223.125},{"data":"28/05/2026","cpf":"70857277219","nome":"NEWFHAR","entrada":"08:00","saida":"09:30","operacao":"EXPEDIÇÃO","fornecedor":"LJA","fornecedorNorm":"LJA","horaExtra":"0:00","vlHExtra":-195,"vlTotal":36.65}],"tercRows":[{"data":"16/05/2026","nome":"MARCOS VINICIOS","cpf":"07936914277","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"16/05/2026","nome":"ANTONIO CARLOS","cpf":"03345855208","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"16/05/2026","nome":"JOAO VICTOR","cpf":"12761743903","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"16/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"16/05/2026","nome":"WELLITON MELO","cpf":"07665417205","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"18/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"2:45","vlDiaria":190,"vlHExtra":82.5,"descontos":0,"vlTotal":272.5},{"data":"18/05/2026","nome":"PEDRO","cpf":"06225184961","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"4:20","vlDiaria":190,"vlHExtra":130,"descontos":0,"vlTotal":320},{"data":"18/05/2026","nome":"RAIMUNDO","cpf":"89516257291","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"4:20","vlDiaria":190,"vlHExtra":130,"descontos":0,"vlTotal":320},{"data":"18/05/2026","nome":"NEWFHAR","cpf":"70857277219","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"18/05/2026","nome":"KAIQUE","cpf":"8434162970","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"18/05/2026","nome":"WILLIAN","cpf":"10744360919","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"18/05/2026","nome":"ALEXANDRE RIBEIRO","cpf":"12983051528","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"18/05/2026","nome":"THIERRY HENRY","cpf":"13236204940","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:55","vlDiaria":210,"vlHExtra":27.5,"descontos":0,"vlTotal":237.5},{"data":"18/05/2026","nome":"PEDRO HENRIQUE","cpf":"62811788310","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:55","vlDiaria":190,"vlHExtra":27.5,"descontos":0,"vlTotal":217.5},{"data":"18/05/2026","nome":"CLEBERSON","cpf":"15575417956","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:55","vlDiaria":190,"vlHExtra":27.5,"descontos":0,"vlTotal":217.5},{"data":"18/05/2026","nome":"DONAVAN","cpf":"37985607811","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:55","vlDiaria":190,"vlHExtra":27.5,"descontos":0,"vlTotal":217.5},{"data":"18/05/2026","nome":"JOAO VICTOR","cpf":"12761743903","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:55","vlDiaria":190,"vlHExtra":27.5,"descontos":0,"vlTotal":217.5},{"data":"18/05/2026","nome":"PABLO","cpf":"03598172036","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:55","vlDiaria":190,"vlHExtra":27.5,"descontos":0,"vlTotal":217.5},{"data":"18/05/2026","nome":"MARCOS VINICIOS","cpf":"07936914277","horarioRaw":"13:30 as 23:30","entrada":"13:30","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"18/05/2026","nome":"WELLITON MELO","cpf":"07665417205","horarioRaw":"13:30 as 23:30","entrada":"13:30","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"18/05/2026","nome":"ARNALDO PREIS","cpf":"80368878900","horarioRaw":"13:30 as 23:30","entrada":"13:30","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"19/05/2026","nome":"PEDRO","cpf":"06225184961","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"4:13","vlDiaria":190,"vlHExtra":126.5,"descontos":0,"vlTotal":316.5},{"data":"19/05/2026","nome":"RAIMUNDO","cpf":"89516257291","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"4:32","vlDiaria":190,"vlHExtra":136,"descontos":0,"vlTotal":326},{"data":"19/05/2026","nome":"WILLIAN","cpf":"10744360919","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"19/05/2026","nome":"NEWFHAR","cpf":"70857277219","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"19/05/2026","nome":"ALEXANDRE RIBEIRO","cpf":"12983051528","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"19/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"19/05/2026","nome":"THIERRY HENRY","cpf":"13236204940","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":210,"vlHExtra":0,"descontos":0,"vlTotal":210},{"data":"19/05/2026","nome":"DONAVAN","cpf":"37985607811","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"19/05/2026","nome":"CLEBERSON","cpf":"15575417956","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"19/05/2026","nome":"PEDRO HENRIQUE","cpf":"62811788310","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"19/05/2026","nome":"PABLO","cpf":"03598172036","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"19/05/2026","nome":"GENILSON","cpf":"10526996420","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"20/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"1:15","vlDiaria":190,"vlHExtra":37.5,"descontos":0,"vlTotal":227.5},{"data":"20/05/2026","nome":"PEDRO","cpf":"06225184961","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"3:28","vlDiaria":190,"vlHExtra":104,"descontos":0,"vlTotal":294},{"data":"20/05/2026","nome":"RAIMUNDO","cpf":"89516257291","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"3:28","vlDiaria":190,"vlHExtra":104,"descontos":0,"vlTotal":294},{"data":"20/05/2026","nome":"NEWFHAR","cpf":"70857277219","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"20/05/2026","nome":"ALEXANDRE RIBEIRO","cpf":"12983051528","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"20/05/2026","nome":"WILLIAN","cpf":"10744360919","horarioRaw":"8:00 as 09:25","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":29.69,"vlHExtra":0,"descontos":0,"vlTotal":29.69},{"data":"20/05/2026","nome":"DARLAN OLIVEIRA","cpf":"09715162940","horarioRaw":"8:00 as 12:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":95,"vlHExtra":0,"descontos":0,"vlTotal":95},{"data":"20/05/2026","nome":"THIERRY HENRY","cpf":"13236204940","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:27","vlDiaria":210,"vlHExtra":13.5,"descontos":0,"vlTotal":223.5},{"data":"20/05/2026","nome":"CLEBERSON","cpf":"15575417956","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:27","vlDiaria":190,"vlHExtra":13.5,"descontos":0,"vlTotal":203.5},{"data":"20/05/2026","nome":"PEDRO HENRIQUE","cpf":"62811788310","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:27","vlDiaria":190,"vlHExtra":13.5,"descontos":0,"vlTotal":203.5},{"data":"20/05/2026","nome":"BRYAN","cpf":"15238056923","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:27","vlDiaria":190,"vlHExtra":13.5,"descontos":0,"vlTotal":203.5},{"data":"20/05/2026","nome":"DAVID","cpf":"06843020399","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:27","vlDiaria":190,"vlHExtra":13.5,"descontos":0,"vlTotal":203.5},{"data":"20/05/2026","nome":"GENILSON","cpf":"10526996420","horarioRaw":"17:75 as 2:15","entrada":"17:75","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"20/05/2026","nome":"ARNALDO PREIS","cpf":"80368878900","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"20/05/2026","nome":"MARCOS VINICIOS","cpf":"07936914277","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"21/05/2026","nome":"BRYAN","cpf":"15238056923","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"3:10","vlDiaria":190,"vlHExtra":95,"descontos":0,"vlTotal":285},{"data":"21/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"3:10","vlDiaria":190,"vlHExtra":95,"descontos":0,"vlTotal":285},{"data":"21/05/2026","nome":"ALEXANDRE RIBEIRO","cpf":"12983051528","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"1:30","vlDiaria":190,"vlHExtra":45,"descontos":0,"vlTotal":235},{"data":"21/05/2026","nome":"DIEGO FELIX","cpf":"71885864469","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"21/05/2026","nome":"PABLO","cpf":"03598172036","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"21/05/2026","nome":"RAIMUNDO","cpf":"89516257291","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"1:30","vlDiaria":190,"vlHExtra":45,"descontos":0,"vlTotal":235},{"data":"21/05/2026","nome":"PEDRO","cpf":"06225184961","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"2:59","vlDiaria":190,"vlHExtra":89.5,"descontos":0,"vlTotal":279.5},{"data":"21/05/2026","nome":"DAVID","cpf":"06843020399","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"21/05/2026","nome":"GONZALO / JOÃO","cpf":"","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"21/05/2026","nome":"NEWFHAR","cpf":"70857277219","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"21/05/2026","nome":"WILLIAN","cpf":"10744360919","horarioRaw":"8:00 as 12:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":95,"vlHExtra":0,"descontos":0,"vlTotal":95},{"data":"21/05/2026","nome":"THIERRY HENRY","cpf":"13236204940","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"2:30","vlDiaria":210,"vlHExtra":75,"descontos":0,"vlTotal":285},{"data":"21/05/2026","nome":"CLEBERSON","cpf":"15575417956","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"2:30","vlDiaria":190,"vlHExtra":75,"descontos":0,"vlTotal":265},{"data":"21/05/2026","nome":"DONAVAN","cpf":"37985607811","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"2:30","vlDiaria":190,"vlHExtra":75,"descontos":0,"vlTotal":265},{"data":"21/05/2026","nome":"DIEGO PASTANA","cpf":"08887866201","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"2:30","vlDiaria":190,"vlHExtra":75,"descontos":0,"vlTotal":265},{"data":"21/05/2026","nome":"FAGNER","cpf":"70963705288","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"2:30","vlDiaria":190,"vlHExtra":75,"descontos":0,"vlTotal":265},{"data":"21/05/2026","nome":"GENILSON","cpf":"10526996420","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"22/05/2026","nome":"RAIMUNDO","cpf":"89516257291","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"1:49","vlDiaria":190,"vlHExtra":53.5,"descontos":0,"vlTotal":243.5},{"data":"22/05/2026","nome":"ALEXANDRE RIBEIRO","cpf":"12983051528","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"1:49","vlDiaria":190,"vlHExtra":53.5,"descontos":0,"vlTotal":243.5},{"data":"22/05/2026","nome":"KAIQUE","cpf":"8434162970","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"9:00","vlDiaria":190,"vlHExtra":270,"descontos":0,"vlTotal":460},{"data":"22/05/2026","nome":"DIEGO FELIX","cpf":"71885864469","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"9:00","vlDiaria":190,"vlHExtra":270,"descontos":0,"vlTotal":460},{"data":"22/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"3:13","vlDiaria":190,"vlHExtra":96.5,"descontos":0,"vlTotal":286.5},{"data":"22/05/2026","nome":"PEDRO","cpf":"06225184961","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"2:00","vlDiaria":190,"vlHExtra":60,"descontos":0,"vlTotal":250},{"data":"22/05/2026","nome":"BRYAN","cpf":"15238056923","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"8:00","vlDiaria":190,"vlHExtra":240,"descontos":0,"vlTotal":430},{"data":"22/05/2026","nome":"PABLO","cpf":"03598172036","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"22/05/2026","nome":"NEWFHAR","cpf":"70857277219","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"22/05/2026","nome":"THIERRY HENRY","cpf":"13236204940","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"0:00","vlDiaria":210,"vlHExtra":0,"descontos":0,"vlTotal":210},{"data":"22/05/2026","nome":"CLEBERSON","cpf":"15575417956","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"1:38","vlDiaria":190,"vlHExtra":45,"descontos":0,"vlTotal":235},{"data":"22/05/2026","nome":"DONAVAN","cpf":"37985607811","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"1:38","vlDiaria":190,"vlHExtra":45,"descontos":0,"vlTotal":235},{"data":"22/05/2026","nome":"PEDRO HENRIQUE","cpf":"62811788310","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"1:38","vlDiaria":190,"vlHExtra":45,"descontos":0,"vlTotal":235},{"data":"22/05/2026","nome":"ARNALDO PREIS","cpf":"80368878900","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"22/05/2026","nome":"MARCOS VINICIOS","cpf":"07936914277","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"25/05/2026","nome":"DIEGO FELIX","cpf":"71885864469","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"9:40","vlDiaria":190,"vlHExtra":290,"descontos":0,"vlTotal":480},{"data":"25/05/2026","nome":"DIEGO PASTANA","cpf":"08887866201","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"4:37","vlDiaria":190,"vlHExtra":138.5,"descontos":0,"vlTotal":328.5},{"data":"25/05/2026","nome":"FAGNER","cpf":"70963705288","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"4:37","vlDiaria":190,"vlHExtra":138.5,"descontos":0,"vlTotal":328.5},{"data":"25/05/2026","nome":"KAIQUE","cpf":"8434162970","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"9:40","vlDiaria":190,"vlHExtra":290,"descontos":0,"vlTotal":480},{"data":"25/05/2026","nome":"ALEXANDRE RIBEIRO","cpf":"12983051528","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"9:40","vlDiaria":190,"vlHExtra":290,"descontos":0,"vlTotal":480},{"data":"25/05/2026","nome":"RAIMUNDO","cpf":"89516257291","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"9:40","vlDiaria":190,"vlHExtra":290,"descontos":0,"vlTotal":480},{"data":"25/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"2:17","vlDiaria":190,"vlHExtra":65.5,"descontos":0,"vlTotal":255.5},{"data":"25/05/2026","nome":"PEDRO","cpf":"06225184961","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"5:44","vlDiaria":190,"vlHExtra":172,"descontos":0,"vlTotal":362},{"data":"25/05/2026","nome":"PABLO","cpf":"03598172036","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"1:27","vlDiaria":190,"vlHExtra":43.5,"descontos":0,"vlTotal":233.5},{"data":"25/05/2026","nome":"BRYAN","cpf":"15238056923","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"2:30","vlDiaria":190,"vlHExtra":75,"descontos":0,"vlTotal":265},{"data":"25/05/2026","nome":"GONZALO","cpf":"07384414067","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"1:20","vlDiaria":190,"vlHExtra":40,"descontos":0,"vlTotal":230},{"data":"25/05/2026","nome":"DAVID","cpf":"06843020399","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"1:17","vlDiaria":190,"vlHExtra":38.5,"descontos":0,"vlTotal":228.5},{"data":"25/05/2026","nome":"ELISANDRO","cpf":"10605477590","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"25/05/2026","nome":"CLEITON","cpf":"07900225242","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"25/05/2026","nome":"NEWFHAR","cpf":"70857277219","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"25/05/2026","nome":"THIERRY HENRY","cpf":"13236204940","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"1:40","vlDiaria":210,"vlHExtra":50,"descontos":0,"vlTotal":260},{"data":"25/05/2026","nome":"PEDRO HENRIQUE","cpf":"62811788310","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"1:40","vlDiaria":190,"vlHExtra":50,"descontos":0,"vlTotal":240},{"data":"25/05/2026","nome":"DONAVAN","cpf":"37985607811","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"1:40","vlDiaria":190,"vlHExtra":50,"descontos":0,"vlTotal":240},{"data":"25/05/2026","nome":"GENILSON","cpf":"10526996420","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"25/05/2026","nome":"JOAO VICTOR","cpf":"12761743903","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"26/05/2026","nome":"HENRY","cpf":"12445971985","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"2:10","vlDiaria":190,"vlHExtra":65,"descontos":0,"vlTotal":255},{"data":"26/05/2026","nome":"DAVID","cpf":"06843020399","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"2:10","vlDiaria":190,"vlHExtra":65,"descontos":0,"vlTotal":255},{"data":"26/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"05:00 as 14:00","entrada":"05:00","saida":"","horaExtra":"6:10","vlDiaria":190,"vlHExtra":185,"descontos":0,"vlTotal":375},{"data":"26/05/2026","nome":"BRYAN","cpf":"15238056923","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"5:10","vlDiaria":190,"vlHExtra":155,"descontos":0,"vlTotal":345},{"data":"26/05/2026","nome":"RAIMUNDO","cpf":"89516257291","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"2:15","vlDiaria":190,"vlHExtra":67.5,"descontos":0,"vlTotal":257.5},{"data":"26/05/2026","nome":"ALEXANDRE RIBEIRO","cpf":"12983051528","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"2:15","vlDiaria":190,"vlHExtra":67.5,"descontos":0,"vlTotal":257.5},{"data":"26/05/2026","nome":"THIERRY HENRY","cpf":"13236204940","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":210,"vlHExtra":0,"descontos":0,"vlTotal":210},{"data":"26/05/2026","nome":"PEDRO HENRIQUE","cpf":"62811788310","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"26/05/2026","nome":"DONAVAN","cpf":"37985607811","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"26/05/2026","nome":"DIEGO FELIX","cpf":"71885864469","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"26/05/2026","nome":"DIEGO PASTANA","cpf":"08887866201","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"26/05/2026","nome":"FAGNER","cpf":"70963705288","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"26/05/2026","nome":"ARNALDO PREIS","cpf":"80368878900","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"26/05/2026","nome":"MARCOS VINICIOS","cpf":"07936914277","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"26/05/2026","nome":"WELLITON MELO","cpf":"07665417205","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"27/05/2026","nome":"KAIQUE","cpf":"8434162970","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"0:50","vlDiaria":190,"vlHExtra":27,"descontos":0,"vlTotal":217},{"data":"27/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"3:20","vlDiaria":190,"vlHExtra":100,"descontos":0,"vlTotal":290},{"data":"27/05/2026","nome":"PEDRO","cpf":"06225184961","horarioRaw":"05:00 as 14:00","entrada":"05:00","saida":"","horaExtra":"5:00","vlDiaria":190,"vlHExtra":150,"descontos":0,"vlTotal":340},{"data":"27/05/2026","nome":"ALEXANDRE RIBEIRO","cpf":"12983051528","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"27/05/2026","nome":"RAIMUNDO","cpf":"89516257291","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"2:10","vlDiaria":190,"vlHExtra":65,"descontos":0,"vlTotal":255},{"data":"27/05/2026","nome":"NEWFHAR","cpf":"70857277219","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"27/05/2026","nome":"HENRY","cpf":"12445971985","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"27/05/2026","nome":"THIERRY HENRY","cpf":"13236204940","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":210,"vlHExtra":0,"descontos":0,"vlTotal":210},{"data":"27/05/2026","nome":"PEDRO HENRIQUE","cpf":"62811788310","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"27/05/2026","nome":"DONAVAN","cpf":"37985607811","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"27/05/2026","nome":"DIEGO FELIX","cpf":"71885864469","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"27/05/2026","nome":"DIEGO PASTANA","cpf":"08887866201","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"27/05/2026","nome":"FAGNER","cpf":"70963705288","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"28/05/2026","nome":"RAIMUNDO","cpf":"89516257291","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"2:00","vlDiaria":190,"vlHExtra":60,"descontos":0,"vlTotal":250},{"data":"28/05/2026","nome":"ALEXANDRE RIBEIRO","cpf":"12983051528","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"2:00","vlDiaria":190,"vlHExtra":60,"descontos":0,"vlTotal":250},{"data":"28/05/2026","nome":"LUCIANO RODRIGUES","cpf":"11439730466","horarioRaw":"06:00 as 15:00","entrada":"06:00","saida":"","horaExtra":"2:59","vlDiaria":190,"vlHExtra":89.5,"descontos":0,"vlTotal":279.5},{"data":"28/05/2026","nome":"BRYAN","cpf":"15238056923","horarioRaw":"8:00 as 17:00","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":190,"vlHExtra":0,"descontos":0,"vlTotal":190},{"data":"28/05/2026","nome":"PEDRO","cpf":"06225184961","horarioRaw":"07:00 as 16:00","entrada":"07:00","saida":"","horaExtra":"3:44","vlDiaria":190,"vlHExtra":112,"descontos":0,"vlTotal":302},{"data":"28/05/2026","nome":"NEWFHAR","cpf":"70857277219","horarioRaw":"8:00 as 9:30","entrada":"08:00","saida":"","horaExtra":"0:00","vlDiaria":35.65,"vlHExtra":0,"descontos":0,"vlTotal":35.65},{"data":"28/05/2026","nome":"THIERRY HENRY","cpf":"13236204940","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:20","vlDiaria":210,"vlHExtra":10,"descontos":0,"vlTotal":220},{"data":"28/05/2026","nome":"PEDRO HENRIQUE","cpf":"62811788310","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:20","vlDiaria":190,"vlHExtra":10,"descontos":0,"vlTotal":200},{"data":"28/05/2026","nome":"DONAVAN","cpf":"37985607811","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:20","vlDiaria":190,"vlHExtra":10,"descontos":0,"vlTotal":200},{"data":"28/05/2026","nome":"DIEGO PASTANA","cpf":"08887866201","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:20","vlDiaria":190,"vlHExtra":10,"descontos":0,"vlTotal":200},{"data":"28/05/2026","nome":"FAGNER","cpf":"70963705288","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:20","vlDiaria":190,"vlHExtra":10,"descontos":0,"vlTotal":200},{"data":"28/05/2026","nome":"RAFAEL SANTOS","cpf":"12495766951","horarioRaw":"14:00 as 23:08","entrada":"14:00","saida":"","horaExtra":"0:20","vlDiaria":190,"vlHExtra":10,"descontos":0,"vlTotal":200}],"mes":"05/2026","qz":"2","forn":"LJA","period":"Maio 2026 — 2ª Quinzena","generated":"29/05/2026, 18:32:04"};
+function init(){
+ptxRows=SD.ptxRows;tercRows=SD.tercRows;lastPeriodLabel=SD.period;
+var ig=document.querySelector(".import-grid");if(ig)ig.style.display="none";
+var ab=document.getElementById("actions-bar");if(ab)ab.style.display="none";
+var bn=document.getElementById("snap-banner");
+if(bn){bn.style.display="flex";bn.innerHTML="<b>Snapshot</b><span class='snap-period'>"+SD.period+"</span><span class='snap-date'>Gerado em "+SD.generated+"</span>";}
+document.getElementById("recon").style.display="";
+populateFilters();
+var sm=document.getElementById("sel-mes");
+if(sm){sm.innerHTML="";sm.insertAdjacentHTML("beforeend","<option value='"+SD.mes+"'>"+getMonthLabel(SD.mes)+"</option>");sm.value=SD.mes;sm.disabled=true;}
+var sq=document.getElementById("sel-qz");if(sq){sq.value=SD.qz;sq.disabled=true;}
+var sf=document.getElementById("sel-forn");if(sf&&SD.forn)sf.value=SD.forn;
+render();
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
+})();
+</script>
+</body>',boot+'\n</body>');
+
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='index.html';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+</script>
+
+
+</body></html>

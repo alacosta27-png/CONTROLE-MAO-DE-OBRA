@@ -1,0 +1,9 @@
+COMO RODAR O BACKUP (ELE APAGA O ÚLTIMO SALVO)
+
+ACESSAR WINDOWS+R - CMD
+
+ACESSAR 
+C:\Users\Usuário\OneDrive - PORTOEXPRESS LOGISTICA LTDA\Área de Trabalho\CLAUDE\MÃO DE OBRA>
+
+EXECUTAR
+node backup-firestore.js
