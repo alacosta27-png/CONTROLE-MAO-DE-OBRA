@@ -1379,6 +1379,19 @@ tbody tr:hover { background: var(--gray-50); }
         <label>Observações gerais</label>
         <textarea id="vaga-obs" placeholder="Informações adicionais..." style="min-height:60px"></textarea>
       </div>
+      <div style="margin-top:14px;padding:14px;background:var(--warning-bg);border:1px solid #FCD34D;border-radius:var(--radius);">
+        <div style="font-size:11px;font-weight:700;color:var(--warning);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">💰 Valor Adicional <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional — urgência, trabalho especial)</span></div>
+        <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;align-items:end;">
+          <div class="form-group" style="margin:0">
+            <label>Valor (R$)</label>
+            <input type="number" id="vaga-adicional-valor" placeholder="0,00" step="0.01" min="0" oninput="document.getElementById('vaga-adicional-motivo-wrap').style.display=parseFloat(this.value)>0?'block':'none'">
+          </div>
+          <div class="form-group" id="vaga-adicional-motivo-wrap" style="margin:0;display:none">
+            <label>Motivo do adicional *</label>
+            <input type="text" id="vaga-adicional-motivo" placeholder="Ex: Serviço especial, urgência, carga diferenciada...">
+          </div>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-vaga')">Cancelar</button>
@@ -2504,6 +2517,11 @@ function populateVagaModal() {
   vagaLinhaCounter = 0;
   // Adiciona 15 linhas vazias por padrão
   for (let i = 0; i < 3; i++) addVagaLinha();
+  // Limpar campos de adicional
+  sv('vaga-adicional-valor', '');
+  sv('vaga-adicional-motivo', '');
+  const motivoWrap = document.getElementById('vaga-adicional-motivo-wrap');
+  if (motivoWrap) motivoWrap.style.display = 'none';
 }
 
 function populateVagaEmpresasCheck() {
@@ -2602,10 +2620,15 @@ function saveVaga() {
   });
   if (!linhas.length) { toast('Preencha ao menos uma linha com operação válida.', 'error'); return; }
   const empsSel = [...document.querySelectorAll('input[name="vaga-emp"]:checked')].map(e=>e.value);
+  const _adicValor = parseFloat(v('vaga-adicional-valor')) || 0;
+  const _adicMotivo = v('vaga-adicional-motivo').trim();
+  if (_adicValor > 0 && !_adicMotivo) { toast('Informe o motivo do valor adicional.', 'error'); return; }
   const payload = {
     data, linhas,
     empresasAlvo: empsSel.length ? empsSel : null,
     obs: v('vaga-obs'),
+    adicionalValor: _adicValor > 0 ? _adicValor : null,
+    adicionalMotivo: _adicValor > 0 ? _adicMotivo : null,
     status: 'aberta',
     criadoEm: Date.now()
   };
@@ -2664,6 +2687,11 @@ function renderMural() {
         ? vaga.empresasAlvo.map(eid => (STATE.empresas[eid]||{}).nome||eid).join(', ')
         : 'Todas';
       const obsVaga = vaga.obs ? ` &nbsp;|&nbsp; 📝 ${vaga.obs}` : '';
+      const _adicVal = vaga.adicionalValor;
+      const _adicMot = vaga.adicionalMotivo;
+      const adicionalMuralTag = _adicVal > 0
+        ? `<span style="background:#FEF9C3;color:#854D0E;border:1px solid #FCD34D;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px">💰 + R$ ${parseFloat(_adicVal).toFixed(2).replace('.',',')} &nbsp;·&nbsp; ${_adicMot||'Adicional'}</span>`
+        : '';
 
       const linhasVaga = (vaga.linhas || []).map((linha, li) => {
         const atribs = Object.values(linha.atribuicoes || {});
@@ -2719,6 +2747,7 @@ function renderMural() {
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span style="color:var(--yellow);font-size:11px;font-weight:700">📋 Solicitação ${vagasPorData.length > 1 ? vagaIdx+1 : ''}</span>
             <span style="color:rgba(255,255,255,0.65);font-size:11px">Empresas: ${empsAlvo}${obsVaga}</span>
+            ${adicionalMuralTag}
           </div>
         </td>
       </tr>`;
@@ -3219,7 +3248,14 @@ function renderAcompRow(id, a, opCor) {
     <td class="td-name">${a.colNome}${desacordoCell ? ' '+desacordoCell : ''}</td>
     <td style="font-size:11px;color:var(--gray-600)">${a.empresaNome||'—'}</td>
     <td><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span></td>
-    <td style="font-size:11px">${(() => { const mn = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || ''; return mn ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${mn}</span>` : '<span style="color:var(--gray-400)">—</span>'; })()}</td>
+    <td style="font-size:11px">${(() => {
+      let mn = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '';
+      if (!mn && a.vagaId && STATE.vagas[a.vagaId]) {
+        const vLinha = (STATE.vagas[a.vagaId].linhas || [])[a.linhaIdx];
+        if (vLinha) mn = vLinha.motoristaNome || (vLinha.motoristaId && STATE.motoristas[vLinha.motoristaId] ? STATE.motoristas[vLinha.motoristaId].nome : '') || '';
+      }
+      return mn ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${mn}</span>` : '<span style="color:var(--gray-400)">—</span>';
+    })()}</td>
     <td style="font-family:'JetBrains Mono',monospace;color:var(--info);font-weight:600">${a.horaInicial||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace">${a.chegada||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace;color:var(--gray-400)">${a.refeicao||'—'}</td>
@@ -4514,7 +4550,7 @@ function updateNotifBadge() {
 // ─── UTILITÁRIOS ─────────────────────────────────────────────────────────────
 function v(id)       { const el = document.getElementById(id); return el ? el.value : ''; }
 function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
-function n(id)       { return document.getElementById(id); }
+function n(id)       { return parseFloat(v(id)) || 0; }
 function formatDate(d) {
   if (!d) return '';
   const [y, m, dia] = d.split('-');
