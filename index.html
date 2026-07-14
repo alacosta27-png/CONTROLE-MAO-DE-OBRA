@@ -2952,18 +2952,40 @@ function indicarNaLinha(gIdx, vagaId, linhaIdx) {
       const selWrap = document.getElementById(`sel-wrap-${gIdx}`);
       if (restantes <= 0 && selWrap) {
         selWrap.innerHTML = `<div style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
-        const todasCompletas = verificarTodasLinhasCompletas();
-        if (todasCompletas) {
-          toast('✓ Todas as vagas preenchidas! Encerrando...', 'success');
-          setTimeout(() => closeModal('modal-atribuir'), 1800);
-        }
       } else if (selWrap) {
         const btn = selWrap.querySelector('button');
         if (btn) btn.textContent = `✓ Confirmar (${restantes} vaga${restantes>1?'s':''})`;
         sel.value = '';
       }
       toast(`${col.nome} indicado!`, 'success');
+
+      // Fecha automaticamente a vaga se todas as linhas dela ficaram completas
+      encerrarVagaSeCompleta(vagaId, linhaIdx, novaQtd);
+
+      const todasCompletas = verificarTodasLinhasCompletas();
+      if (todasCompletas) {
+        toast('✓ Todas as vagas preenchidas!', 'success');
+        setTimeout(() => closeModal('modal-atribuir'), 1800);
+      }
     });
+  });
+}
+
+// Verifica se todas as linhas de uma vaga específica estão completas e, se sim,
+// encerra a vaga automaticamente (sem precisar clicar em "Encerrar").
+function encerrarVagaSeCompleta(vagaId, linhaIdxAtual, novaQtdAtual) {
+  const vaga = STATE.vagas[vagaId];
+  if (!vaga || vaga.status === 'encerrada') return;
+  const linhas = vaga.linhas || [];
+  if (!linhas.length) return;
+  const todasCompletas = linhas.every((l, idx) => {
+    const needed = l.qtd || 0;
+    const filled = idx === linhaIdxAtual ? novaQtdAtual : Object.values(l.atribuicoes || {}).length;
+    return needed > 0 && filled >= needed;
+  });
+  if (!todasCompletas) return;
+  db.ref('vagas/' + vagaId + '/status').set('encerrada').then(() => {
+    registrarTransacao('vaga', `Vaga encerrada automaticamente (todas as posições preenchidas): ${formatDate(vaga.data||'')}${vaga.opNome ? ' — '+vaga.opNome : ''}`);
   });
 }
 
