@@ -525,14 +525,27 @@ const DEFAULT_USERS = [
   { login: 'LJA',                  senha: '123456',     tipo: 'empresa', filtro: 'LJA' },
   { login: 'RP',                   senha: 'RP123',      tipo: 'empresa', filtro: 'RP' },
   { login: 'IAGO',                 senha: '123456',     tipo: 'empresa', filtro: 'IAGO' },
-  { login: 'LITORAL',              senha: '123456',     tipo: 'empresa', filtro: 'litoral' }
+  { login: 'LITORAL',              senha: '123456',     tipo: 'empresa', filtro: 'litoral' },
+  { login: 'LPO',                  senha: '84541961',   tipo: 'empresa', filtro: 'LPO' }
 ];
 
 function getUsers() {
   try { const s=localStorage.getItem(TV_USERS_KEY); return s?JSON.parse(s):null; } catch{ return null; }
 }
 function ensureUsers() {
-  if (!getUsers()) localStorage.setItem(TV_USERS_KEY, JSON.stringify(DEFAULT_USERS));
+  const stored = getUsers();
+  if (!stored) { localStorage.setItem(TV_USERS_KEY, JSON.stringify(DEFAULT_USERS)); return; }
+  // Mescla usuários novos definidos no código (ex.: empresas cadastradas via código)
+  // que ainda não existem no localStorage deste navegador, sem apagar os que já
+  // foram cadastrados por aqui via painel Admin.
+  let changed = false;
+  DEFAULT_USERS.forEach(du => {
+    if (!stored.find(u => u.login.toUpperCase() === du.login.toUpperCase())) {
+      stored.push(du);
+      changed = true;
+    }
+  });
+  if (changed) saveUsers(stored);
 }
 function saveUsers(u) { localStorage.setItem(TV_USERS_KEY, JSON.stringify(u)); }
 
