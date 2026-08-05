@@ -526,9 +526,9 @@ const DEFAULT_USERS = [
   { login: 'RP',                   senha: 'RP123',      tipo: 'empresa', filtro: 'RP' },
   { login: 'IAGO',                 senha: '123456',     tipo: 'empresa', filtro: 'IAGO' },
   { login: 'LITORAL',              senha: '123456',     tipo: 'empresa', filtro: 'litoral' },
-  { login: 'LPO',                  senha: '84541961',   tipo: 'empresa', filtro: 'LPO' }
+  { login: 'LPO',                  senha: '84541961',   tipo: 'empresa', filtro: 'LPO' },
   { login: 'RS',                   senha: 'RS123',      tipo: 'empresa', filtro: 'RS' }
-];
+  ];
 
 function getUsers() {
   try { const s=localStorage.getItem(TV_USERS_KEY); return s?JSON.parse(s):null; } catch{ return null; }
