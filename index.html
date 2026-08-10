@@ -4942,8 +4942,8 @@ function renderGR() {
   const filtroStatus = document.getElementById('gr-filtro-status')?.value || '';
   // STATE.colaboradores é aninhado: { empresaId: { colId: {...} } }
   const cols = [];
-  Object.values(STATE.colaboradores || {}).forEach(empCols => {
-    Object.entries(empCols || {}).forEach(e => cols.push(e));
+  Object.entries(STATE.colaboradores || {}).forEach(([eid, empCols]) => {
+    Object.entries(empCols || {}).forEach(([cid, c]) => cols.push([cid, { ...c, empresaId: c.empresaId || eid }]));
   });
 
   let liberados = 0, analise = 0, bloqueados = 0;
