@@ -847,7 +847,7 @@ tbody tr:hover { background: var(--gray-50); }
       <div id="col-lista" class="inner-page">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>CPF / RG</th><th>Nome</th><th>Operação</th><th>Status</th><th>Ações</th></tr></thead>
+            <thead><tr><th>CPF / RG</th><th>Nome</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody id="col-lista-body"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador cadastrado.</td></tr></tbody>
           </table>
         </div>
@@ -858,7 +858,7 @@ tbody tr:hover { background: var(--gray-50); }
     <div id="page-empresas" class="page">
       <div class="section-header">
         <div><div class="section-title">🏢 Empresas Terceirizadas</div></div>
-        <button class="btn btn-yellow" onclick="openModal('modal-empresa')">+ Nova Empresa</button>
+        <button class="btn btn-yellow" onclick="clearEmpForm(); editEmpresaId=null; openModal('modal-empresa')">+ Nova Empresa</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -893,6 +893,7 @@ tbody tr:hover { background: var(--gray-50); }
           <button id="btn-sugestoes-pendentes" class="btn btn-sm" style="display:none;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning);font-weight:700" onclick="openModal('modal-sugestoes')">
             ⚠️ <span id="sugestoes-count">0</span> Sugestão(ões) Pendente(s)
           </button>
+          <button class="btn btn-sm btn-navy" onclick="openRelatorioAssinatura()">📝 Relatório de Assinatura</button>
           <div class="form-group" style="margin:0">
             <select id="filter-data-acomp" style="padding:7px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="renderAcompanhamento()">
               <option value="">Todas as datas</option>
@@ -1422,6 +1423,57 @@ tbody tr:hover { background: var(--gray-50); }
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-edit-colab')">Cancelar</button>
       <button class="btn btn-navy" onclick="saveEditColab()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Duplicidade de colaborador em outra empresa (G.R.) -->
+<div class="modal-overlay" id="modal-dup-gr">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title">⚠️ Cadastro bloqueado</div>
+      <button class="modal-close" onclick="closeModal('modal-dup-gr')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:14px;line-height:1.6">
+        Este <strong>nome</strong> e/ou <strong>CPF</strong> já está cadastrado em outra empresa.
+        Um colaborador não pode ficar vinculado a empresas diferentes. Verifique em qual empresa ele deve permanecer:
+      </div>
+      <div id="dup-gr-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-navy" onclick="closeModal('modal-dup-gr')">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Relatório de Assinatura -->
+<div class="modal-overlay" id="modal-rel-assinatura">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">📝 Relatório de Assinatura</div>
+      <button class="modal-close" onclick="closeModal('modal-rel-assinatura')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:14px;line-height:1.6">
+        Gere uma folha de assinatura (nome, CPF, empresa, hora inicial e operação). Deixe um filtro em branco para incluir tudo.
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <select id="rel-ass-data"><option value="">Todas as datas</option></select>
+      </div>
+      <div class="form-group">
+        <label>Empresa</label>
+        <select id="rel-ass-empresa"><option value="">Todas as empresas</option></select>
+      </div>
+      <div class="form-group">
+        <label>Operação</label>
+        <select id="rel-ass-operacao"><option value="">Todas as operações</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-rel-assinatura')">Cancelar</button>
+      <button class="btn btn-yellow" onclick="gerarRelatorioAssinatura()">🖨 Gerar folha</button>
     </div>
   </div>
 </div>
@@ -2364,6 +2416,47 @@ function checkColaborador() {
   }
 }
 
+// Procura o mesmo CPF ou Nome já cadastrado em OUTRA empresa.
+// Retorna array de { empresaId, empresaNome, nome, cpf, match } ou [] se não houver.
+function findDuplicidadeOutraEmpresa(cpf, nome, empresaAtualId) {
+  const cpfNorm = (cpf || '').replace(/\D/g, '');
+  const nomeNorm = (nome || '').trim().toUpperCase();
+  const achados = [];
+  Object.entries(STATE.colaboradores || {}).forEach(([eid, cols]) => {
+    if (eid === empresaAtualId) return; // ignora a própria empresa
+    Object.values(cols || {}).forEach(c => {
+      const cCpf = (c.cpf || '').replace(/\D/g, '');
+      const cNome = (c.nome || '').trim().toUpperCase();
+      const matchCpf = cpfNorm && cCpf && cpfNorm === cCpf;
+      const matchNome = nomeNorm && cNome && nomeNorm === cNome;
+      if (matchCpf || matchNome) {
+        const emp = STATE.empresas[eid];
+        achados.push({
+          empresaId: eid,
+          empresaNome: emp ? emp.nome : '(empresa desconhecida)',
+          nome: c.nome || '—',
+          cpf: c.cpf || '—',
+          match: matchCpf && matchNome ? 'CPF e Nome' : matchCpf ? 'CPF' : 'Nome'
+        });
+      }
+    });
+  });
+  return achados;
+}
+
+// Exibe um aviso bloqueando o cadastro duplicado em outra empresa.
+function mostrarAvisoDuplicidade(achados) {
+  const linhas = achados.map(a =>
+    `<div style="border:1px solid var(--gray-200);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px">
+       <div style="font-weight:700;color:var(--navy)">🏢 ${a.empresaNome}</div>
+       <div style="font-size:12px;color:var(--gray-600);margin-top:2px">${a.nome} — <span style="font-family:'JetBrains Mono',monospace">${a.cpf}</span></div>
+       <div style="font-size:11px;color:var(--danger);margin-top:2px">Coincide por: <strong>${a.match}</strong></div>
+     </div>`).join('');
+  const body = document.getElementById('dup-gr-body');
+  if (body) body.innerHTML = linhas;
+  openModal('modal-dup-gr');
+}
+
 function saveColaborador() {
   const cpf = v('col-cpf'), nome = v('col-nome'), opId = v('col-operacao');
   if (!cpf || !nome) { toast('CPF/RG e Nome são obrigatórios.', 'error'); return; }
@@ -2372,6 +2465,14 @@ function saveColaborador() {
   const motivoBloq = checkGRBloqueio(cpf);
   if (motivoBloq) {
     toast(`🚫 Colaborador BLOQUEADO pelo G.R. — ${motivoBloq}`, 'error');
+    return;
+  }
+
+  // Bloquear mesmo nome/CPF já cadastrado em outra empresa
+  const dup = findDuplicidadeOutraEmpresa(cpf, nome, currentUser.empresaId);
+  if (dup.length) {
+    toast('🚫 Este nome/CPF já está cadastrado em outra empresa.', 'error');
+    mostrarAvisoDuplicidade(dup);
     return;
   }
 
@@ -2413,7 +2514,6 @@ function renderColLista() {
     `<tr>
       <td class="td-mono">${col.cpf}</td>
       <td class="td-name">${col.nome}</td>
-      <td>${col.operacaoNome || '—'}</td>
       <td><span class="badge ${col.status==='ativo'?'badge-success':'badge-gray'}">${col.status||'ativo'}</span></td>
       <td><button class="btn btn-ghost btn-sm" onclick="toggleColStatus('${id}','${col._empId || currentUser.empresaId}','${col.status||'ativo'}')">
         ${(col.status||'ativo')==='ativo'?'Inativar':'Ativar'}
@@ -2485,13 +2585,23 @@ function importCSVRows(rows) {
   const ops = STATE.operacoes;
   let count = 0;
   const batch = {};
+  const bloqueados = [];
   rows.forEach(r => {
+    // Bloquear mesmo nome/CPF já cadastrado em outra empresa
+    const dup = findDuplicidadeOutraEmpresa(r.cpf, r.nome, currentUser.empresaId);
+    if (dup.length) { bloqueados.push(`${r.nome} (${dup[0].empresaNome})`); return; }
     const opEntry = Object.entries(ops).find(([,op]) => op.nome.toUpperCase() === (r.operacao||'').toUpperCase());
     const key = db.ref(`colaboradores/${currentUser.empresaId}`).push().key;
     batch[key] = { cpf: r.cpf, nome: r.nome, operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', status: 'ativo', criadoEm: Date.now() };
     count++;
   });
-  db.ref(`colaboradores/${currentUser.empresaId}`).update(batch).then(() => toast(`${count} colaboradores importados!`, 'success'));
+  const finalizar = () => {
+    if (bloqueados.length) {
+      toast(`⚠️ ${bloqueados.length} ignorado(s) por já existir em outra empresa: ${bloqueados.join('; ')}`, 'error');
+    }
+  };
+  if (!count) { finalizar(); return; }
+  db.ref(`colaboradores/${currentUser.empresaId}`).update(batch).then(() => { toast(`${count} colaboradores importados!`, 'success'); finalizar(); });
 }
 
 function populateAtribuirCol() {
@@ -2499,7 +2609,7 @@ function populateAtribuirCol() {
   if (!sel) return;
   const empId = currentUser.role === 'empresa' ? currentUser.empresaId : null;
   if (!empId) return;
-  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([,c]) => (c.status||'ativo') === 'ativo');
+  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([,c]) => (c.status||'ativo') === 'ativo' && !checkGRBloqueio(c.cpf));
   sel.innerHTML = '<option value="">Selecione...</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} — ${c.cpf}</option>`).join('');
 }
 
@@ -2802,7 +2912,7 @@ function openAtribuir(vagaIdsStr) {
 
   const empId = currentUser.empresaId;
   const cols = Object.entries(STATE.colaboradores[empId] || {})
-    .filter(([,c]) => (c.status||'ativo') === 'ativo')
+    .filter(([,c]) => (c.status||'ativo') === 'ativo' && !checkGRBloqueio(c.cpf))
     .sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
   const colOpts = '<option value="">— Selecione —</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
 
@@ -3055,6 +3165,90 @@ function populateAcompFilters() {
   if (curOp) filterOp.value = curOp;
 }
 
+// ─── RELATÓRIO DE ASSINATURA ──────────────────────────────────────────────────
+function openRelatorioAssinatura() {
+  const selData = document.getElementById('rel-ass-data');
+  const selEmp  = document.getElementById('rel-ass-empresa');
+  const selOp   = document.getElementById('rel-ass-operacao');
+
+  // Datas presentes no acompanhamento
+  const datas = [...new Set(Object.values(STATE.acompanhamento).map(a => a.data).filter(Boolean))].sort().reverse();
+  selData.innerHTML = '<option value="">Todas as datas</option>' + datas.map(d => `<option value="${d}">${formatDate(d)}</option>`).join('');
+
+  // Empresas (ordenadas por nome)
+  const emps = Object.entries(STATE.empresas || {}).sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
+  selEmp.innerHTML = '<option value="">Todas as empresas</option>' + emps.map(([id,e]) => `<option value="${id}">${e.nome}</option>`).join('');
+
+  // Operações ativas
+  const ops = Object.entries(STATE.operacoes || {}).filter(([,op]) => op.ativa === 'sim').sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
+  selOp.innerHTML = '<option value="">Todas as operações</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome}</option>`).join('');
+
+  openModal('modal-rel-assinatura');
+}
+
+function gerarRelatorioAssinatura() {
+  const dataVal = document.getElementById('rel-ass-data').value;
+  const empVal  = document.getElementById('rel-ass-empresa').value;
+  const opVal   = document.getElementById('rel-ass-operacao').value;
+  const empNomeSel = empVal ? (STATE.empresas[empVal]?.nome || '') : '';
+  const opNomeSel  = opVal ? (STATE.operacoes[opVal]?.nome || '') : '';
+
+  let items = Object.values(STATE.acompanhamento || {});
+  if (dataVal) items = items.filter(a => a.data === dataVal);
+  if (empVal)  items = items.filter(a => a.empresaId === empVal ||
+      (!a.empresaId && empNomeSel && (a.empresaNome||'').trim().toUpperCase() === empNomeSel.trim().toUpperCase()));
+  if (opNomeSel) items = items.filter(a => (a.opNome||'') === opNomeSel);
+
+  if (!items.length) { toast('Nenhum registro para os filtros selecionados.', 'error'); return; }
+
+  // Ordenar por Operação → Empresa → Nome
+  items.sort((a,b) =>
+    (a.opNome||'').localeCompare(b.opNome||'', 'pt-BR') ||
+    (a.empresaNome||'').localeCompare(b.empresaNome||'', 'pt-BR') ||
+    (a.colNome||'').localeCompare(b.colNome||'', 'pt-BR'));
+
+  const filtrosTxt = [
+    dataVal ? `Data: ${formatDate(dataVal)}` : 'Todas as datas',
+    empVal ? `Empresa: ${empNomeSel}` : 'Todas as empresas',
+    opVal ? `Operação: ${opNomeSel}` : 'Todas as operações'
+  ].join(' &nbsp;|&nbsp; ');
+
+  const linhas = items.map((a, i) => `<tr>
+    <td style="text-align:center">${i+1}</td>
+    <td>${a.colNome||'—'}</td>
+    <td style="font-family:monospace">${a.colCPF||'—'}</td>
+    <td>${a.empresaNome||'—'}</td>
+    <td style="text-align:center">${a.horaInicial||'—'}</td>
+    <td>${a.opNome||'—'}</td>
+    <td class="ass"></td>
+  </tr>`).join('');
+
+  const style = `<style>
+    body { font-family: Arial, sans-serif; font-size: 12px; color:#1a1a1a; margin:20px; }
+    h1 { font-size:16px; color:#0D1B3E; margin-bottom:4px; }
+    .filtros { font-size:11px; color:#666; margin-bottom:16px; }
+    table { width:100%; border-collapse:collapse; }
+    th { background:#0D1B3E; color:#F5C518; padding:6px 8px; text-align:left; font-size:11px; }
+    td { padding:8px; border-bottom:1px solid #ddd; font-size:12px; }
+    tr:nth-child(even) td { background:#f8f9fa; }
+    .ass { width:200px; }
+    @media print { .no-print { display:none; } }
+  </style>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Relatório de Assinatura</title>${style}</head><body>
+    <button class="no-print" onclick="window.print()" style="float:right;background:#0D1B3E;color:white;border:none;padding:8px 18px;border-radius:4px;cursor:pointer;font-size:13px">🖨 Imprimir / Salvar PDF</button>
+    <h1>PORTOEX — Relatório de Assinatura</h1>
+    <div class="filtros">${filtrosTxt} &nbsp;|&nbsp; ${items.length} colaborador${items.length>1?'es':''}</div>
+    <table>
+      <thead><tr><th style="width:32px">#</th><th>Nome</th><th>CPF</th><th>Empresa</th><th style="width:70px">H. Inicial</th><th>Operação</th><th class="ass">Assinatura</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+  </body></html>`);
+  win.document.close();
+  closeModal('modal-rel-assinatura');
+}
+
 function renderAcompanhamento() {
   const container = document.getElementById('acomp-container');
   if (!container) return;
@@ -3109,17 +3303,10 @@ function renderAcompanhamento() {
   todasOps.forEach((op, i) => { opCorMap[op] = OP_CORES[i % OP_CORES.length]; });
 
   container.innerHTML = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a)).map(([data, rows]) => {
-    // Ordenar por Função (Conferente → Interno → Externo → outros) e depois H. Inicial
-    const _funcaoOrd = f => {
-      const n = (f||'').toLowerCase();
-      if (n.includes('conferente')) return 0;
-      if (n.includes('interno')) return 1;
-      if (n.includes('externo')) return 2;
-      return 9;
-    };
+    // Ordenar pela Operação e depois por H. Inicial
     const rowsOrdenados = [...rows].sort(([,a],[,b]) => {
-      const fo = _funcaoOrd(a.funcao) - _funcaoOrd(b.funcao);
-      if (fo !== 0) return fo;
+      const oo = (a.opNome||'').localeCompare(b.opNome||'', 'pt-BR');
+      if (oo !== 0) return oo;
       return (a.horaInicial||'').localeCompare(b.horaInicial||'');
     });
     // Seção de confirmação do dia (apenas empresa)
@@ -4793,6 +4980,8 @@ function renderGR() {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador encontrado.</td></tr>';
     return;
   }
+
+  visible.sort(([, a], [, b]) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
 
   tbody.innerHTML = visible.map(([cid, c]) => {
     const gr = getGRStatus(c.cpf);
