@@ -638,7 +638,8 @@ function doLogout() {
   document.getElementById('btn-admin').style.display  = 'none';
   document.getElementById('btn-logout').style.display = 'none';
   document.getElementById('login-overlay').style.display = 'none';
-  initFirebase();
+  // Adia até o restante do script rodar (o "const db" é definido mais abaixo)
+  setTimeout(initFirebase, 0);
   return true;
 })();
 
