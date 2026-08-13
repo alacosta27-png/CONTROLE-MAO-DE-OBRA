@@ -526,9 +526,8 @@ const DEFAULT_USERS = [
   { login: 'RP',                   senha: 'RP123',      tipo: 'empresa', filtro: 'RP' },
   { login: 'IAGO',                 senha: '123456',     tipo: 'empresa', filtro: 'IAGO' },
   { login: 'LITORAL',              senha: '123456',     tipo: 'empresa', filtro: 'litoral' },
-  { login: 'LPO',                  senha: '84541961',   tipo: 'empresa', filtro: 'LPO' },
-  { login: 'RS',                   senha: 'RS123',      tipo: 'empresa', filtro: 'RS' }
-  ];
+  { login: 'LPO',                  senha: '84541961',   tipo: 'empresa', filtro: 'LPO' }
+];
 
 function getUsers() {
   try { const s=localStorage.getItem(TV_USERS_KEY); return s?JSON.parse(s):null; } catch{ return null; }
@@ -567,6 +566,7 @@ function clearSession() {
 
 let filtroEmpresa = null;
 let CURRENT_USER  = null;
+let FILTRO_EMP_ID = null; // quando aberto via index.html com ?empId=
 
 function doLogin() {
   ensureUsers();
@@ -624,8 +624,27 @@ function doLogout() {
   document.getElementById('login-overlay').style.display = 'flex';
 }
 
-// Auto-login se tiver sessão salva
+// Abertura filtrada via index.html (?empId=...&empNome=...): pula o login da TV
+(function bootstrapFromURL() {
+  const p = new URLSearchParams(location.search);
+  const empId = p.get('empId');
+  const empNome = p.get('empNome');
+  if (!empId && !empNome) return false;
+  FILTRO_EMP_ID = empId || null;
+  filtroEmpresa = empNome || empId || null;
+  CURRENT_USER = { login: empNome || 'EMPRESA', tipo: 'empresa', filtro: filtroEmpresa };
+  const tag = document.getElementById('tv-empresa-tag');
+  if (tag) { tag.textContent = (empNome || '').toUpperCase(); tag.style.display = 'inline-block'; }
+  document.getElementById('btn-admin').style.display  = 'none';
+  document.getElementById('btn-logout').style.display = 'none';
+  document.getElementById('login-overlay').style.display = 'none';
+  initFirebase();
+  return true;
+})();
+
+// Auto-login se tiver sessão salva (ignorado quando aberto via URL filtrada)
 (function checkSession() {
+  if (FILTRO_EMP_ID || filtroEmpresa) return; // já inicializado pela URL
   ensureUsers();
   const sess = getSession();
   if (sess && sess.login) {
@@ -753,6 +772,11 @@ updateClock();
 
 // ===== FILTRO POR EMPRESA =====
 function pertenceAEmpresa(a) {
+  // Filtro estrito por ID da empresa (quando aberto via index.html)
+  if (FILTRO_EMP_ID) {
+    if ((a.empresaId || '') === FILTRO_EMP_ID) return true;
+    return filtroEmpresa ? (a.empresaNome || '').toLowerCase() === filtroEmpresa.toLowerCase() : false;
+  }
   if (!filtroEmpresa) return true; // acesso total
   const f = filtroEmpresa.toLowerCase();
   return (
@@ -962,4 +986,3 @@ function updateTotais(rota, expedicao, outros) {
           <input id="adm-filtro" placeholder="ex: LJA">
         </div>
       </div>
-    
