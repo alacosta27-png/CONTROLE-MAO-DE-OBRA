@@ -768,6 +768,7 @@ tbody tr:hover { background: var(--gray-50); }
     </div>
     <div class="header-right">
       <span class="user-badge" id="header-user">—</span>
+      <button id="btn-tv-empresa" class="btn btn-sm btn-navy" style="display:none;text-decoration:none" onclick="abrirTelaTVEmpresa()">📺 Abrir Tela TV</button>
       <button class="btn-logout" onclick="doLogout()">Sair</button>
     </div>
   </header>
@@ -847,7 +848,7 @@ tbody tr:hover { background: var(--gray-50); }
       <div id="col-lista" class="inner-page">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>CPF / RG</th><th>Nome</th><th>Status</th><th>Ações</th></tr></thead>
+            <thead><tr><th>CPF / RG</th><th>Nome</th><th>G.R.</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody id="col-lista-body"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador cadastrado.</td></tr></tbody>
           </table>
         </div>
@@ -893,7 +894,7 @@ tbody tr:hover { background: var(--gray-50); }
           <button id="btn-sugestoes-pendentes" class="btn btn-sm" style="display:none;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning);font-weight:700" onclick="openModal('modal-sugestoes')">
             ⚠️ <span id="sugestoes-count">0</span> Sugestão(ões) Pendente(s)
           </button>
-          <button class="btn btn-sm btn-navy" onclick="openRelatorioAssinatura()">📝 Relatório de Assinatura</button>
+          <button id="btn-rel-assinatura" class="btn btn-sm btn-navy" style="display:none" onclick="openRelatorioAssinatura()">📝 Relatório de Assinatura</button>
           <div class="form-group" style="margin:0">
             <select id="filter-data-acomp" style="padding:7px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="renderAcompanhamento()">
               <option value="">Todas as datas</option>
@@ -1166,6 +1167,22 @@ tbody tr:hover { background: var(--gray-50); }
       <div id="avisos-container">
         <div class="empty-state"><div class="empty-icon">📢</div><div class="empty-text">Nenhum aviso publicado.</div></div>
       </div>
+    </div>
+
+    <!-- ===================== PÁGINA: CONFIRMAÇÕES DO DIA ===================== -->
+    <div id="page-confirmacoes" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">✅ Confirmações do Dia</div>
+          <div class="section-sub">Empresas que deram OK na finalização de cada dia</div>
+        </div>
+        <div class="form-group" style="margin:0">
+          <select id="conf-filter-data" style="padding:7px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="renderConfirmacoes()">
+            <option value="">Todas as datas</option>
+          </select>
+        </div>
+      </div>
+      <div id="confirmacoes-container"></div>
     </div>
 
   </div><!-- content-area -->
@@ -2060,6 +2077,7 @@ function buildNavTabs() {
     { id: 'page-operacoes', label: 'Operações' },
     { id: 'page-motoristas', label: 'Motoristas' },
     { id: 'page-gr', label: '🛡️ G.R.' },
+    { id: 'page-confirmacoes', label: '✅ Confirmações' },
     { id: 'page-avisos', label: '📢 Avisos' },
     ...(isSuperAdmin ? [
       { id: 'page-admin-logins', label: '🔐 Logins' },
@@ -2097,9 +2115,24 @@ function buildNavTabs() {
   if (currentUser.role === 'admin' || currentUser.acesso === 'inserir') {
     document.getElementById('btn-nova-vaga-wrap').style.display = 'block';
   }
+  // Relatório de Assinatura: somente admin
+  const btnRel = document.getElementById('btn-rel-assinatura');
+  if (btnRel) btnRel.style.display = currentUser.role === 'admin' ? 'inline-flex' : 'none';
+  // Botão Abrir Tela TV: somente empresas terceirizadas
+  const btnTv = document.getElementById('btn-tv-empresa');
+  if (btnTv) btnTv.style.display = currentUser.role === 'empresa' ? 'inline-flex' : 'none';
   if (currentUser.role === 'empresa') {
     document.getElementById('empresa-nome-sub').textContent = currentUser.empresaNome;
   }
+}
+
+// Abre a Tela TV já filtrada para a empresa logada (sem exigir login da TV)
+function abrirTelaTVEmpresa() {
+  const params = new URLSearchParams({
+    empId: currentUser.empresaId || '',
+    empNome: currentUser.empresaNome || ''
+  });
+  window.open('portoex-tv.html?' + params.toString(), '_blank');
 }
 
 function switchPage(pageId) {
@@ -2119,6 +2152,7 @@ function switchPage(pageId) {
   if (pageId === 'page-vagas-admin') renderVagasAdmin();
   if (pageId === 'page-motoristas') renderMotoristas();
   if (pageId === 'page-gr') renderGR();
+  if (pageId === 'page-confirmacoes') renderConfirmacoes();
   if (pageId === 'page-avisos') renderAvisosAdmin();
   if (pageId === 'page-admin-logins') renderAdminLogins();
   if (pageId === 'page-transacoes') renderLog();
@@ -2219,6 +2253,7 @@ function listenFirebase() {
   db.ref('confirmacoesDia').on('value', snap => {
     STATE.confirmacoesDia = snap.val() || {};
     if (document.getElementById('page-acompanhamento')?.classList.contains('active')) renderAcompanhamento();
+    if (document.getElementById('page-confirmacoes')?.classList.contains('active')) renderConfirmacoes();
   });
   const colPath = currentUser.role === 'empresa'
     ? 'colaboradores/' + currentUser.empresaId
@@ -2458,7 +2493,7 @@ function mostrarAvisoDuplicidade(achados) {
 }
 
 function saveColaborador() {
-  const cpf = v('col-cpf'), nome = v('col-nome'), opId = v('col-operacao');
+  const cpf = v('col-cpf'), nome = (v('col-nome')||'').trim().toUpperCase(), opId = v('col-operacao');
   if (!cpf || !nome) { toast('CPF/RG e Nome são obrigatórios.', 'error'); return; }
 
   // Verificar bloqueio G.R.
@@ -2510,22 +2545,29 @@ function renderColLista() {
     });
   }
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador.</td></tr>'; return; }
-  tbody.innerHTML = rows.map(([id, col]) =>
-    `<tr>
+  // Ordem alfabética por nome
+  rows.sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
+  tbody.innerHTML = rows.map(([id, col]) => {
+    const empId = col._empId || currentUser.empresaId;
+    const gr = getGRStatus(col.cpf);
+    const st = gr ? gr.status : 'LIBERADO';
+    const grCor  = st === 'BLOQUEADO' ? '#ef4444' : st === 'ANÁLISE' ? '#f59e0b' : '#22c55e';
+    const grIcon = st === 'BLOQUEADO' ? '🚫' : st === 'ANÁLISE' ? '⚠️' : '✅';
+    const grCell = `<span style="background:${grCor};color:#fff;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:700;white-space:nowrap">${grIcon} ${st}</span>` +
+      (st !== 'LIBERADO' && gr && gr.motivo ? `<div style="font-size:11px;color:var(--danger);margin-top:3px">${gr.motivo}</div>` : '');
+    return `<tr>
       <td class="td-mono">${col.cpf}</td>
-      <td class="td-name">${col.nome}</td>
+      <td class="td-name">${(col.nome||'').toUpperCase()}</td>
+      <td>${grCell}</td>
       <td><span class="badge ${col.status==='ativo'?'badge-success':'badge-gray'}">${col.status||'ativo'}</span></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="toggleColStatus('${id}','${col._empId || currentUser.empresaId}','${col.status||'ativo'}')">
-        ${(col.status||'ativo')==='ativo'?'Inativar':'Ativar'}
-      </button></td>
       <td style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="openEditColab('${id}','${col._empId || currentUser.empresaId}')">✏️ Alterar</button>
-        <button class="btn btn-ghost btn-sm" onclick="toggleColStatus('${id}','${col._empId || currentUser.empresaId}','${col.status||'ativo'}')">
+        <button class="btn btn-ghost btn-sm" onclick="openEditColab('${id}','${empId}')">✏️ Alterar</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleColStatus('${id}','${empId}','${col.status||'ativo'}')">
           ${(col.status||'ativo')==='ativo'?'Inativar':'Ativar'}
         </button>
       </td>
-    </tr>`
-  ).join('');
+    </tr>`;
+  }).join('');
 }
 
 function openEditColab(id, empId) {
@@ -2541,7 +2583,7 @@ function openEditColab(id, empId) {
 function saveEditColab() {
   const id = document.getElementById('ec-id').value;
   const empId = document.getElementById('ec-empid').value;
-  const nome = document.getElementById('ec-nome').value.trim();
+  const nome = document.getElementById('ec-nome').value.trim().toUpperCase();
   if (!nome) { toast('Informe o nome do colaborador.', 'error'); return; }
   db.ref(`colaboradores/${empId}/${id}/nome`).set(nome)
     .then(() => {
@@ -2592,7 +2634,7 @@ function importCSVRows(rows) {
     if (dup.length) { bloqueados.push(`${r.nome} (${dup[0].empresaNome})`); return; }
     const opEntry = Object.entries(ops).find(([,op]) => op.nome.toUpperCase() === (r.operacao||'').toUpperCase());
     const key = db.ref(`colaboradores/${currentUser.empresaId}`).push().key;
-    batch[key] = { cpf: r.cpf, nome: r.nome, operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', status: 'ativo', criadoEm: Date.now() };
+    batch[key] = { cpf: r.cpf, nome: (r.nome||'').trim().toUpperCase(), operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', status: 'ativo', criadoEm: Date.now() };
     count++;
   });
   const finalizar = () => {
@@ -3325,6 +3367,15 @@ function renderAcompanhamento() {
           </div>
         </div>`;
       } else {
+        // Botão fica vermelho se passaram mais de 72h da data
+        const passou72h = (Date.now() - new Date(data + 'T00:00:00').getTime()) > 72 * 3600 * 1000;
+        const btnStyle = passou72h
+          ? 'background:var(--danger);color:#fff;border:1px solid var(--danger)'
+          : '';
+        const btnClass = passou72h ? 'btn' : 'btn btn-yellow';
+        const alerta72h = passou72h
+          ? '<span style="font-size:11px;color:var(--danger);font-weight:700">⏰ Mais de 72h sem confirmação!</span>'
+          : '<span style="font-size:11px;color:var(--gray-400)">⚠️ Após confirmar, não será possível desfazer.</span>';
         confirmacaoSection = `
         <div style="padding:16px 18px;border-top:2px dashed var(--gray-200)">
           <div style="background:#F8FAFC;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px">
@@ -3334,8 +3385,8 @@ function renderAcompanhamento() {
             </div>
             <textarea id="conf-obs-${data}" rows="2" placeholder="Observações ou inconsistências a registrar (opcional)..." style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;resize:vertical;margin-bottom:10px"></textarea>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-              <button class="btn btn-yellow" onclick="confirmarDia('${data}')">✅ Confirmar Dia</button>
-              <span style="font-size:11px;color:var(--gray-400)">⚠️ Após confirmar, não será possível desfazer.</span>
+              <button class="${btnClass}" style="${btnStyle}" onclick="confirmarDia('${data}')">✅ Confirmar Dia</button>
+              ${alerta72h}
             </div>
           </div>
         </div>`;
@@ -3394,6 +3445,90 @@ function confirmarDia(data) {
     toast('Dia confirmado com sucesso! ✅', 'success');
     registrarTransacao('CONFIRMACAO_DIA', `Confirmou o dia ${data}`, { data, obs });
   }).catch(() => toast('Erro ao confirmar. Tente novamente.', 'error'));
+}
+
+// ─── PAINEL ADMIN: CONFIRMAÇÕES DO DIA ────────────────────────────────────────
+function renderConfirmacoes() {
+  const container = document.getElementById('confirmacoes-container');
+  if (!container) return;
+
+  // Empresas com registros no acompanhamento, agrupadas por data
+  const empresasPorData = {}; // { data: { empKey: empresaNome } }
+  Object.values(STATE.acompanhamento || {}).forEach(a => {
+    if (!a.data) return;
+    const empKey = a.empresaId || a.empresaNome;
+    if (!empKey) return;
+    if (!empresasPorData[a.data]) empresasPorData[a.data] = {};
+    empresasPorData[a.data][empKey] = a.empresaNome || '—';
+  });
+
+  // Todas as datas (do acompanhamento + das confirmações)
+  const datas = [...new Set([
+    ...Object.keys(empresasPorData),
+    ...Object.keys(STATE.confirmacoesDia || {})
+  ])].filter(Boolean).sort().reverse();
+
+  // Preencher filtro de data
+  const filtro = document.getElementById('conf-filter-data');
+  if (filtro) {
+    const cur = filtro.value;
+    filtro.innerHTML = '<option value="">Todas as datas</option>' + datas.map(d => `<option value="${d}">${formatDate(d)}</option>`).join('');
+    if (cur && datas.includes(cur)) filtro.value = cur;
+  }
+  const filtroData = filtro ? filtro.value : '';
+  const datasExibir = filtroData ? [filtroData] : datas;
+
+  if (!datasExibir.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma confirmação registrada.</div></div>';
+    return;
+  }
+
+  container.innerHTML = datasExibir.map(data => {
+    const confs = STATE.confirmacoesDia[data] || {};
+    // Universo de empresas do dia = as com registro + as que confirmaram
+    const universo = { ...(empresasPorData[data] || {}) };
+    Object.entries(confs).forEach(([k, c]) => { if (!universo[k]) universo[k] = c.empresaNome || k; });
+
+    const chaves = Object.keys(universo).sort((a, b) => (universo[a]||'').localeCompare(universo[b]||'', 'pt-BR'));
+    const confirmadas = chaves.filter(k => confs[k]);
+    const pendentes   = chaves.filter(k => !confs[k]);
+
+    const rows = chaves.map(k => {
+      const c = confs[k];
+      if (c) {
+        const quando = new Date(c.confirmedAt).toLocaleString('pt-BR');
+        return `<tr>
+          <td><strong>${universo[k]}</strong></td>
+          <td><span class="badge badge-success" style="font-size:11px">✅ Confirmado</span></td>
+          <td style="font-size:12px;color:var(--gray-600)">${quando}</td>
+          <td style="font-size:12px;color:var(--gray-600)">${c.login||'—'}</td>
+          <td style="font-size:12px;color:var(--gray-600)">${c.obs ? c.obs : '—'}</td>
+        </tr>`;
+      }
+      return `<tr>
+        <td><strong>${universo[k]}</strong></td>
+        <td><span class="badge badge-danger" style="font-size:11px">⏳ Pendente</span></td>
+        <td colspan="3" style="font-size:12px;color:var(--gray-400)">Aguardando confirmação</td>
+      </tr>`;
+    }).join('');
+
+    const total = chaves.length;
+    const corTopo = pendentes.length === 0 ? 'var(--success)' : 'var(--warning)';
+
+    return `
+    <div class="acomp-card" style="margin-bottom:20px">
+      <div class="acomp-header" style="border-left:4px solid ${corTopo}">
+        <div class="acomp-op">📅 ${formatDate(data)}</div>
+        <div class="acomp-meta">${confirmadas.length}/${total} confirmaram${pendentes.length ? ` — ${pendentes.length} pendente(s)` : ' — todos OK ✅'}</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Empresa</th><th>Situação</th><th>Confirmado em</th><th>Por</th><th>Observação</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderAcompRow(id, a, opCor) {
