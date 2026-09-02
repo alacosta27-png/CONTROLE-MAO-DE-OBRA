@@ -814,18 +814,41 @@ tbody tr:hover { background: var(--gray-50); }
       <div id="col-manual" class="inner-page active">
         <div class="card">
           <div class="card-title">Novo Colaborador</div>
+          <div style="margin-bottom:16px;padding:12px 14px;background:var(--info-bg);border-radius:var(--radius);font-size:12px;line-height:1.6;color:var(--navy)">
+            🗃️ <strong>Documentos obrigatórios para incluir o colaborador:</strong><br>
+            🪪 Documento com FOTO (CTPS não é válida) — <strong>frente e verso</strong><br>
+            📍 Endereço completo (com CEP) &nbsp;•&nbsp; 📲 Nº de telefone<br>
+            <span style="color:var(--danger)">Sem o link dos documentos o cadastro é barrado.</span> O colaborador entra <strong>EM ANÁLISE</strong> pelo G.R. e só é liberado após a aprovação.
+          </div>
           <div class="form-grid" style="grid-template-columns:1fr 2fr">
             <div class="form-group">
-              <label>CPF / RG *</label>
-              <input type="text" id="col-cpf" placeholder="000.000.000-00" oninput="checkColaborador()">
+              <label>CPF *</label>
+              <input type="text" id="col-cpf" maxlength="14" placeholder="000.000.000-00" oninput="maskCPF(this);checkColaborador()">
             </div>
             <div class="form-group">
               <label>Nome *</label>
-              <input type="text" id="col-nome" placeholder="Nome completo">
+              <input type="text" id="col-nome" placeholder="Nome completo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
             </div>
           </div>
-          <div id="col-aviso" style="display:none; margin-top:12px; padding:10px 14px; background:var(--warning-bg); border-radius:var(--radius); font-size:12px; color:var(--warning);">
-            ⚠️ Este CPF/RG já está cadastrado. Os dados bloqueados não serão alterados.
+          <div class="form-grid" style="grid-template-columns:2fr 1fr;margin-top:12px">
+            <div class="form-group">
+              <label>Endereço completo (com CEP) *</label>
+              <input type="text" id="col-endereco" placeholder="Rua, nº, bairro, cidade/UF, CEP">
+            </div>
+            <div class="form-group">
+              <label>Telefone *</label>
+              <input type="text" id="col-telefone" maxlength="15" placeholder="(00) 00000-0000" oninput="maskTel(this)">
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label>Link dos documentos no Google Drive *</label>
+            <input type="text" id="col-drive" placeholder="Cole aqui o link do arquivo/pasta no Google Drive">
+            <div style="margin-top:6px">
+              <a href="https://drive.google.com/drive/folders/1UrOAAEZs-1UD3bVtb_zcgmScPV42WQyL" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="text-decoration:none">📁 Abrir pasta do Drive para enviar os arquivos</a>
+            </div>
+          </div>
+          <div id="col-aviso" style="display:none; margin-top:12px; padding:10px 14px; background:var(--danger-bg); border-radius:var(--radius); font-size:12px; color:var(--danger);">
+            🚫 Este CPF já está cadastrado nesta empresa. Não é permitido cadastrar em duplicidade.
           </div>
           <div class="form-actions">
             <button class="btn btn-navy" onclick="saveColaborador()">Salvar Colaborador</button>
@@ -2436,19 +2459,13 @@ function populateOpSelects() {
 
 // ===================== COLABORADORES =====================
 function checkColaborador() {
-  const cpf = v('col-cpf');
-  if (!cpf) return;
-  const cols = STATE.colaboradores[currentUser.empresaId] || {};
-  const found = Object.values(cols).find(c => c.cpf === cpf);
+  const cpfDig = (v('col-cpf')||'').replace(/\D/g, '');
   const aviso = document.getElementById('col-aviso');
-  if (found) {
-    sv('col-nome', found.nome);
-    document.getElementById('col-nome').readOnly = true;
-    aviso.style.display = 'block';
-  } else {
-    document.getElementById('col-nome').readOnly = false;
-    aviso.style.display = 'none';
-  }
+  if (!aviso) return;
+  if (cpfDig.length < 11) { aviso.style.display = 'none'; return; }
+  const cols = STATE.colaboradores[currentUser.empresaId] || {};
+  const found = Object.values(cols).find(c => (c.cpf||'').replace(/\D/g,'') === cpfDig);
+  aviso.style.display = found ? 'block' : 'none';
 }
 
 // Procura o mesmo CPF ou Nome já cadastrado em OUTRA empresa.
@@ -2493,17 +2510,39 @@ function mostrarAvisoDuplicidade(achados) {
 }
 
 function saveColaborador() {
-  const cpf = v('col-cpf'), nome = (v('col-nome')||'').trim().toUpperCase(), opId = v('col-operacao');
-  if (!cpf || !nome) { toast('CPF/RG e Nome são obrigatórios.', 'error'); return; }
+  const cpfRaw = v('col-cpf');
+  const cpfDig = (cpfRaw||'').replace(/\D/g, '');
+  const nome = (v('col-nome')||'').trim().toUpperCase();
+  const endereco = (v('col-endereco')||'').trim();
+  const telefone = (v('col-telefone')||'').trim();
+  const driveLink = (v('col-drive')||'').trim();
 
-  // Verificar bloqueio G.R.
+  // Campos obrigatórios
+  if (!cpfDig || !nome) { toast('CPF e Nome são obrigatórios.', 'error'); return; }
+  if (!isValidCPF(cpfDig)) { toast('🚫 CPF inválido. Confira os números digitados.', 'error'); return; }
+  if (!endereco) { toast('📍 Informe o endereço completo (com CEP).', 'error'); return; }
+  if (!telefone) { toast('📲 Informe o telefone.', 'error'); return; }
+  if (!driveLink) { toast('🗃️ Anexe os documentos: cole o link do Google Drive. Cadastro barrado sem documentação.', 'error'); return; }
+
+  const cpf = formatCPF(cpfDig);
+
+  // Bloqueio G.R. (CPF já bloqueado anteriormente)
   const motivoBloq = checkGRBloqueio(cpf);
   if (motivoBloq) {
     toast(`🚫 Colaborador BLOQUEADO pelo G.R. — ${motivoBloq}`, 'error');
     return;
   }
 
-  // Bloquear mesmo nome/CPF já cadastrado em outra empresa
+  // Duplicidade na PRÓPRIA empresa (CPF ou Nome)
+  const cols = STATE.colaboradores[currentUser.empresaId] || {};
+  const dupMesma = Object.values(cols).find(c =>
+    (c.cpf||'').replace(/\D/g,'') === cpfDig || (c.nome||'').trim().toUpperCase() === nome);
+  if (dupMesma) {
+    toast('🚫 Já existe um colaborador com este CPF ou nome nesta empresa.', 'error');
+    return;
+  }
+
+  // Duplicidade em OUTRA empresa (CPF ou Nome)
   const dup = findDuplicidadeOutraEmpresa(cpf, nome, currentUser.empresaId);
   if (dup.length) {
     toast('🚫 Este nome/CPF já está cadastrado em outra empresa.', 'error');
@@ -2511,25 +2550,37 @@ function saveColaborador() {
     return;
   }
 
-  const cols = STATE.colaboradores[currentUser.empresaId] || {};
-  const existing = Object.entries(cols).find(([,c]) => c.cpf === cpf);
+  const ref = db.ref(`colaboradores/${currentUser.empresaId}`).push();
+  const colId = ref.key;
+  const data = {
+    cpf, nome, endereco, telefone, driveLink,
+    operacaoId: '', operacaoNome: '',
+    status: 'ativo', grStatus: 'ANÁLISE', criadoEm: Date.now()
+  };
 
-  const op = opId ? (STATE.operacoes[opId] || {}) : {};
-  const data = existing
-    ? { ...existing[1], operacaoId: opId, operacaoNome: op.nome || '' }
-    : { cpf, nome, operacaoId: opId, operacaoNome: op.nome || '', status: 'ativo', criadoEm: Date.now() };
-
-  const path = existing
-    ? `colaboradores/${currentUser.empresaId}/${existing[0]}`
-    : `colaboradores/${currentUser.empresaId}`;
-  const ref = existing ? db.ref(path) : db.ref(path).push();
-  (existing ? ref.set(data) : ref.set(data)).then(() => { toast('Colaborador salvo!', 'success'); clearColForm(); });
+  ref.set(data).then(() => {
+    // Envia para análise do G.R. — status EM ANÁLISE (amarelo)
+    db.ref('grStatus/' + cpfDig).set({
+      colId, cpf,
+      status: 'ANÁLISE',
+      motivo: 'Aguardando análise de documentação pelo G.R.',
+      empresaId: currentUser.empresaId,
+      empresaNome: currentUser.empresaNome || '',
+      driveLink, telefone, endereco,
+      atualizadoEm: Date.now()
+    }).catch(()=>{});
+    // Registro em Transações
+    registrarTransacao('CADASTRO_COLABORADOR', `Novo colaborador enviado ao G.R.: ${nome} (${cpf})`, {
+      colaborador: nome, cpf, empresa: currentUser.empresaNome || currentUser.empresaId, driveLink
+    });
+    toast('✅ Colaborador cadastrado e enviado ao G.R. para análise.', 'success');
+    clearColForm();
+  }).catch(e => toast('Erro ao salvar: ' + e.message, 'error'));
 }
 
 function clearColForm() {
-  sv('col-cpf',''); sv('col-nome',''); sv('col-operacao','');
-  document.getElementById('col-nome').readOnly = false;
-  document.getElementById('col-aviso').style.display = 'none';
+  sv('col-cpf',''); sv('col-nome',''); sv('col-endereco',''); sv('col-telefone',''); sv('col-drive','');
+  const av = document.getElementById('col-aviso'); if (av) av.style.display = 'none';
 }
 
 function renderColLista() {
@@ -2627,6 +2678,7 @@ function importCSVRows(rows) {
   const ops = STATE.operacoes;
   let count = 0;
   const batch = {};
+  const grBatch = {};
   const bloqueados = [];
   rows.forEach(r => {
     // Bloquear mesmo nome/CPF já cadastrado em outra empresa
@@ -2634,7 +2686,10 @@ function importCSVRows(rows) {
     if (dup.length) { bloqueados.push(`${r.nome} (${dup[0].empresaNome})`); return; }
     const opEntry = Object.entries(ops).find(([,op]) => op.nome.toUpperCase() === (r.operacao||'').toUpperCase());
     const key = db.ref(`colaboradores/${currentUser.empresaId}`).push().key;
-    batch[key] = { cpf: r.cpf, nome: (r.nome||'').trim().toUpperCase(), operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', status: 'ativo', criadoEm: Date.now() };
+    const cpfDig = (r.cpf||'').replace(/\D/g,'');
+    const cpfFmt = cpfDig.length === 11 ? formatCPF(cpfDig) : (r.cpf||'');
+    batch[key] = { cpf: cpfFmt, nome: (r.nome||'').trim().toUpperCase(), operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', status: 'ativo', grStatus: 'ANÁLISE', criadoEm: Date.now() };
+    if (cpfDig) grBatch[cpfDig] = { colId: key, cpf: cpfFmt, status: 'ANÁLISE', motivo: 'Aguardando análise (importação CSV)', empresaId: currentUser.empresaId, empresaNome: currentUser.empresaNome||'', atualizadoEm: Date.now() };
     count++;
   });
   const finalizar = () => {
@@ -2643,7 +2698,12 @@ function importCSVRows(rows) {
     }
   };
   if (!count) { finalizar(); return; }
-  db.ref(`colaboradores/${currentUser.empresaId}`).update(batch).then(() => { toast(`${count} colaboradores importados!`, 'success'); finalizar(); });
+  db.ref(`colaboradores/${currentUser.empresaId}`).update(batch).then(() => {
+    if (Object.keys(grBatch).length) db.ref('grStatus').update(grBatch).catch(()=>{});
+    registrarTransacao('CADASTRO_COLABORADOR', `${count} colaborador(es) importados via CSV e enviados ao G.R.`, { quantidade: count, empresa: currentUser.empresaNome||currentUser.empresaId });
+    toast(`${count} colaboradores importados e enviados ao G.R.!`, 'success');
+    finalizar();
+  });
 }
 
 function populateAtribuirCol() {
@@ -2859,7 +2919,7 @@ function renderMural() {
           const empTag = (currentUser.role === 'admin' && a.empresaNome)
             ? `<span style="font-size:9px;color:var(--gray-600);margin-left:2px">(${a.empresaNome})</span>`
             : '';
-          return `<span style="font-size:10px;background:var(--info-bg);color:var(--info);padding:2px 7px;border-radius:10px;margin:1px;display:inline-block">${a.colNome}${empTag}</span>`;
+          return `<span title="G.R.: ${grColorSet(a.colCPF).st}" style="font-size:10px;background:var(--info-bg);color:var(--info);padding:2px 7px;border-radius:10px;margin:1px;display:inline-block">${grDot(a.colCPF)}${a.colNome}${empTag}</span>`;
         }).join('');
         const statusCell = completo
           ? `<span class="badge badge-success" style="font-size:10px">✓ Completo</span>`
@@ -3589,7 +3649,7 @@ function renderAcompRow(id, a, opCor) {
   return `<tr style="${temDesacordoPendente && currentUser.role==='admin' ? 'background:var(--warning-bg)' : corStyle}">
     <td>${acoes}</td>
     <td><span class="badge ${statusBadge}" style="font-size:10px">${a.status||'Em escolha'}</span></td>
-    <td class="td-name">${a.colNome}${desacordoCell ? ' '+desacordoCell : ''}</td>
+    <td class="td-name">${grDot(a.colCPF)}${a.colNome}${desacordoCell ? ' '+desacordoCell : ''}</td>
     <td style="font-size:11px;color:var(--gray-600)">${a.empresaNome||'—'}</td>
     <td><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span></td>
     <td style="font-size:11px">${(() => {
@@ -5066,6 +5126,53 @@ function getGRStatus(cpf) {
   return Object.values(STATE.grStatus || {}).find(g => (g.cpf || '').replace(/\D/g, '') === clean) || null;
 }
 
+// ─── Máscaras/validação CPF e telefone + cor do status G.R. ──────────────────
+function formatCPF(digits) {
+  const d = (digits||'').replace(/\D/g,'').slice(0,11);
+  if (d.length !== 11) return digits;
+  return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+}
+function maskCPF(el) {
+  let d = el.value.replace(/\D/g,'').slice(0,11);
+  let out = d;
+  if (d.length > 9)      out = d.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+  else if (d.length > 6) out = d.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+  else if (d.length > 3) out = d.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+  el.value = out;
+}
+function maskTel(el) {
+  let d = el.value.replace(/\D/g,'').slice(0,11);
+  let out = d;
+  if (d.length > 10)     out = d.replace(/(\d{2})(\d{5})(\d{1,4})/, '($1) $2-$3');
+  else if (d.length > 6) out = d.replace(/(\d{2})(\d{4})(\d{1,4})/, '($1) $2-$3');
+  else if (d.length > 2) out = d.replace(/(\d{2})(\d{1,5})/, '($1) $2');
+  else if (d.length > 0) out = '(' + d;
+  el.value = out;
+}
+function isValidCPF(cpf) {
+  cpf = (cpf||'').replace(/\D/g,'');
+  if (cpf.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cpf)) return false;
+  let s = 0;
+  for (let i = 0; i < 9; i++) s += parseInt(cpf[i]) * (10 - i);
+  let r = (s * 10) % 11; if (r === 10) r = 0;
+  if (r !== parseInt(cpf[9])) return false;
+  s = 0;
+  for (let i = 0; i < 10; i++) s += parseInt(cpf[i]) * (11 - i);
+  r = (s * 10) % 11; if (r === 10) r = 0;
+  return r === parseInt(cpf[10]);
+}
+function grColorSet(cpf) {
+  const st = (getGRStatus(cpf) || {}).status || 'LIBERADO';
+  if (st === 'BLOQUEADO') return { cor: '#ef4444', icon: '🚫', st };
+  if (st === 'ANÁLISE')   return { cor: '#f59e0b', icon: '⚠️', st };
+  return { cor: '#22c55e', icon: '✅', st };
+}
+function grDot(cpf) {
+  const g = grColorSet(cpf);
+  return `<span title="G.R.: ${g.st}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${g.cor};margin-right:5px;vertical-align:middle"></span>`;
+}
+
 function checkGRBloqueio(cpf) {
   const gr = getGRStatus(cpf);
   if (gr && gr.status === 'BLOQUEADO') return gr.motivo || 'Bloqueado pelo G.R.';
@@ -5126,14 +5233,15 @@ function renderGR() {
     const emp = STATE.empresas[c.empresaId];
     const cpfEsc = (c.cpf || '').replace(/'/g, "\\'");
     const nomeEsc = (c.nome || '').replace(/'/g, "\\'");
+    const _dLink = c.driveLink || (gr && gr.driveLink) || '';
     return `<tr>
       <td style="font-family:JetBrains Mono,monospace;font-size:12px">${c.cpf || c.rg || '—'}</td>
-      <td><strong>${c.nome || '—'}</strong></td>
+      <td><strong>${c.nome || '—'}</strong>${c.telefone ? `<div style="font-size:11px;color:var(--gray-500)">📲 ${c.telefone}</div>` : ''}${c.endereco ? `<div style="font-size:11px;color:var(--gray-400)">📍 ${c.endereco}</div>` : ''}</td>
       <td>${emp ? emp.nome : '—'}</td>
       <td><span style="background:${stCor};color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">${stIcon} ${st}</span></td>
       <td style="font-size:12px;color:var(--gray-500)">${gr ? (gr.motivo || '—') : '—'}</td>
       <td style="font-size:12px;color:var(--gray-400)">${gr && gr.atualizadoEm ? new Date(gr.atualizadoEm).toLocaleString('pt-BR') : '—'}</td>
-      <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="openGRStatus('${cid}','${cpfEsc}','${nomeEsc}')">✏️ Editar</button></td>
+      <td style="white-space:nowrap">${_dLink ? `<a href="${_dLink}" target="_blank" rel="noopener" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;text-decoration:none">📎 Docs</a> ` : ''}<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="openGRStatus('${cid}','${cpfEsc}','${nomeEsc}')">✏️ Editar</button></td>
     </tr>`;
   }).join('');
 }
