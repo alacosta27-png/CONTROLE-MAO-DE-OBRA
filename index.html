@@ -818,7 +818,7 @@ tbody tr:hover { background: var(--gray-50); }
             🗃️ <strong>Documentos obrigatórios para incluir o colaborador:</strong><br>
             🪪 Documento com FOTO (CTPS não é válida) — <strong>frente e verso</strong><br>
             📍 Endereço completo (com CEP) &nbsp;•&nbsp; 📲 Nº de telefone<br>
-            <span style="color:var(--danger)">Sem o link dos documentos o cadastro é barrado.</span> O colaborador entra <strong>EM ANÁLISE</strong> pelo G.R. e só é liberado após a aprovação.
+            <span style="color:var(--danger)">Envie os arquivos na pasta do Google Drive da empresa (abaixo).</span> O colaborador entra <strong>EM ANÁLISE</strong> pelo G.R. e só é liberado após a aprovação.
           </div>
           <div class="form-grid" style="grid-template-columns:1fr 2fr">
             <div class="form-group">
@@ -841,11 +841,8 @@ tbody tr:hover { background: var(--gray-50); }
             </div>
           </div>
           <div class="form-group" style="margin-top:12px">
-            <label>Link dos documentos no Google Drive *</label>
-            <input type="text" id="col-drive" placeholder="Cole aqui o link do arquivo/pasta no Google Drive">
-            <div style="margin-top:6px">
-              <a href="https://drive.google.com/drive/folders/1UrOAAEZs-1UD3bVtb_zcgmScPV42WQyL" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="text-decoration:none">📁 Abrir pasta do Drive para enviar os arquivos</a>
-            </div>
+            <label>📁 Documentos no Google Drive (pasta da empresa)</label>
+            <div id="col-drive-info" style="font-size:13px;color:var(--gray-600)">—</div>
           </div>
           <div id="col-aviso" style="display:none; margin-top:12px; padding:10px 14px; background:var(--danger-bg); border-radius:var(--radius); font-size:12px; color:var(--danger);">
             🚫 Este CPF já está cadastrado nesta empresa. Não é permitido cadastrar em duplicidade.
@@ -1300,6 +1297,11 @@ tbody tr:hover { background: var(--gray-50); }
             <option value="padrao">Padrão</option>
             <option value="inserir">Inserir (Motoristas + Avisos)</option>
           </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>📁 Pasta de documentos no Google Drive</label>
+          <input type="text" id="emp-drive" placeholder="Cole o link fixo da pasta desta empresa no Google Drive">
+          <div style="font-size:11px;color:var(--gray-500);margin-top:4px">Link fixo desta empresa, usado no cadastro dos colaboradores. Sem ele a empresa não consegue cadastrar (o G.R. abre esta pasta para conferir os documentos).</div>
         </div>
       </div>
       <div style="margin-top:18px;">
@@ -2169,7 +2171,7 @@ function switchPage(pageId) {
 
   if (pageId === 'page-mural') renderMural();
   if (pageId === 'page-acompanhamento') { renderAcompanhamento(); renderSugestoesPendentes(); }
-  if (pageId === 'page-colaboradores') renderColLista();
+  if (pageId === 'page-colaboradores') { renderColLista(); renderColDriveInfo(); }
   if (pageId === 'page-empresas') renderEmpresas();
   if (pageId === 'page-operacoes') renderOperacoes();
   if (pageId === 'page-vagas-admin') renderVagasAdmin();
@@ -2340,7 +2342,8 @@ function renderEmpresas() {
       <td><span class="badge ${emp.status==='ativa'?'badge-success':'badge-gray'}">${emp.status}</span></td>
       <td>${acessoBadge}</td>
       <td>${nCols}</td>
-      <td style="display:flex;gap:6px">
+      <td style="display:flex;gap:6px;align-items:center">
+        ${emp.driveDocs ? `<a href="${emp.driveDocs}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="text-decoration:none" title="Abrir pasta de documentos">📁</a>` : `<span title="Sem pasta de documentos configurada" style="font-size:13px">📁⚠️</span>`}
         <button class="btn btn-ghost btn-sm" onclick="editEmpresa('${id}')">Editar</button>
         <button class="btn btn-danger btn-sm" onclick="deleteEmpresa('${id}')">Excluir</button>
       </td>
@@ -2364,6 +2367,7 @@ function saveEmpresa() {
   const acesso = v('emp-acesso') || 'padrao';
   const data = {
     nome, login, senha, status, acesso,
+    driveDocs: (v('emp-drive')||'').trim(),
     valores: {
       'Interno': { valor: n('emp-val-ai'), he: n('emp-he-ai') },
       'Externo': { valor: n('emp-val-ae'), he: n('emp-he-ae') },
@@ -2383,6 +2387,7 @@ function editEmpresa(id) {
   const emp = STATE.empresas[id];
   editEmpresaId = id;
   sv('emp-nome', emp.nome); sv('emp-login', emp.login); sv('emp-senha', emp.senha); sv('emp-status', emp.status); sv('emp-acesso', emp.acesso || 'padrao');
+  sv('emp-drive', emp.driveDocs || '');
   const v2 = emp.valores || {};
   sv('emp-val-ai', (v2['Interno']||{}).valor||'');
   sv('emp-he-ai', (v2['Interno']||{}).he||'');
@@ -2399,7 +2404,7 @@ function deleteEmpresa(id) {
 }
 
 function clearEmpForm() {
-  ['emp-nome','emp-login','emp-senha','emp-val-ai','emp-he-ai','emp-val-ae','emp-he-ae','emp-val-co','emp-he-co'].forEach(i => sv(i,''));
+  ['emp-nome','emp-login','emp-senha','emp-drive','emp-val-ai','emp-he-ai','emp-val-ae','emp-he-ae','emp-val-co','emp-he-co'].forEach(i => sv(i,''));
   sv('emp-status','ativa');
   sv('emp-acesso','padrao');
 }
@@ -2515,14 +2520,14 @@ function saveColaborador() {
   const nome = (v('col-nome')||'').trim().toUpperCase();
   const endereco = (v('col-endereco')||'').trim();
   const telefone = (v('col-telefone')||'').trim();
-  const driveLink = (v('col-drive')||'').trim();
+  const driveLink = ((STATE.empresas[currentUser.empresaId]||{}).driveDocs || '').trim();
 
   // Campos obrigatórios
   if (!cpfDig || !nome) { toast('CPF e Nome são obrigatórios.', 'error'); return; }
   if (!isValidCPF(cpfDig)) { toast('🚫 CPF inválido. Confira os números digitados.', 'error'); return; }
   if (!endereco) { toast('📍 Informe o endereço completo (com CEP).', 'error'); return; }
   if (!telefone) { toast('📲 Informe o telefone.', 'error'); return; }
-  if (!driveLink) { toast('🗃️ Anexe os documentos: cole o link do Google Drive. Cadastro barrado sem documentação.', 'error'); return; }
+  if (!driveLink) { toast('🗃️ A empresa ainda não tem pasta de documentos no Drive. Peça ao administrador para cadastrar em Empresas.', 'error'); return; }
 
   const cpf = formatCPF(cpfDig);
 
@@ -2579,8 +2584,21 @@ function saveColaborador() {
 }
 
 function clearColForm() {
-  sv('col-cpf',''); sv('col-nome',''); sv('col-endereco',''); sv('col-telefone',''); sv('col-drive','');
+  sv('col-cpf',''); sv('col-nome',''); sv('col-endereco',''); sv('col-telefone','');
   const av = document.getElementById('col-aviso'); if (av) av.style.display = 'none';
+}
+
+function renderColDriveInfo() {
+  const el = document.getElementById('col-drive-info');
+  if (!el) return;
+  const emp = STATE.empresas[currentUser.empresaId] || {};
+  const link = (emp.driveDocs || '').trim();
+  if (link) {
+    el.innerHTML = `<a href="${link}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="text-decoration:none">📁 Abrir pasta de documentos da empresa</a>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Envie os documentos deste colaborador nesta pasta antes de salvar.</div>`;
+  } else {
+    el.innerHTML = `<div style="padding:8px 12px;background:var(--danger-bg);color:var(--danger);border-radius:var(--radius);font-size:12px">⚠️ Sua empresa ainda não tem pasta de documentos configurada. O cadastro ficará bloqueado até o administrador cadastrar o link em Empresas.</div>`;
+  }
 }
 
 function renderColLista() {
@@ -2680,6 +2698,7 @@ function importCSVRows(rows) {
   const batch = {};
   const grBatch = {};
   const bloqueados = [];
+  const empDrive = ((STATE.empresas[currentUser.empresaId]||{}).driveDocs||'').trim();
   rows.forEach(r => {
     // Bloquear mesmo nome/CPF já cadastrado em outra empresa
     const dup = findDuplicidadeOutraEmpresa(r.cpf, r.nome, currentUser.empresaId);
@@ -2688,8 +2707,8 @@ function importCSVRows(rows) {
     const key = db.ref(`colaboradores/${currentUser.empresaId}`).push().key;
     const cpfDig = (r.cpf||'').replace(/\D/g,'');
     const cpfFmt = cpfDig.length === 11 ? formatCPF(cpfDig) : (r.cpf||'');
-    batch[key] = { cpf: cpfFmt, nome: (r.nome||'').trim().toUpperCase(), operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', status: 'ativo', grStatus: 'ANÁLISE', criadoEm: Date.now() };
-    if (cpfDig) grBatch[cpfDig] = { colId: key, cpf: cpfFmt, status: 'ANÁLISE', motivo: 'Aguardando análise (importação CSV)', empresaId: currentUser.empresaId, empresaNome: currentUser.empresaNome||'', atualizadoEm: Date.now() };
+    batch[key] = { cpf: cpfFmt, nome: (r.nome||'').trim().toUpperCase(), operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', driveLink: empDrive, status: 'ativo', grStatus: 'ANÁLISE', criadoEm: Date.now() };
+    if (cpfDig) grBatch[cpfDig] = { colId: key, cpf: cpfFmt, status: 'ANÁLISE', motivo: 'Aguardando análise (importação CSV)', empresaId: currentUser.empresaId, empresaNome: currentUser.empresaNome||'', driveLink: empDrive, atualizadoEm: Date.now() };
     count++;
   });
   const finalizar = () => {
