@@ -1904,6 +1904,23 @@ tbody tr:hover { background: var(--gray-50); }
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-whats">
+  <div class="modal" style="max-width:470px">
+    <div class="modal-header">
+      <div class="modal-title">✅ Colaborador cadastrado</div>
+      <button class="modal-close" onclick="closeModal('modal-whats')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:12px">Enviado ao G.R. para análise. Você pode notificar pelo WhatsApp:</div>
+      <div id="whats-body" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px 14px;font-size:13px;line-height:1.7;white-space:pre-wrap"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-whats')">Fechar</button>
+      <a id="whats-link" href="#" target="_blank" rel="noopener" class="btn" style="background:#25D366;color:#fff;text-decoration:none">📲 Enviar via WhatsApp</a>
+    </div>
+  </div>
+</div>
+
 <div id="toast" style="position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px"></div>
 
 <script>
@@ -2578,6 +2595,7 @@ function saveColaborador() {
     registrarTransacao('CADASTRO_COLABORADOR', `Novo colaborador enviado ao G.R.: ${nome} (${cpf})`, {
       colaborador: nome, cpf, empresa: currentUser.empresaNome || currentUser.empresaId, driveLink
     });
+    abrirWhatsCadastro({ empresa: currentUser.empresaNome || currentUser.empresaId, nome, cpf, endereco, telefone, driveLink, dataHora: new Date().toLocaleString('pt-BR') });
     toast('✅ Colaborador cadastrado e enviado ao G.R. para análise.', 'success');
     clearColForm();
   }).catch(e => toast('Erro ao salvar: ' + e.message, 'error'));
@@ -2599,6 +2617,28 @@ function renderColDriveInfo() {
   } else {
     el.innerHTML = `<div style="padding:8px 12px;background:var(--danger-bg);color:var(--danger);border-radius:var(--radius);font-size:12px">⚠️ Sua empresa ainda não tem pasta de documentos configurada. O cadastro ficará bloqueado até o administrador cadastrar o link em Empresas.</div>`;
   }
+}
+
+// ─── WhatsApp: enviar dados do cadastro (número fixo) ────────────────────────
+const WHATS_NUMERO = '5547997500664'; // 47 99750-0664
+function montarMsgWhatsCadastro(d) {
+  return `*NOVO COLABORADOR — PORTO EXPRESS*\n\n`
+    + `🏢 Empresa: ${d.empresa || '—'}\n`
+    + `👤 Nome: ${d.nome || '—'}\n`
+    + `🪪 CPF: ${d.cpf || '—'}\n`
+    + `📍 Endereço: ${d.endereco || '—'}\n`
+    + `📲 Telefone: ${d.telefone || '—'}\n`
+    + `🗃️ Documentos (Drive): ${d.driveLink || '—'}\n`
+    + `🛡️ Status: EM ANÁLISE (G.R.)\n`
+    + `🕒 ${d.dataHora || ''}`;
+}
+function abrirWhatsCadastro(d) {
+  const msg = montarMsgWhatsCadastro(d);
+  const bodyEl = document.getElementById('whats-body');
+  const linkEl = document.getElementById('whats-link');
+  if (bodyEl) bodyEl.textContent = msg;
+  if (linkEl) linkEl.href = 'https://wa.me/' + WHATS_NUMERO + '?text=' + encodeURIComponent(msg);
+  openModal('modal-whats');
 }
 
 function renderColLista() {
