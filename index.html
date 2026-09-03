@@ -701,7 +701,7 @@ tbody tr:hover { background: var(--gray-50); }
 /* Acompanhamento: full width */
 .content-area.acomp-full { max-width: 100% !important; padding: 16px 20px; }
 .acomp-table th, .acomp-table td { font-size: 11px !important; padding: 5px 7px !important; white-space: nowrap; }
-.acomp-table .td-name { font-size: 11px !important; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.acomp-table .td-name { font-size: 11px !important; max-width: 140px; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
 .acomp-table .btn-sm  { font-size: 10px !important; padding: 3px 8px !important; }
 #acomp-container .table-wrap { overflow-x: visible; }
 @media (max-width: 1400px) { #acomp-container .table-wrap { overflow-x: auto; } }
@@ -769,6 +769,7 @@ tbody tr:hover { background: var(--gray-50); }
     <div class="header-right">
       <span class="user-badge" id="header-user">—</span>
       <button id="btn-tv-empresa" class="btn btn-sm btn-navy" style="display:none;text-decoration:none" onclick="abrirTelaTVEmpresa()">📺 Abrir Tela TV</button>
+      <button id="btn-atualizar-empresa" class="btn btn-sm btn-yellow" style="display:none" onclick="atualizarApp()" title="Recarrega o sistema na versão mais recente (equivale a Ctrl+F5)">🔄 Atualizar</button>
       <button class="btn-logout" onclick="doLogout()">Sair</button>
     </div>
   </header>
@@ -2163,8 +2164,34 @@ function buildNavTabs() {
   // Botão Abrir Tela TV: somente empresas terceirizadas
   const btnTv = document.getElementById('btn-tv-empresa');
   if (btnTv) btnTv.style.display = currentUser.role === 'empresa' ? 'inline-flex' : 'none';
+  const btnAtualizar = document.getElementById('btn-atualizar-empresa');
+  if (btnAtualizar) btnAtualizar.style.display = currentUser.role === 'empresa' ? 'inline-flex' : 'none';
   if (currentUser.role === 'empresa') {
     document.getElementById('empresa-nome-sub').textContent = currentUser.empresaNome;
+  }
+}
+
+// Botão Atualizar (empresas): recarrega o sistema forçando a versão mais nova (equivale a Ctrl+F5)
+async function atualizarApp() {
+  try { toast('🔄 Atualizando o sistema...', 'success'); } catch (e) {}
+  try {
+    if (window.caches && caches.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch (e) {}
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  } catch (e) {}
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('_v', Date.now().toString());
+    window.location.replace(url.toString());
+  } catch (e) {
+    window.location.reload(true);
   }
 }
 
@@ -4115,6 +4142,12 @@ function aceitarAlteracaoIndicacao(nid, acompId, novoColId, novoColNome) {
   if (novoColId && novoColId !== 'undefined') {
     updates['acompanhamento/' + acompId + '/colId'] = novoColId;
     updates['acompanhamento/' + acompId + '/colNome'] = novoColNome;
+    // Atualiza também o CPF para que a COR do status (G.R.) acompanhe o novo colaborador
+    const _aRecCpf = STATE.acompanhamento[acompId] || {};
+    const _novoCol = (STATE.colaboradores[_aRecCpf.empresaId] || {})[novoColId];
+    if (_novoCol && _novoCol.cpf) {
+      updates['acompanhamento/' + acompId + '/colCPF'] = _novoCol.cpf;
+    }
   }
   // Garantir que o motorista da vaga seja sempre preservado
   const aRec = STATE.acompanhamento[acompId] || {};
@@ -5330,6 +5363,11 @@ function saveGRStatus() {
 }
 
 // ─── AVISOS ──────────────────────────────────────────────────────────────────
+// Avisos permanecem ativos por apenas 24h após a criação.
+const AVISO_TTL_MS = 24 * 60 * 60 * 1000;
+function avisoExpirado(a) {
+  return !!(a && a.criadoEm) && (Date.now() - a.criadoEm) > AVISO_TTL_MS;
+}
 function renderAvisosBanner() {
   const banner  = document.getElementById('aviso-banner');
   const textoEl = document.getElementById('aviso-banner-texto');
@@ -5337,6 +5375,7 @@ function renderAvisosBanner() {
   if (currentUser?.role !== 'empresa') { banner.style.display = 'none'; return; }
   const ativos = Object.entries(STATE.avisos || {}).filter(([, a]) => {
     if (!a.ativo) return false;
+    if (avisoExpirado(a)) return false;
     if (a.empresas && Object.keys(a.empresas).length > 0) {
       return a.empresas[currentUser.empresaId];
     }
@@ -5384,7 +5423,7 @@ function renderAvisosAdmin() {
         <div style="font-size:11px;color:var(--gray-400);margin-top:4px">
           ${tipoLabel[a.tipo] || a.tipo || ''}
           &nbsp;|&nbsp; Criado em ${a.criadoEm ? new Date(a.criadoEm).toLocaleString('pt-BR') : '—'}
-          &nbsp;|&nbsp; <span style="font-weight:600;color:${a.ativo ? '#22c55e' : '#9ca3af'}">${a.ativo ? '✅ Ativo' : '⏸ Inativo'}</span>
+          &nbsp;|&nbsp; <span style="font-weight:600;color:${avisoExpirado(a) ? '#9ca3af' : (a.ativo ? '#22c55e' : '#9ca3af')}">${avisoExpirado(a) ? '⏳ Expirado (24h)' : (a.ativo ? '✅ Ativo' : '⏸ Inativo')}</span>
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
