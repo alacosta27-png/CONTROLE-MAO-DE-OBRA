@@ -1169,9 +1169,9 @@ tbody tr:hover { background: var(--gray-50); }
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>CPF / RG</th><th>Nome</th><th>Empresa</th><th>Status G.R.</th><th>Motivo</th><th>Atualizado em</th><th>Ações</th>
+            <th>CPF / RG</th><th>Nome</th><th>Empresa</th><th>Status G.R.</th><th>Motivo</th><th>Atualizado em</th><th>Validade Doc.</th><th>Ações</th>
           </tr></thead>
-          <tbody id="gr-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador cadastrado.</td></tr></tbody>
+          <tbody id="gr-tbody"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador cadastrado.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -5311,7 +5311,7 @@ function renderGR() {
   });
 
   if (!visible.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador encontrado.</td></tr>';
     return;
   }
 
@@ -5326,6 +5326,17 @@ function renderGR() {
     const cpfEsc = (c.cpf || '').replace(/'/g, "\\'");
     const nomeEsc = (c.nome || '').replace(/'/g, "\\'");
     const _dLink = c.driveLink || (gr && gr.driveLink) || '';
+    const _vd = (gr && gr.validadeDoc) ? gr.validadeDoc : '';
+    let _vdBorder = 'var(--gray-200)', _vdExtra = '', _vdTag = '', _vdTagCor = 'var(--gray-400)';
+    if (_vd) {
+      const _hoje = new Date(); _hoje.setHours(0,0,0,0);
+      const _dv = new Date(_vd + 'T00:00:00');
+      const _diff = Math.round((_dv - _hoje) / 86400000);
+      if (_diff < 0) { _vdBorder = '#ef4444'; _vdExtra = 'background:#FEF2F2;color:#b91c1c;font-weight:700'; _vdTag = '🔴 VENCIDO'; _vdTagCor = '#ef4444'; }
+      else if (_diff <= 30) { _vdBorder = '#f59e0b'; _vdTag = `⚠️ faltam ${_diff}d`; _vdTagCor = '#f59e0b'; }
+      else { _vdBorder = '#22c55e'; _vdTag = '✅ válido'; _vdTagCor = '#22c55e'; }
+    }
+    const _vdCell = `<input type="date" value="${_vd}" onchange="saveGRValidade('${cpfEsc}','${cid}',this.value)" style="padding:5px 8px;border:1px solid ${_vdBorder};border-radius:8px;font-family:inherit;font-size:12px;${_vdExtra}">` + (_vd ? `<div style="font-size:10px;color:${_vdTagCor};margin-top:3px;font-weight:700">${_vdTag}</div>` : '');
     return `<tr>
       <td style="font-family:JetBrains Mono,monospace;font-size:12px">${c.cpf || c.rg || '—'}</td>
       <td><strong>${c.nome || '—'}</strong>${c.telefone ? `<div style="font-size:11px;color:var(--gray-500)">📲 ${c.telefone}</div>` : ''}${c.endereco ? `<div style="font-size:11px;color:var(--gray-400)">📍 ${c.endereco}</div>` : ''}</td>
@@ -5333,6 +5344,7 @@ function renderGR() {
       <td><span style="background:${stCor};color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">${stIcon} ${st}</span></td>
       <td style="font-size:12px;color:var(--gray-500)">${gr ? (gr.motivo || '—') : '—'}</td>
       <td style="font-size:12px;color:var(--gray-400)">${gr && gr.atualizadoEm ? new Date(gr.atualizadoEm).toLocaleString('pt-BR') : '—'}</td>
+      <td>${_vdCell}</td>
       <td style="white-space:nowrap">${_dLink ? `<a href="${_dLink}" target="_blank" rel="noopener" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;text-decoration:none">📎 Docs</a> ` : ''}<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="openGRStatus('${cid}','${cpfEsc}','${nomeEsc}')">✏️ Editar</button></td>
     </tr>`;
   }).join('');
@@ -5359,6 +5371,16 @@ function saveGRStatus() {
   const key = (cpf || colId).replace(/\D/g, '') || colId;
   db.ref('grStatus/' + key).set({ colId, cpf, status, motivo, atualizadoEm: Date.now() })
     .then(() => { toast('Status G.R. atualizado!'); closeModal('modal-gr-status'); renderGR(); })
+    .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+
+// Validade da documentação (preenchida manualmente pelo G.R.)
+function saveGRValidade(cpf, colId, val) {
+  const key = (cpf || colId).replace(/\D/g, '') || colId;
+  const existing = getGRStatus(cpf) || {};
+  const upd = { validadeDoc: val || null, colId, cpf, status: existing.status || 'LIBERADO', validadeAtualizadaEm: Date.now() };
+  db.ref('grStatus/' + key).update(upd)
+    .then(() => { toast(val ? '📅 Validade da documentação salva!' : 'Validade removida.'); renderGR(); })
     .catch(e => toast('Erro: ' + e.message, 'error'));
 }
 
