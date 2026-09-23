@@ -1169,9 +1169,9 @@ tbody tr:hover { background: var(--gray-50); }
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>CPF / RG</th><th>Nome</th><th>Empresa</th><th>Status G.R.</th><th>Motivo</th><th>Atualizado em</th><th>Validade Doc.</th><th>Ações</th>
+            <th>CPF / RG</th><th>Nome</th><th>Empresa</th><th>Telefone</th><th>Status G.R.</th><th>Motivo</th><th>Atualizado em</th><th>Validade Doc.</th><th>Ações</th>
           </tr></thead>
-          <tbody id="gr-tbody"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador cadastrado.</td></tr></tbody>
+          <tbody id="gr-tbody"><tr><td colspan="9" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador cadastrado.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -5311,7 +5311,7 @@ function renderGR() {
   });
 
   if (!visible.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador encontrado.</td></tr>';
     return;
   }
 
@@ -5339,8 +5339,9 @@ function renderGR() {
     const _vdCell = `<input type="date" value="${_vd}" onchange="saveGRValidade('${cpfEsc}','${cid}',this.value)" style="padding:5px 8px;border:1px solid ${_vdBorder};border-radius:8px;font-family:inherit;font-size:12px;${_vdExtra}">` + (_vd ? `<div style="font-size:10px;color:${_vdTagCor};margin-top:3px;font-weight:700">${_vdTag}</div>` : '');
     return `<tr>
       <td style="font-family:JetBrains Mono,monospace;font-size:12px">${c.cpf || c.rg || '—'}</td>
-      <td><strong>${c.nome || '—'}</strong>${c.telefone ? `<div style="font-size:11px;color:var(--gray-500)">📲 ${c.telefone}</div>` : ''}${c.endereco ? `<div style="font-size:11px;color:var(--gray-400)">📍 ${c.endereco}</div>` : ''}</td>
+      <td><strong>${c.nome || '—'}</strong>${c.endereco ? `<div style="font-size:11px;color:var(--gray-400)">📍 ${c.endereco}</div>` : ''}</td>
       <td>${emp ? emp.nome : '—'}</td>
+      <td style="font-family:JetBrains Mono,monospace;font-size:12px;font-weight:600">📲 ${c.telefone || (gr && gr.telefone) || '—'}</td>
       <td><span style="background:${stCor};color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">${stIcon} ${st}</span></td>
       <td style="font-size:12px;color:var(--gray-500)">${gr ? (gr.motivo || '—') : '—'}</td>
       <td style="font-size:12px;color:var(--gray-400)">${gr && gr.atualizadoEm ? new Date(gr.atualizadoEm).toLocaleString('pt-BR') : '—'}</td>
