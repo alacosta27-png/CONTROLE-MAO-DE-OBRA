@@ -1571,6 +1571,25 @@ tbody tr:hover { background: var(--gray-50); }
   </div>
 </div>
 <!-- Modal: Admin — Editar Ponto -->
+<div class="modal-overlay" id="modal-rateio">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">➗ Dividir entre operações</div>
+      <button class="modal-close" onclick="closeModal('modal-rateio')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="rateio-info" style="font-size:13px;color:var(--gray-600);margin-bottom:8px"></div>
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px">Ajuste a porcentagem de cada operação (a soma deve ser <strong>100%</strong>). Isso <strong>não altera</strong> os valores exibidos no acompanhamento — apenas distribui o custo e as horas entre as operações nos relatórios.</div>
+      <div id="rateio-list" style="max-height:46vh;overflow:auto;margin:8px 0"></div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding-top:10px;border-top:1px solid var(--gray-200);font-size:13px;font-weight:700">Total: <span id="rateio-total">0%</span></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-rateio')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveRateio()">Salvar divisão</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-acomp-edit">
   <div class="modal" style="max-width:660px">
     <div class="modal-header">
@@ -3490,7 +3509,13 @@ function renderAcompanhamento() {
   const opCorMap = {};
   todasOps.forEach((op, i) => { opCorMap[op] = OP_CORES[i % OP_CORES.length]; });
 
-  container.innerHTML = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a)).map(([data, rows]) => {
+  let _datasOrdenadas = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a));
+  let _aviso15 = '';
+  if (!filterDataVal && _datasOrdenadas.length > 15) {
+    _aviso15 = `<div style="padding:10px 14px;background:var(--info-bg);border-radius:var(--radius);font-size:12px;color:var(--navy);margin-bottom:12px">📅 Exibindo os <strong>últimos 15 dias</strong>. Há ${_datasOrdenadas.length - 15} dia(s) anteriores — use o <strong>filtro de data</strong> no topo para vê-los.</div>`;
+    _datasOrdenadas = _datasOrdenadas.slice(0, 15);
+  }
+  container.innerHTML = _aviso15 + _datasOrdenadas.map(([data, rows]) => {
     // Ordenar pela Operação e depois por H. Inicial
     const rowsOrdenados = [...rows].sort(([,a],[,b]) => {
       const oo = (a.opNome||'').localeCompare(b.opNome||'', 'pt-BR');
@@ -3711,6 +3736,7 @@ function renderAcompRow(id, a, opCor) {
   if (currentUser.role === 'admin') {
     acoes = `<div style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>
+      <button class="btn btn-ghost btn-sm" onclick="openRateio('${id}')">➗ 2ª Op.</button>
       ${temDesacordoPendente ? `<button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning)" onclick="renderSugestoesPendentes();openModal('modal-sugestoes')">⚠️ Ver sugestão</button>` : ''}
     </div>`;
   } else if (a.empresaId === currentUser.empresaId ||
@@ -3737,7 +3763,13 @@ function renderAcompRow(id, a, opCor) {
     <td><span class="badge ${statusBadge}" style="font-size:10px">${a.status||'Em escolha'}</span></td>
     <td class="td-name">${grDot(a.colCPF)}${a.colNome}${desacordoCell ? ' '+desacordoCell : ''}</td>
     <td style="font-size:11px;color:var(--gray-600)">${a.empresaNome||'—'}</td>
-    <td><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span></td>
+    <td>${(() => {
+      const _rt = Array.isArray(a.rateio) ? a.rateio.filter(r => (r.pct||0) > 0) : [];
+      if (_rt.length >= 2) {
+        return _rt.map(r => `<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${opBadgeStyle};display:inline-block;margin:1px">${r.opNome} <span style="opacity:.75">${r.pct}%</span></span>`).join(' ');
+      }
+      return `<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span>`;
+    })()}</td>
     <td style="font-size:11px">${(() => {
       let mn = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '';
       if (!mn && a.vagaId && STATE.vagas[a.vagaId]) {
@@ -3757,7 +3789,72 @@ function renderAcompRow(id, a, opCor) {
   </tr>`;
 }
 
-// ===================== AVALIAÇÃO =====================
+// ===================== RATEIO DE OPERAÇÕES ====================================
+let currentRateioId = null;
+function openRateio(id) {
+  currentRateioId = id;
+  const a = STATE.acompanhamento[id];
+  if (!a) { toast('Registro não encontrado.', 'error'); return; }
+  const infoEl = document.getElementById('rateio-info');
+  if (infoEl) infoEl.innerHTML = `<strong>${a.colNome||''}</strong> — ${formatDate(a.data||'')} · Operação principal: <strong>${a.opNome||'—'}</strong>`;
+  const ops = Object.entries(STATE.operacoes)
+    .filter(([,op]) => op.ativa === 'sim' || op.ativa == null)
+    .map(([,op]) => ({ nome: op.nome, cc: op.cc||'' }));
+  const nomesSet = new Set(ops.map(o => (o.nome||'').trim().toUpperCase()));
+  if (a.opNome && !nomesSet.has(a.opNome.trim().toUpperCase())) ops.push({ nome: a.opNome, cc: a.opCC||'' });
+  ops.sort((x,y) => (x.nome||'').localeCompare(y.nome||'', 'pt-BR'));
+  const pref = {};
+  if (Array.isArray(a.rateio)) a.rateio.forEach(r => { pref[(r.opNome||'').trim().toUpperCase()] = r.pct||0; });
+  else if (a.opNome) pref[a.opNome.trim().toUpperCase()] = 100;
+  const list = document.getElementById('rateio-list');
+  list.innerHTML = ops.map(o => {
+    const pct = pref[(o.nome||'').trim().toUpperCase()] || 0;
+    return `<div class="rateio-item" data-op="${o.nome}" data-cc="${o.cc}" style="display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid var(--gray-100)">
+      <div style="min-width:150px;font-size:13px;font-weight:600">${o.nome}${o.cc ? ` <span style="color:var(--gray-400);font-size:11px;font-weight:400">${o.cc}</span>` : ''}</div>
+      <input type="range" min="0" max="100" step="5" value="${pct}" class="rt-range" oninput="rateioSync(this)" style="flex:1">
+      <input type="number" min="0" max="100" value="${pct}" class="rt-num" oninput="rateioSync(this)" style="width:62px;padding:4px 6px;border:1px solid var(--gray-200);border-radius:6px;font-family:inherit;font-size:13px">
+      <span style="font-size:12px;color:var(--gray-500)">%</span>
+    </div>`;
+  }).join('');
+  rateioTotal();
+  openModal('modal-rateio');
+}
+function rateioSync(el) {
+  const item = el.closest('.rateio-item');
+  let v = parseInt(el.value); if (isNaN(v) || v < 0) v = 0; if (v > 100) v = 100;
+  item.querySelector('.rt-range').value = v;
+  item.querySelector('.rt-num').value = v;
+  rateioTotal();
+}
+function rateioTotal() {
+  let tot = 0;
+  document.querySelectorAll('#rateio-list .rt-num').forEach(n => tot += parseInt(n.value) || 0);
+  const el = document.getElementById('rateio-total');
+  if (el) { el.textContent = tot + '%'; el.style.color = tot === 100 ? 'var(--success)' : 'var(--danger)'; }
+  return tot;
+}
+function saveRateio() {
+  const id = currentRateioId; if (!id) return;
+  const arr = [];
+  document.querySelectorAll('#rateio-list .rateio-item').forEach(item => {
+    const pct = parseInt(item.querySelector('.rt-num').value) || 0;
+    if (pct > 0) arr.push({ opNome: item.dataset.op, opCC: item.dataset.cc || '', pct });
+  });
+  const tot = arr.reduce((s, r) => s + r.pct, 0);
+  if (tot !== 100) { toast('A soma das porcentagens deve ser 100%. Atual: ' + tot + '%', 'error'); return; }
+  const payload = (arr.length >= 2) ? arr : null;
+  db.ref('acompanhamento/' + id + '/rateio').set(payload)
+    .then(() => {
+      const a = STATE.acompanhamento[id] || {};
+      registrarTransacao('rateio', `Rateio de operações: ${a.colNome||''} (${formatDate(a.data||'')}) — ${arr.map(r => r.opNome + ' ' + r.pct + '%').join(', ')}`);
+      toast(payload ? '➗ Divisão de operações salva!' : 'Operação única — rateio removido.', 'success');
+      closeModal('modal-rateio');
+      renderAcompanhamento();
+    })
+    .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+
+// ===================== AVALIAÇÃO =====================================
 let currentAvaliacaoId = null;
 let currentStarVal = 0;
 
@@ -4599,15 +4696,20 @@ function renderResumoAdmin() {
   // Resumo por Operação/CC
   const porOp = {};
   items.forEach(([,a]) => {
-    const key = `${a.opNome||'—'}|${a.opCC||'—'}`;
-    if (!porOp[key]) porOp[key] = { opNome: a.opNome||'—', opCC: a.opCC||'—', cols: 0, horasMin: 0, valor: 0 };
-    porOp[key].cols++;
-    if (a.chegada && a.saida) {
-      const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
-      porOp[key].horasMin += t;
-      const { valor } = calcHoras(a);
-      porOp[key].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
-    }
+    const temPonto = a.chegada && a.saida;
+    const t = temPonto ? (timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00')) : 0;
+    const vNum = temPonto ? (parseFloat(calcHoras(a).valor.replace('R$ ','').replace(',','.')) || 0) : 0;
+    const _rt = Array.isArray(a.rateio) ? a.rateio.filter(r => (r.pct||0) > 0) : [];
+    const destinos = _rt.length >= 2
+      ? _rt.map(r => ({ opNome: r.opNome||'—', opCC: r.opCC||'—', frac: (r.pct||0)/100 }))
+      : [{ opNome: a.opNome||'—', opCC: a.opCC||'—', frac: 1 }];
+    destinos.forEach(d => {
+      const key = `${d.opNome}|${d.opCC}`;
+      if (!porOp[key]) porOp[key] = { opNome: d.opNome, opCC: d.opCC, cols: 0, horasMin: 0, valor: 0 };
+      porOp[key].cols++;                    // conta 1 em cada operação
+      porOp[key].horasMin += t * d.frac;    // horas rateadas por %
+      porOp[key].valor += vNum * d.frac;    // custo rateado por %
+    });
   });
 
   const tabelaOp = `
@@ -5153,8 +5255,13 @@ function renderDashboard() {
     qtFunc[a.funcao || '—'] = (qtFunc[a.funcao || '—'] || 0) + 1;
     custoData[a.data] = (custoData[a.data] || 0) + valorTotal;
     horasEmp[empN]  = (horasEmp[empN]  || 0) + hTrabMin / 60;
-    const opN = a.opNome || (a.opCC ? a.opCC : '—');
-    custoOp[opN]    = (custoOp[opN]    || 0) + valorTotal;
+    const _rtd = Array.isArray(a.rateio) ? a.rateio.filter(r => (r.pct||0) > 0) : [];
+    if (_rtd.length >= 2) {
+      _rtd.forEach(r => { const k = r.opNome || '—'; custoOp[k] = (custoOp[k] || 0) + valorTotal * ((r.pct||0)/100); });
+    } else {
+      const opN = a.opNome || (a.opCC ? a.opCC : '—');
+      custoOp[opN]    = (custoOp[opN]    || 0) + valorTotal;
+    }
     const mes = a.data ? a.data.slice(0, 7) : '?';
     custoMes[mes]   = (custoMes[mes]   || 0) + valorTotal;
   });
