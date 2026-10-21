@@ -2789,6 +2789,7 @@ function importCSVRows(rows) {
     // Bloquear mesmo nome/CPF já cadastrado em outra empresa
     const dup = findDuplicidadeOutraEmpresa(r.cpf, r.nome, currentUser.empresaId);
     if (dup.length) { bloqueados.push(`${r.nome} (${dup[0].empresaNome})`); return; }
+    if (checkGRBloqueio(r.cpf)) { bloqueados.push(`${r.nome} (BLOQUEADO G.R.)`); return; }
     const opEntry = Object.entries(ops).find(([,op]) => op.nome.toUpperCase() === (r.operacao||'').toUpperCase());
     const key = db.ref(`colaboradores/${currentUser.empresaId}`).push().key;
     const cpfDig = (r.cpf||'').replace(/\D/g,'');
@@ -3734,9 +3735,9 @@ function renderAcompRow(id, a, opCor) {
   // Ações por role
   let acoes = '—';
   if (currentUser.role === 'admin') {
-    acoes = `<div style="display:flex;gap:4px;flex-wrap:wrap">
+    acoes = `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap;white-space:nowrap">
       <button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>
-      <button class="btn btn-ghost btn-sm" onclick="openRateio('${id}')">➗ 2ª Op.</button>
+      <button class="btn btn-ghost btn-sm" onclick="openRateio('${id}')">2ª OP</button>
       ${temDesacordoPendente ? `<button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning)" onclick="renderSugestoesPendentes();openModal('modal-sugestoes')">⚠️ Ver sugestão</button>` : ''}
     </div>`;
   } else if (a.empresaId === currentUser.empresaId ||
@@ -3759,7 +3760,7 @@ function renderAcompRow(id, a, opCor) {
     : '';
 
   return `<tr style="${temDesacordoPendente && currentUser.role==='admin' ? 'background:var(--warning-bg)' : corStyle}">
-    <td>${acoes}</td>
+    <td style="white-space:nowrap;min-width:150px">${acoes}</td>
     <td><span class="badge ${statusBadge}" style="font-size:10px">${a.status||'Em escolha'}</span></td>
     <td class="td-name">${grDot(a.colCPF)}${a.colNome}${desacordoCell ? ' '+desacordoCell : ''}</td>
     <td style="font-size:11px;color:var(--gray-600)">${a.empresaNome||'—'}</td>
@@ -4235,6 +4236,11 @@ function aceitarExclusaoIndicacao(nid, acompId) {
 
 function aceitarAlteracaoIndicacao(nid, acompId, novoColId, novoColNome) {
   const updates = {};
+  if (novoColId && novoColId !== 'undefined') {
+    const _aRec0 = STATE.acompanhamento[acompId] || {};
+    const _nc0 = (STATE.colaboradores[_aRec0.empresaId] || {})[novoColId];
+    if (_nc0 && checkGRBloqueio(_nc0.cpf)) { toast(`🚫 ${novoColNome||_nc0.nome} está BLOQUEADO pelo G.R. — alteração não aplicada.`, 'error'); return; }
+  }
   updates['notificacoes/' + nid + '/status'] = 'aceito';
   if (novoColId && novoColId !== 'undefined') {
     updates['acompanhamento/' + acompId + '/colId'] = novoColId;
@@ -4482,7 +4488,7 @@ function openGerenciarIndicacao(acompId) {
 
   // Popular lista de colaboradores (exceto o atual)
   const empId = currentUser.empresaId;
-  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([id,c]) => id !== a.colId && (c.status||'ativo') === 'ativo');
+  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([id,c]) => id !== a.colId && (c.status||'ativo') === 'ativo' && !checkGRBloqueio(c.cpf));
   const sel = document.getElementById('gi-col-novo');
   sel.innerHTML = '<option value="">Manter o atual</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
   openModal('modal-gerenciar-indicacao');
@@ -4494,6 +4500,7 @@ function solicitarEdicaoIndicacao() {
   if (!motivo.trim()) { toast('Informe o motivo da solicitação.', 'error'); return; }
   const empId = currentUser.empresaId;
   const novoCol = novoColId ? (STATE.colaboradores[empId]||{})[novoColId] : null;
+  if (novoCol && checkGRBloqueio(novoCol.cpf)) { toast(`🚫 ${novoCol.nome} está BLOQUEADO pelo G.R. e não pode ser indicado.`, 'error'); return; }
   const notif = {
     tipo: 'edicao_indicacao',
     acompId: currentIndicacaoId,
