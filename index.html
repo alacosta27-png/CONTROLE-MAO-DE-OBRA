@@ -1206,6 +1206,49 @@ tbody tr:hover { background: var(--gray-50); }
       <div id="confirmacoes-container"></div>
     </div>
 
+    <!-- ===================== PÁGINA: DIÁRIO DE OCORRÊNCIAS ===================== -->
+    <div id="page-ocorrencias" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📓 Diário de Ocorrências</div>
+          <div class="section-sub">Registro e análise de ocorrências por fornecedor</div>
+        </div>
+      </div>
+
+      <div id="ocor-form-wrap" class="card" style="margin-bottom:16px">
+        <div class="card-title">Registrar ocorrência</div>
+        <div class="form-grid" style="grid-template-columns:repeat(4,1fr);gap:12px">
+          <div class="form-group"><label>Data *</label><input type="date" id="ocor-data"></div>
+          <div class="form-group" style="grid-column:span 2"><label>Fornecedor *</label><select id="ocor-empresa"></select></div>
+          <div class="form-group"><label>Quantidade</label><input type="number" id="ocor-qtd" min="1" value="1"></div>
+          <div class="form-group" style="grid-column:span 2"><label>Tipo *</label><select id="ocor-tipo"></select></div>
+          <div class="form-group"><label>Hora</label><input type="time" id="ocor-hora"></div>
+          <div class="form-group"><label>Operação / C. Custo</label><select id="ocor-operacao"></select></div>
+          <div class="form-group" style="grid-column:1/-1"><label>Observação</label><input type="text" id="ocor-obs" placeholder="Detalhe do caso (opcional)"></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-navy" onclick="saveOcorrencia()">📓 Registrar</button></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="margin:0"><label>De</label><input type="date" id="ocor-filtro-inicio" onchange="renderOcorrencias()"></div>
+          <div class="form-group" style="margin:0"><label>Até</label><input type="date" id="ocor-filtro-fim" onchange="renderOcorrencias()"></div>
+          <div class="form-group" id="ocor-filtro-empresa-wrap" style="margin:0;min-width:180px"><label>Fornecedor</label><select id="ocor-filtro-empresa" onchange="renderOcorrencias()"></select></div>
+          <div class="form-group" style="margin:0;min-width:180px"><label>Tipo</label><select id="ocor-filtro-tipo" onchange="renderOcorrencias()"></select></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📊 Análise por Fornecedor</div>
+        <div id="ocor-analise"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Lançamentos</div>
+        <div id="ocor-lista"></div>
+      </div>
+    </div>
+
   </div><!-- content-area -->
 </div><!-- app-layout -->
 
@@ -1971,7 +2014,8 @@ let STATE = {
   avisos: {},
   adminLogins: {},
   transacoes: {},
-  confirmacoesDia: {}
+  confirmacoesDia: {},
+  ocorrencias: {}
 };
 let editEmpresaId = null;
 let editVagaId = null;
@@ -2140,6 +2184,7 @@ function buildNavTabs() {
     { id: 'page-motoristas', label: 'Motoristas' },
     { id: 'page-gr', label: '🛡️ G.R.' },
     { id: 'page-confirmacoes', label: '✅ Confirmações' },
+    { id: 'page-ocorrencias', label: '📓 Diário' },
     { id: 'page-avisos', label: '📢 Avisos' },
     ...(isSuperAdmin ? [
       { id: 'page-admin-logins', label: '🔐 Logins' },
@@ -2157,12 +2202,14 @@ function buildNavTabs() {
         { id: 'page-mural', label: 'Mural de Vagas' },
         { id: 'page-acompanhamento', label: 'Acompanhamento' },
         { id: 'page-motoristas', label: '🚛 Motoristas' },
+        { id: 'page-ocorrencias', label: '📓 Ocorrências' },
         { id: 'page-avisos', label: '📢 Avisos' },
       ]
     : [
         { id: 'page-mural', label: 'Mural de Vagas' },
         { id: 'page-colaboradores', label: 'Meus Colaboradores' },
         { id: 'page-acompanhamento', label: 'Acompanhamento' },
+        { id: 'page-ocorrencias', label: '📓 Ocorrências' },
       ];
 
   tabs.forEach(t => {
@@ -2241,6 +2288,7 @@ function switchPage(pageId) {
   if (pageId === 'page-motoristas') renderMotoristas();
   if (pageId === 'page-gr') renderGR();
   if (pageId === 'page-confirmacoes') renderConfirmacoes();
+  if (pageId === 'page-ocorrencias') renderOcorrencias();
   if (pageId === 'page-avisos') renderAvisosAdmin();
   if (pageId === 'page-admin-logins') renderAdminLogins();
   if (pageId === 'page-transacoes') renderLog();
@@ -2342,6 +2390,10 @@ function listenFirebase() {
     STATE.confirmacoesDia = snap.val() || {};
     if (document.getElementById('page-acompanhamento')?.classList.contains('active')) renderAcompanhamento();
     if (document.getElementById('page-confirmacoes')?.classList.contains('active')) renderConfirmacoes();
+  });
+  db.ref('ocorrencias').on('value', snap => {
+    STATE.ocorrencias = snap.val() || {};
+    if (document.getElementById('page-ocorrencias')?.classList.contains('active')) renderOcorrencias();
   });
   const colPath = currentUser.role === 'empresa'
     ? 'colaboradores/' + currentUser.empresaId
@@ -5321,6 +5373,167 @@ function renderDashboard() {
     s.onload = drawCharts;
     document.head.appendChild(s);
   }
+}
+
+// ===================== DIÁRIO DE OCORRÊNCIAS ==================================
+const OCOR_TIPOS = [
+  { key:'VAGA_NAO_PREENCHIDA', label:'Vaga não preenchida', sinal:'neg', cor:'#ef4444' },
+  { key:'VAGA_NAO_REPOSTA',    label:'Vaga não reposta',    sinal:'neg', cor:'#f97316' },
+  { key:'ATRASO',              label:'Atraso',              sinal:'neg', cor:'#eab308' },
+  { key:'REPOSICAO',           label:'Reposição',           sinal:'pos', cor:'#22c55e' },
+  { key:'PEDIDO_EM_CIMA',      label:'Pedido em cima do horário (<3h)', sinal:'pos', cor:'#3b82f6' },
+];
+function ocorTipo(key){ return OCOR_TIPOS.find(t=>t.key===key) || { key, label:key, sinal:'neg', cor:'#64748b' }; }
+
+function populateOcorSelects() {
+  const empsAtivas = Object.entries(STATE.empresas).filter(([,e])=>e.status==='ativa').sort(([,a],[,b])=>(a.nome||'').localeCompare(b.nome||'','pt-BR'));
+  const empOpts = empsAtivas.map(([id,e])=>`<option value="${id}">${e.nome}</option>`).join('');
+  [['ocor-empresa','Selecione o fornecedor...'],['ocor-filtro-empresa','Todos os fornecedores']].forEach(([id,ph])=>{
+    const s=document.getElementById(id); if(!s) return; const cur=s.value; s.innerHTML=`<option value="">${ph}</option>`+empOpts; s.value=cur;
+  });
+  const ops = Object.entries(STATE.operacoes).filter(([,op])=>op.ativa==='sim'||op.ativa==null).sort(([,a],[,b])=>(a.nome||'').localeCompare(b.nome||'','pt-BR'));
+  const opOpts = ops.map(([,op])=>`<option value="${op.nome}">${op.nome}${op.cc?(' — '+op.cc):''}</option>`).join('');
+  { const s=document.getElementById('ocor-operacao'); if(s){ const cur=s.value; s.innerHTML='<option value="">—</option>'+opOpts; s.value=cur; } }
+  const tipoOpts = OCOR_TIPOS.map(t=>`<option value="${t.key}">${t.sinal==='neg'?'🔴':'🟢'} ${t.label}</option>`).join('');
+  [['ocor-tipo','Selecione o tipo...'],['ocor-filtro-tipo','Todos os tipos']].forEach(([id,ph])=>{
+    const s=document.getElementById(id); if(!s) return; const cur=s.value; s.innerHTML=`<option value="">${ph}</option>`+tipoOpts; s.value=cur;
+  });
+}
+
+function saveOcorrencia() {
+  if (currentUser.role !== 'admin') return;
+  const data = v('ocor-data'), empresaId = v('ocor-empresa'), tipo = v('ocor-tipo');
+  if (!data || !empresaId || !tipo) { toast('Preencha data, fornecedor e tipo.', 'error'); return; }
+  const emp = STATE.empresas[empresaId] || {};
+  const rec = {
+    data, tipo, empresaId, empresaNome: emp.nome || '',
+    qtd: parseInt(v('ocor-qtd')) || 1,
+    hora: v('ocor-hora') || '',
+    opNome: v('ocor-operacao') || '',
+    obs: (v('ocor-obs')||'').trim(),
+    registradoPor: currentUser.login || currentUser.label || 'admin',
+    criadoEm: Date.now()
+  };
+  db.ref('ocorrencias').push(rec).then(() => {
+    registrarTransacao('ocorrencia', `Ocorrência: ${ocorTipo(tipo).label} — ${emp.nome||''} (${formatDate(data)})`, { fornecedor: emp.nome||'', tipo, qtd: rec.qtd });
+    toast('📓 Ocorrência registrada!', 'success');
+    sv('ocor-empresa',''); sv('ocor-tipo',''); sv('ocor-qtd','1'); sv('ocor-hora',''); sv('ocor-operacao',''); sv('ocor-obs','');
+    renderOcorrencias();
+  }).catch(e => toast('Erro: '+e.message, 'error'));
+}
+
+function deleteOcorrencia(id) {
+  if (currentUser.role !== 'admin') return;
+  if (!confirm('Excluir esta ocorrência?')) return;
+  db.ref('ocorrencias/'+id).remove().then(()=>{ toast('Ocorrência excluída.'); renderOcorrencias(); });
+}
+
+function renderOcorrencias() {
+  const isAdmin = currentUser.role === 'admin';
+  const formWrap = document.getElementById('ocor-form-wrap');
+  if (formWrap) formWrap.style.display = isAdmin ? '' : 'none';
+  const empFilWrap = document.getElementById('ocor-filtro-empresa-wrap');
+  if (empFilWrap) empFilWrap.style.display = isAdmin ? '' : 'none';
+  const dataEl = document.getElementById('ocor-data');
+  if (dataEl && !dataEl.value) dataEl.value = new Date().toISOString().slice(0,10);
+  populateOcorSelects();
+
+  const fIni = v('ocor-filtro-inicio'), fFim = v('ocor-filtro-fim');
+  const fEmp = v('ocor-filtro-empresa'), fTipo = v('ocor-filtro-tipo');
+  let items = Object.entries(STATE.ocorrencias || {});
+  if (!isAdmin) {
+    const empId = currentUser.empresaId;
+    const empNome = (currentUser.empresaNome||'').trim().toUpperCase();
+    items = items.filter(([,o]) => o.empresaId === empId || (o.empresaNome||'').trim().toUpperCase() === empNome);
+  }
+  if (fIni) items = items.filter(([,o]) => (o.data||'') >= fIni);
+  if (fFim) items = items.filter(([,o]) => (o.data||'') <= fFim);
+  if (isAdmin && fEmp) items = items.filter(([,o]) => o.empresaId === fEmp);
+  if (fTipo) items = items.filter(([,o]) => o.tipo === fTipo);
+
+  // Análise por fornecedor
+  const porEmp = {};
+  items.forEach(([,o]) => {
+    const nome = o.empresaNome || (STATE.empresas[o.empresaId]||{}).nome || '—';
+    if (!porEmp[nome]) { porEmp[nome] = {}; OCOR_TIPOS.forEach(t=>porEmp[nome][t.key]=0); porEmp[nome]._neg=0; porEmp[nome]._pos=0; }
+    const q = parseInt(o.qtd)||1;
+    porEmp[nome][o.tipo] = (porEmp[nome][o.tipo]||0) + q;
+    if (ocorTipo(o.tipo).sinal==='neg') porEmp[nome]._neg += q; else porEmp[nome]._pos += q;
+  });
+  const empNomes = Object.keys(porEmp).sort((a,b)=> (porEmp[b]._pos-porEmp[b]._neg) - (porEmp[a]._pos-porEmp[a]._neg));
+
+  const analiseEl = document.getElementById('ocor-analise');
+  if (analiseEl) {
+    if (!empNomes.length) {
+      analiseEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📓</div><div class="empty-text">Nenhuma ocorrência no período/filtro selecionado.</div></div>';
+    } else {
+      const th = (txt,cor)=>`<th style="padding:7px 8px;font-size:10px;text-transform:uppercase;color:${cor||'var(--gray-600)'};border-bottom:1px solid var(--gray-200);text-align:center">${txt}</th>`;
+      const head = `<th style="padding:7px 10px;font-size:10px;text-transform:uppercase;color:var(--gray-600);border-bottom:1px solid var(--gray-200);text-align:left">Fornecedor</th>` +
+        OCOR_TIPOS.map(t=>th(t.label, t.cor)).join('') + th('Σ Neg','#ef4444')+th('Σ Pos','#22c55e')+th('Saldo');
+      const rows = empNomes.map(nome=>{
+        const d = porEmp[nome]; const saldo = d._pos - d._neg;
+        return `<tr>
+          <td style="padding:6px 10px;font-weight:600;font-size:12px">${nome}</td>
+          ${OCOR_TIPOS.map(t=>`<td style="padding:6px 8px;text-align:center;font-size:12px;${d[t.key]?('font-weight:700;color:'+t.cor):'color:var(--gray-300)'}">${d[t.key]||'–'}</td>`).join('')}
+          <td style="padding:6px 8px;text-align:center;font-weight:700;color:#ef4444">${d._neg||0}</td>
+          <td style="padding:6px 8px;text-align:center;font-weight:700;color:#22c55e">${d._pos||0}</td>
+          <td style="padding:6px 8px;text-align:center;font-weight:800;color:${saldo>0?'#16a34a':saldo<0?'#dc2626':'var(--gray-500)'}">${saldo>0?'+':''}${saldo}</td>
+        </tr>`;
+      }).join('');
+      analiseEl.innerHTML = `<div class="table-wrap"><table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--gray-50)">${head}</tr></thead><tbody>${rows}</tbody></table></div>
+        <div style="height:320px;margin-top:16px"><canvas id="ocor-chart"></canvas></div>`;
+      drawOcorChart(empNomes, porEmp);
+    }
+  }
+
+  const listaEl = document.getElementById('ocor-lista');
+  if (listaEl) {
+    const ord = items.sort(([,a],[,b]) => (b.data||'').localeCompare(a.data||'') || (b.criadoEm||0)-(a.criadoEm||0));
+    if (!ord.length) { listaEl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:13px">Nenhum lançamento.</div>'; }
+    else {
+      listaEl.innerHTML = `<div class="table-wrap"><table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--gray-50)">
+          <th style="padding:7px 10px;font-size:10px;text-transform:uppercase;color:var(--gray-600);text-align:left">Data</th>
+          <th style="padding:7px 10px;font-size:10px;text-transform:uppercase;color:var(--gray-600);text-align:left">Fornecedor</th>
+          <th style="padding:7px 10px;font-size:10px;text-transform:uppercase;color:var(--gray-600);text-align:left">Tipo</th>
+          <th style="padding:7px 10px;font-size:10px;text-transform:uppercase;color:var(--gray-600);text-align:center">Qtd</th>
+          <th style="padding:7px 10px;font-size:10px;text-transform:uppercase;color:var(--gray-600);text-align:left">Hora</th>
+          <th style="padding:7px 10px;font-size:10px;text-transform:uppercase;color:var(--gray-600);text-align:left">Operação</th>
+          <th style="padding:7px 10px;font-size:10px;text-transform:uppercase;color:var(--gray-600);text-align:left">Observação</th>
+          ${isAdmin?'<th></th>':''}
+        </tr></thead><tbody>${ord.map(([id,o])=>{
+          const t = ocorTipo(o.tipo);
+          return `<tr>
+            <td style="padding:6px 10px;font-size:12px;white-space:nowrap">${formatDate(o.data)}</td>
+            <td style="padding:6px 10px;font-size:12px;font-weight:600">${o.empresaNome||'—'}</td>
+            <td style="padding:6px 10px;font-size:12px"><span style="background:${t.cor};color:#fff;border-radius:10px;padding:2px 9px;font-size:11px;font-weight:700;white-space:nowrap">${t.sinal==='neg'?'▼':'▲'} ${t.label}</span></td>
+            <td style="padding:6px 10px;text-align:center;font-size:12px;font-weight:600">${o.qtd||1}</td>
+            <td style="padding:6px 10px;font-size:12px;font-family:JetBrains Mono,monospace">${o.hora||'—'}</td>
+            <td style="padding:6px 10px;font-size:12px">${o.opNome||'—'}</td>
+            <td style="padding:6px 10px;font-size:12px;color:var(--gray-600)">${o.obs||'—'}</td>
+            ${isAdmin?`<td style="padding:6px 10px;text-align:right"><button class="btn btn-ghost btn-sm" onclick="deleteOcorrencia('${id}')">🗑️</button></td>`:''}
+          </tr>`;
+        }).join('')}</tbody></table></div>`;
+    }
+  }
+}
+
+let _ocorChart = null;
+function drawOcorChart(empNomes, porEmp) {
+  const run = () => {
+    const c = document.getElementById('ocor-chart'); if (!c || typeof Chart==='undefined') return;
+    if (_ocorChart) { _ocorChart.destroy(); }
+    const labels = empNomes;
+    const datasets = OCOR_TIPOS.map(t => ({ label: t.label, data: labels.map(n => porEmp[n][t.key]||0), backgroundColor: t.cor }));
+    _ocorChart = new Chart(c, {
+      type:'bar',
+      data:{ labels, datasets },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{size:10} } } }, scales:{ x:{ stacked:true }, y:{ stacked:true, ticks:{ precision:0 } } } }
+    });
+  };
+  if (typeof Chart !== 'undefined') run();
+  else { const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'; s.onload=run; document.head.appendChild(s); }
 }
 
 // ─── G.R. – GERENCIAMENTO DE RISCO ───────────────────────────────────────────
