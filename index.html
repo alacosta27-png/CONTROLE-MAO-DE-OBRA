@@ -1614,6 +1614,35 @@ tbody tr:hover { background: var(--gray-50); }
   </div>
 </div>
 <!-- Modal: Admin — Editar Ponto -->
+<!-- Modal: EPI (Equipamento de Proteção Individual) -->
+<div class="modal-overlay" id="modal-epi">
+  <style>
+    .epi-card{border:1px solid var(--gray-200);border-radius:var(--radius);padding:10px 12px;margin-bottom:10px;background:#fff}
+    .epi-title{font-weight:700;font-size:13px;margin-bottom:8px;color:var(--navy)}
+    .epi-seg{display:flex;gap:6px;flex-wrap:wrap}
+    .epi-opt,.epi-chip{border:1px solid var(--gray-300,#d1d5db);background:#fff;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;user-select:none}
+    .epi-chip{min-width:44px;text-align:center;padding:7px 8px}
+    .epi-opt.on[data-v=""]{background:var(--gray-100,#f3f4f6);border-color:var(--gray-400,#9ca3af)}
+    .epi-opt.on[data-v="emprestimo"]{background:#FFF7ED;border-color:#EA580C;color:#9A3412}
+    .epi-opt.on[data-v="definitivo"]{background:#ECFDF5;border-color:#059669;color:#065F46}
+    .epi-chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+    .epi-tams{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  </style>
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">🦺 EPI — Empréstimo / Fornecimento</div>
+      <button class="modal-close" onclick="closeModal('modal-epi')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="epi-info" style="font-size:13px;color:var(--gray-600);margin-bottom:10px"></div>
+      <div id="epi-cards"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-epi')">Cancelar</button>
+      <button class="btn btn-navy" onclick="salvarEpi()">Salvar EPI</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-rateio">
   <div class="modal" style="max-width:560px">
     <div class="modal-header">
@@ -3790,6 +3819,7 @@ function renderAcompRow(id, a, opCor) {
     acoes = `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap;white-space:nowrap">
       <button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>
       <button class="btn btn-ghost btn-sm" onclick="openRateio('${id}')">2ª OP</button>
+      <button class="btn btn-ghost btn-sm" onclick="openEpi('${id}')">🦺 EPI</button>
       ${temDesacordoPendente ? `<button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning)" onclick="renderSugestoesPendentes();openModal('modal-sugestoes')">⚠️ Ver sugestão</button>` : ''}
     </div>`;
   } else if (a.empresaId === currentUser.empresaId ||
@@ -3814,7 +3844,7 @@ function renderAcompRow(id, a, opCor) {
   return `<tr style="${temDesacordoPendente && currentUser.role==='admin' ? 'background:var(--warning-bg)' : corStyle}">
     <td style="white-space:nowrap;min-width:150px">${acoes}</td>
     <td><span class="badge ${statusBadge}" style="font-size:10px">${a.status||'Em escolha'}</span></td>
-    <td class="td-name">${grDot(a.colCPF)}${a.colNome}${desacordoCell ? ' '+desacordoCell : ''}</td>
+    <td class="td-name">${grDot(a.colCPF)}${a.colNome}${desacordoCell ? ' '+desacordoCell : ''}${epiBadge(a)}</td>
     <td style="font-size:11px;color:var(--gray-600)">${a.empresaNome||'—'}</td>
     <td>${(() => {
       const _rt = Array.isArray(a.rateio) ? a.rateio.filter(r => (r.pct||0) > 0) : [];
@@ -3840,6 +3870,100 @@ function renderAcompRow(id, a, opCor) {
     <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${(a.funcao||'—').replace('Ajudante Interno','Interno').replace('Ajudante Externo','Externo')}</span></td>
     <td>${avalCell}</td>
   </tr>`;
+}
+
+// ===================== EPI ====================================================
+const EPI_ITENS = [
+  { key: 'bota',     label: '🥾 Bota de segurança',  tams: ['36','37','38','39','40','41','42','43','44','45','46'] },
+  { key: 'colete',   label: '🦺 Colete refletivo',   tams: ['P','M','G','GG','Único'] },
+  { key: 'capacete', label: '⛑️ Capacete',            tams: null }
+];
+let currentEpiId = null;
+let epiDraft = {};
+
+function epiUltimoDoColab(a) {
+  // Reaproveita o último EPI já marcado para a mesma pessoa (tamanhos ficam "fixos")
+  let ult = null;
+  Object.values(STATE.acompanhamento || {}).forEach(r => {
+    if (!r.epi) return;
+    const mesmo = (a.colId && r.colId === a.colId) || (!a.colId && a.colCPF && r.colCPF === a.colCPF);
+    if (mesmo && (!ult || (r.epi.em || '') > (ult.em || ''))) ult = r.epi;
+  });
+  return ult;
+}
+
+function openEpi(id) {
+  const a = STATE.acompanhamento[id];
+  if (!a) { toast('Registro não encontrado.', 'error'); return; }
+  currentEpiId = id;
+  const base = a.epi || epiUltimoDoColab(a) || {};
+  epiDraft = {};
+  EPI_ITENS.forEach(it => {
+    const b = base[it.key] || {};
+    // do histórico só herda o tamanho; o tipo só vem se já estava marcado neste registro
+    epiDraft[it.key] = { tipo: a.epi ? (b.tipo || '') : '', tam: b.tam || '' };
+  });
+  document.getElementById('epi-info').innerHTML = `<strong>${a.colNome||''}</strong> — ${a.empresaNome||''} · ${formatDate(a.data||'')}`;
+  renderEpiCards();
+  openModal('modal-epi');
+}
+
+function renderEpiCards() {
+  document.getElementById('epi-cards').innerHTML = EPI_ITENS.map(it => {
+    const d = epiDraft[it.key];
+    const opt = (v, txt) => `<div class="epi-opt ${d.tipo===v?'on':''}" data-v="${v}" onclick="epiSetTipo('${it.key}','${v}')">${txt}</div>`;
+    const tams = (it.tams && d.tipo)
+      ? `<div class="epi-tams">${it.tams.map(t => `<div class="epi-chip ${d.tam===t?'on':''}" onclick="epiSetTam('${it.key}','${t}')">${t}</div>`).join('')}</div>`
+      : '';
+    return `<div class="epi-card"><div class="epi-title">${it.label}</div>
+      <div class="epi-seg">${opt('', 'Não')}${opt('emprestimo', 'Empréstimo')}${opt('definitivo', 'Definitivo')}</div>${tams}</div>`;
+  }).join('');
+}
+
+function epiSetTipo(key, tipo) { epiDraft[key].tipo = tipo; renderEpiCards(); }
+function epiSetTam(key, tam) { epiDraft[key].tam = (epiDraft[key].tam === tam) ? '' : tam; renderEpiCards(); }
+
+function salvarEpi() {
+  const id = currentEpiId;
+  const a = STATE.acompanhamento[id];
+  if (!a) return;
+  const out = {};
+  for (const it of EPI_ITENS) {
+    const d = epiDraft[it.key];
+    if (!d.tipo) continue;
+    if (it.tams && !d.tam) { toast('Escolha o tamanho: ' + it.label.replace(/^\S+\s/, ''), 'error'); return; }
+    out[it.key] = it.tams ? { tipo: d.tipo, tam: d.tam } : { tipo: d.tipo };
+  }
+  const payload = Object.keys(out).length
+    ? Object.assign(out, { em: new Date().toISOString(), por: (currentUser.nome || currentUser.login || currentUser.email || '') })
+    : null;
+  db.ref('acompanhamento/' + id + '/epi').set(payload)
+    .then(() => {
+      registrarTransacao('epi', `EPI: ${a.colNome||''} — ` + (payload ? epiResumoTexto(payload) : 'removido'));
+      toast(payload ? '🦺 EPI salvo!' : 'EPI removido.', 'success');
+      closeModal('modal-epi');
+    })
+    .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+
+function epiResumoTexto(epi) {
+  const t = v => v === 'emprestimo' ? 'empréstimo' : 'definitivo';
+  return EPI_ITENS.filter(it => epi[it.key]).map(it => {
+    const e = epi[it.key];
+    return it.label.replace(/^\S+\s/, '') + (e.tam ? ' ' + e.tam : '') + ' (' + t(e.tipo) + ')';
+  }).join(', ');
+}
+
+function epiBadge(a) {
+  const epi = a.epi;
+  if (!epi) return '';
+  const ico = { bota: '🥾', colete: '🦺', capacete: '⛑️' };
+  return EPI_ITENS.filter(it => epi[it.key]).map(it => {
+    const e = epi[it.key];
+    const emp = e.tipo === 'emprestimo';
+    const bg = emp ? '#FFF7ED;color:#9A3412;border:1px solid #FED7AA' : '#ECFDF5;color:#065F46;border:1px solid #A7F3D0';
+    return `<span title="${it.label.replace(/^\S+\s/, '')} — ${emp ? 'Empréstimo' : 'Fornecimento definitivo'}" style="font-size:9px;background:${bg};border-radius:3px;padding:1px 5px;margin-left:3px;font-weight:700;white-space:nowrap">${ico[it.key]}${e.tam ? ' ' + e.tam : ''} ${emp ? 'E' : 'D'}</span>`;
+  }).join('');
 }
 
 // ===================== RATEIO DE OPERAÇÕES ====================================

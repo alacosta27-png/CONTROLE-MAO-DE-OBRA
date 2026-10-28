@@ -752,9 +752,34 @@ const db = firebase.database();
 let STATE = { acompanhamento: {}, motoristas: {} };
 let mdSaveTimeout = {};
 
+// Data local (YYYY-MM-DD). toISOString() usa UTC e "virava o dia" às 21h no Brasil.
+function hojeLocal() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// Agrupa vários eventos do Firebase em uma única renderização (evita travar a TV)
+let _renderT = null;
+function scheduleRender() { clearTimeout(_renderT); _renderT = setTimeout(render, 150); }
+
+// Escuta só os registros de HOJE (não o histórico inteiro) e troca sozinho na virada do dia
+let _fbStarted = false, _refAcomp = null, _dataAcomp = null;
+function subscribeAcomp() {
+  const hoje = hojeLocal();
+  if (_dataAcomp === hoje) return;
+  if (_refAcomp) _refAcomp.off('value');
+  _dataAcomp = hoje;
+  _refAcomp = db.ref('acompanhamento').orderByChild('data').equalTo(hoje);
+  _refAcomp.on('value', snap => { STATE.acompanhamento = snap.val() || {}; scheduleRender(); });
+}
+
 function initFirebase() {
-  db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; render(); });
-  db.ref('motoristas').on('value',     snap => { STATE.motoristas     = snap.val() || {}; render(); });
+  if (_fbStarted) return;          // evita listeners duplicados (login/logout repetido)
+  _fbStarted = true;
+  subscribeAcomp();
+  db.ref('motoristas').on('value', snap => { STATE.motoristas = snap.val() || {}; scheduleRender(); });
+  // a cada minuto: confere virada do dia e reavalia ATRASO/EXTRA (dependem da hora atual)
+  setInterval(() => { subscribeAcomp(); scheduleRender(); }, 60000);
 }
 
 // ===== RELÓGIO =====
@@ -817,7 +842,7 @@ window.addEventListener('resize', () => setTimeout(autoScale, 50));
 // ===== RENDER =====
 function render() {
   const content = document.getElementById('tv-scaler');
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = hojeLocal();
 
   let items = Object.entries(STATE.acompanhamento)
     .filter(([,a]) => a.data === hoje && pertenceAEmpresa(a));
