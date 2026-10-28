@@ -229,6 +229,8 @@ body {
   border-bottom-color: var(--yellow);
   font-weight: 600;
 }
+@keyframes grPisca { 0%,100% { color:#ef4444; background:rgba(239,68,68,.12); } 50% { color:#fff; background:#ef4444; } }
+.nav-tab.gr-alert { animation: grPisca 1s ease-in-out infinite; color:#ef4444; font-weight:700; border-radius:6px 6px 0 0; }
 
 /* ===== CONTENT ===== */
 .content-area {
@@ -2247,8 +2249,10 @@ function buildNavTabs() {
     el.textContent = t.label;
     el.onclick = () => switchPage(t.id);
     el.dataset.page = t.id;
+    el.dataset.label = t.label;
     nav.appendChild(el);
   });
+  if (typeof grAlertaAnalise === 'function') grAlertaAnalise();
 
   if (currentUser.role === 'admin' || currentUser.acesso === 'inserir') {
     document.getElementById('btn-nova-vaga-wrap').style.display = 'block';
@@ -2398,6 +2402,8 @@ function listenFirebase() {
   // Listeners GR e Avisos (sempre)
   db.ref('grStatus').on('value', snap => {
     STATE.grStatus = snap.val() || {};
+    grAutoBloquearVencidos();
+    grAlertaAnalise();
     if (document.getElementById('page-gr')?.classList.contains('active')) renderGR();
   });
   db.ref('avisos').on('value', snap => {
@@ -2435,6 +2441,7 @@ function listenFirebase() {
     }
     renderColLista();
     populateAtribuirCol();
+    grAlertaAnalise();
   });
 }
 
@@ -5824,6 +5831,50 @@ function saveGRStatus() {
   db.ref('grStatus/' + key).set({ colId, cpf, status, motivo, atualizadoEm: Date.now() })
     .then(() => { toast('Status G.R. atualizado!'); closeModal('modal-gr-status'); renderGR(); })
     .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+
+// ─── G.R.: bloqueio automático por validade vencida + alerta de "Em Análise" ──
+function grHojeISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// Só atua em registros que TÊM validadeDoc preenchida. Sem data cadastrada: não mexe em nada.
+// Considera vencida a partir do dia seguinte à data (mesma regra do selo "VENCIDO" da tabela).
+const _grAutoPend = new Set();
+function grAutoBloquearVencidos() {
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'gr')) return;
+  const hoje = grHojeISO();
+  Object.entries(STATE.grStatus || {}).forEach(([key, g]) => {
+    const vd = g && g.validadeDoc;
+    if (!vd || !/^\d{4}-\d{2}-\d{2}$/.test(vd)) return;
+    if (vd >= hoje) return;                    // ainda dentro da validade
+    if (g.status === 'BLOQUEADO') return;      // já bloqueado
+    if (_grAutoPend.has(key)) return;
+    _grAutoPend.add(key);
+    const [y, m, d] = vd.split('-');
+    const motivo = `Documentação vencida em ${d}/${m}/${y} (bloqueio automático)`;
+    db.ref('grStatus/' + key).update({ status: 'BLOQUEADO', motivo, atualizadoEm: Date.now(), bloqueioAuto: true })
+      .then(() => { try { registrarTransacao('GR_BLOQUEIO_AUTO', `G.R. bloqueou automaticamente (doc vencida ${d}/${m}/${y}): ${g.cpf || key}`); } catch (e) {} })
+      .catch(() => {})
+      .finally(() => _grAutoPend.delete(key));
+  });
+}
+setInterval(grAutoBloquearVencidos, 30 * 60 * 1000);   // reconfere a cada 30 min (virada do dia)
+
+// Aba "G.R." pisca em vermelho enquanto houver colaborador EM ANÁLISE
+function grAlertaAnalise() {
+  let n = 0;
+  Object.values(STATE.colaboradores || {}).forEach(emp => Object.values(emp || {}).forEach(c => {
+    if (((getGRStatus(c.cpf) || {}).status || 'LIBERADO') === 'ANÁLISE') n++;
+  }));
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if (t.dataset.page !== 'page-gr') return;
+    const base = t.dataset.label || t.textContent;
+    t.classList.toggle('gr-alert', n > 0);
+    t.textContent = n > 0 ? `${base} (${n})` : base;
+    t.title = n > 0 ? `${n} colaborador(es) aguardando análise` : '';
+  });
 }
 
 // Validade da documentação (preenchida manualmente pelo G.R.)
