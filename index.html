@@ -712,6 +712,7 @@ tbody tr:hover { background: var(--gray-50); }
 .badge-gr-liberado { background: var(--success-bg); color: var(--success); border: 1px solid #6ee7a0; }
 .badge-gr-bloqueado { background: var(--danger-bg); color: var(--danger); border: 1px solid #fca5a5; }
 .badge-gr-analise { background: var(--warning-bg); color: var(--warning); border: 1px solid #fcd34d; }
+.badge-gr-expirado { background: #F3E8FF; color: #6D28D9; border: 1px solid #C4B5FD; }
 
 /* ===== AVISO BANNER ===== */
 #aviso-banner {
@@ -1155,7 +1156,7 @@ tbody tr:hover { background: var(--gray-50); }
       <div class="section-header">
         <div>
           <div class="section-title">🛡️ G.R. – Gerenciamento de Risco</div>
-          <div class="section-sub">Controle de status dos colaboradores — Bloqueados, Em Análise e Liberados</div>
+          <div class="section-sub">Controle de status dos colaboradores — Bloqueados, Expirados, Em Análise e Liberados</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <input type="text" id="gr-busca" placeholder="Buscar por nome ou CPF..." style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px;width:240px" oninput="renderGR()">
@@ -1163,11 +1164,12 @@ tbody tr:hover { background: var(--gray-50); }
             <option value="">Todos os status</option>
             <option value="LIBERADO">✅ Liberados</option>
             <option value="ANÁLISE">⚠️ Em Análise</option>
+            <option value="EXPIRADO">⏳ Expirados</option>
             <option value="BLOQUEADO">🚫 Bloqueados</option>
           </select>
         </div>
       </div>
-      <div id="gr-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px"></div>
+      <div id="gr-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
       <div class="table-wrap">
         <table>
           <thead><tr>
@@ -1949,6 +1951,7 @@ tbody tr:hover { background: var(--gray-50); }
         <select id="gr-novo-status" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px;width:100%">
           <option value="LIBERADO">✅ LIBERADO</option>
           <option value="ANÁLISE">⚠️ EM ANÁLISE</option>
+          <option value="EXPIRADO">⏳ EXPIRADO</option>
           <option value="BLOQUEADO">🚫 BLOQUEADO</option>
         </select>
       </div>
@@ -2688,6 +2691,7 @@ function saveColaborador() {
     toast(`🚫 Colaborador BLOQUEADO pelo G.R. — ${motivoBloq}`, 'error');
     return;
   }
+  if (checkGRExpirado(cpf)) { toast(`⏳ Pesquisa EXPIRADA — ${GR_MSG_EXPIRADO}`, 'error'); return; }
 
   // Duplicidade na PRÓPRIA empresa (CPF ou Nome)
   const cols = STATE.colaboradores[currentUser.empresaId] || {};
@@ -2794,10 +2798,12 @@ function renderColLista() {
     const empId = col._empId || currentUser.empresaId;
     const gr = getGRStatus(col.cpf);
     const st = gr ? gr.status : 'LIBERADO';
-    const grCor  = st === 'BLOQUEADO' ? '#ef4444' : st === 'ANÁLISE' ? '#f59e0b' : '#22c55e';
-    const grIcon = st === 'BLOQUEADO' ? '🚫' : st === 'ANÁLISE' ? '⚠️' : '✅';
+    const grCor  = st === 'BLOQUEADO' ? '#ef4444' : st === 'EXPIRADO' ? '#7c3aed' : st === 'ANÁLISE' ? '#f59e0b' : '#22c55e';
+    const grIcon = st === 'BLOQUEADO' ? '🚫' : st === 'EXPIRADO' ? '⏳' : st === 'ANÁLISE' ? '⚠️' : '✅';
     const grCell = `<span style="background:${grCor};color:#fff;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:700;white-space:nowrap">${grIcon} ${st}</span>` +
-      (st !== 'LIBERADO' && gr && gr.motivo ? `<div style="font-size:11px;color:var(--danger);margin-top:3px">${gr.motivo}</div>` : '');
+      (st === 'EXPIRADO'
+        ? `<div style="font-size:11px;color:#7c3aed;margin-top:3px;font-weight:700">${GR_MSG_EXPIRADO}</div>`
+        : (st !== 'LIBERADO' && gr && gr.motivo ? `<div style="font-size:11px;color:var(--danger);margin-top:3px">${gr.motivo}</div>` : ''));
     return `<tr>
       <td class="td-mono">${col.cpf}</td>
       <td class="td-name">${(col.nome||'').toUpperCase()}</td>
@@ -2878,6 +2884,7 @@ function importCSVRows(rows) {
     const dup = findDuplicidadeOutraEmpresa(r.cpf, r.nome, currentUser.empresaId);
     if (dup.length) { bloqueados.push(`${r.nome} (${dup[0].empresaNome})`); return; }
     if (checkGRBloqueio(r.cpf)) { bloqueados.push(`${r.nome} (BLOQUEADO G.R.)`); return; }
+    if (checkGRExpirado(r.cpf)) { bloqueados.push(`${r.nome} (EXPIRADO — contatar o G.R.)`); return; }
     const opEntry = Object.entries(ops).find(([,op]) => op.nome.toUpperCase() === (r.operacao||'').toUpperCase());
     const key = db.ref(`colaboradores/${currentUser.empresaId}`).push().key;
     const cpfDig = (r.cpf||'').replace(/\D/g,'');
@@ -2906,7 +2913,7 @@ function populateAtribuirCol() {
   const empId = currentUser.role === 'empresa' ? currentUser.empresaId : null;
   if (!empId) return;
   const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([,c]) => (c.status||'ativo') === 'ativo' && !checkGRBloqueio(c.cpf));
-  sel.innerHTML = '<option value="">Selecione...</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} — ${c.cpf}</option>`).join('');
+  sel.innerHTML = '<option value="">Selecione...</option>' + cols.map(([id,c]) => colOptHTML(id, c, 'dash')).join('');
 }
 
 // ===================== VAGAS =====================
@@ -3210,7 +3217,7 @@ function openAtribuir(vagaIdsStr) {
   const cols = Object.entries(STATE.colaboradores[empId] || {})
     .filter(([,c]) => (c.status||'ativo') === 'ativo' && !checkGRBloqueio(c.cpf))
     .sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
-  const colOpts = '<option value="">— Selecione —</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
+  const colOpts = '<option value="">— Selecione —</option>' + cols.map(([id,c]) => colOptHTML(id, c)).join('');
 
   // Coletar todas as linhas de todas as vagas do dia
   const todasLinhas = [];
@@ -3310,6 +3317,10 @@ function indicarNaLinha(gIdx, vagaId, linhaIdx) {
     const motivoBloq = checkGRBloqueio(col.cpf);
     if (motivoBloq) {
       toast(`🚫 ${col.nome} está BLOQUEADO pelo G.R. — ${motivoBloq}`, 'error');
+      return;
+    }
+    if (checkGRExpirado(col.cpf)) {
+      toast(`⏳ ${col.nome} está com a pesquisa EXPIRADA — ${GR_MSG_EXPIRADO}`, 'error');
       return;
     }
   }
@@ -4422,6 +4433,7 @@ function aceitarAlteracaoIndicacao(nid, acompId, novoColId, novoColNome) {
   if (novoColId && novoColId !== 'undefined') {
     const _aRec0 = STATE.acompanhamento[acompId] || {};
     const _nc0 = (STATE.colaboradores[_aRec0.empresaId] || {})[novoColId];
+    if (_nc0 && checkGRExpirado(_nc0.cpf)) { toast(`⏳ ${novoColNome||_nc0.nome} está EXPIRADO — ${GR_MSG_EXPIRADO}`, 'error'); return; }
     if (_nc0 && checkGRBloqueio(_nc0.cpf)) { toast(`🚫 ${novoColNome||_nc0.nome} está BLOQUEADO pelo G.R. — alteração não aplicada.`, 'error'); return; }
   }
   updates['notificacoes/' + nid + '/status'] = 'aceito';
@@ -4673,7 +4685,7 @@ function openGerenciarIndicacao(acompId) {
   const empId = currentUser.empresaId;
   const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([id,c]) => id !== a.colId && (c.status||'ativo') === 'ativo' && !checkGRBloqueio(c.cpf));
   const sel = document.getElementById('gi-col-novo');
-  sel.innerHTML = '<option value="">Manter o atual</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
+  sel.innerHTML = '<option value="">Manter o atual</option>' + cols.map(([id,c]) => colOptHTML(id, c)).join('');
   openModal('modal-gerenciar-indicacao');
 }
 
@@ -4683,6 +4695,7 @@ function solicitarEdicaoIndicacao() {
   if (!motivo.trim()) { toast('Informe o motivo da solicitação.', 'error'); return; }
   const empId = currentUser.empresaId;
   const novoCol = novoColId ? (STATE.colaboradores[empId]||{})[novoColId] : null;
+  if (novoCol && checkGRExpirado(novoCol.cpf)) { toast(`⏳ ${novoCol.nome} está EXPIRADO — ${GR_MSG_EXPIRADO}`, 'error'); return; }
   if (novoCol && checkGRBloqueio(novoCol.cpf)) { toast(`🚫 ${novoCol.nome} está BLOQUEADO pelo G.R. e não pode ser indicado.`, 'error'); return; }
   const notif = {
     tipo: 'edicao_indicacao',
@@ -5715,6 +5728,7 @@ function isValidCPF(cpf) {
 function grColorSet(cpf) {
   const st = (getGRStatus(cpf) || {}).status || 'LIBERADO';
   if (st === 'BLOQUEADO') return { cor: '#ef4444', icon: '🚫', st };
+  if (st === 'EXPIRADO')  return { cor: '#7c3aed', icon: '⏳', st };
   if (st === 'ANÁLISE')   return { cor: '#f59e0b', icon: '⚠️', st };
   return { cor: '#22c55e', icon: '✅', st };
 }
@@ -5729,6 +5743,19 @@ function checkGRBloqueio(cpf) {
   return null;
 }
 
+// EXPIRADO: pesquisa/documentação vencida. Aparece para as empresas, mas não pode ser indicado.
+const GR_MSG_EXPIRADO = 'ENTRE EM CONTATO COM O G.R. PARA RENOVAÇÃO DE PESQUISA';
+function checkGRExpirado(cpf) {
+  const gr = getGRStatus(cpf);
+  return (gr && gr.status === 'EXPIRADO') ? GR_MSG_EXPIRADO : null;
+}
+// <option> de colaborador: EXPIRADO aparece desabilitado, com o aviso
+function colOptHTML(id, c, sep) {
+  const txt = sep === 'dash' ? `${c.nome} — ${c.cpf}` : `${c.nome} (${c.cpf})`;
+  if (checkGRExpirado(c.cpf)) return `<option value="${id}" disabled>⏳ ${txt} — EXPIRADO: entre em contato com o G.R.</option>`;
+  return `<option value="${id}">${txt}</option>`;
+}
+
 function renderGR() {
   const busca = (document.getElementById('gr-busca')?.value || '').toLowerCase().trim();
   const filtroStatus = document.getElementById('gr-filtro-status')?.value || '';
@@ -5738,11 +5765,12 @@ function renderGR() {
     Object.entries(empCols || {}).forEach(([cid, c]) => cols.push([cid, { ...c, empresaId: c.empresaId || eid }]));
   });
 
-  let liberados = 0, analise = 0, bloqueados = 0;
+  let liberados = 0, analise = 0, bloqueados = 0, expirados = 0;
   cols.forEach(([, c]) => {
     const st = (getGRStatus(c.cpf) || {}).status || 'LIBERADO';
     if (st === 'LIBERADO') liberados++;
     else if (st === 'ANÁLISE') analise++;
+    else if (st === 'EXPIRADO') expirados++;
     else bloqueados++;
   });
 
@@ -5750,6 +5778,7 @@ function renderGR() {
   if (kpiEl) kpiEl.innerHTML = [
     { label: '✅ Liberados',  val: liberados,  cor: '#22c55e' },
     { label: '⚠️ Em Análise', val: analise,    cor: '#f59e0b' },
+    { label: '⏳ Expirados',  val: expirados,  cor: '#7c3aed' },
     { label: '🚫 Bloqueados', val: bloqueados, cor: '#ef4444' },
   ].map(k => `<div class="card" style="text-align:center;padding:14px">
     <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px">${k.label}</div>
@@ -5778,8 +5807,8 @@ function renderGR() {
   tbody.innerHTML = visible.map(([cid, c]) => {
     const gr = getGRStatus(c.cpf);
     const st = gr ? gr.status : 'LIBERADO';
-    const stCor  = st === 'BLOQUEADO' ? '#ef4444' : st === 'ANÁLISE' ? '#f59e0b' : '#22c55e';
-    const stIcon = st === 'BLOQUEADO' ? '🚫' : st === 'ANÁLISE' ? '⚠️' : '✅';
+    const stCor  = st === 'BLOQUEADO' ? '#ef4444' : st === 'EXPIRADO' ? '#7c3aed' : st === 'ANÁLISE' ? '#f59e0b' : '#22c55e';
+    const stIcon = st === 'BLOQUEADO' ? '🚫' : st === 'EXPIRADO' ? '⏳' : st === 'ANÁLISE' ? '⚠️' : '✅';
     const emp = STATE.empresas[c.empresaId];
     const cpfEsc = (c.cpf || '').replace(/'/g, "\\'");
     const nomeEsc = (c.nome || '').replace(/'/g, "\\'");
@@ -5841,6 +5870,8 @@ function grHojeISO() {
 
 // Só atua em registros que TÊM validadeDoc preenchida. Sem data cadastrada: não mexe em nada.
 // Considera vencida a partir do dia seguinte à data (mesma regra do selo "VENCIDO" da tabela).
+// Vencida => status EXPIRADO (LIBERADO/sem status). Não altera BLOQUEADO manual nem EM ANÁLISE.
+// Bloqueios automáticos feitos pela versão anterior (bloqueioAuto) são convertidos para EXPIRADO.
 const _grAutoPend = new Set();
 function grAutoBloquearVencidos() {
   if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'gr')) return;
@@ -5849,13 +5880,15 @@ function grAutoBloquearVencidos() {
     const vd = g && g.validadeDoc;
     if (!vd || !/^\d{4}-\d{2}-\d{2}$/.test(vd)) return;
     if (vd >= hoje) return;                    // ainda dentro da validade
-    if (g.status === 'BLOQUEADO') return;      // já bloqueado
+    const st = g.status || 'LIBERADO';
+    const migrar = (st === 'BLOQUEADO' && g.bloqueioAuto === true);
+    if (st !== 'LIBERADO' && !migrar) return;  // EXPIRADO / ANÁLISE / BLOQUEADO manual: não mexe
     if (_grAutoPend.has(key)) return;
     _grAutoPend.add(key);
     const [y, m, d] = vd.split('-');
-    const motivo = `Documentação vencida em ${d}/${m}/${y} (bloqueio automático)`;
-    db.ref('grStatus/' + key).update({ status: 'BLOQUEADO', motivo, atualizadoEm: Date.now(), bloqueioAuto: true })
-      .then(() => { try { registrarTransacao('GR_BLOQUEIO_AUTO', `G.R. bloqueou automaticamente (doc vencida ${d}/${m}/${y}): ${g.cpf || key}`); } catch (e) {} })
+    const motivo = `Pesquisa/documentação vencida em ${d}/${m}/${y} — ${GR_MSG_EXPIRADO}`;
+    db.ref('grStatus/' + key).update({ status: 'EXPIRADO', motivo, atualizadoEm: Date.now(), bloqueioAuto: null, expiradoAuto: true })
+      .then(() => { try { registrarTransacao('GR_EXPIRADO_AUTO', `G.R.: status EXPIRADO automático (vencida em ${d}/${m}/${y}): ${g.cpf || key}`); } catch (e) {} })
       .catch(() => {})
       .finally(() => _grAutoPend.delete(key));
   });
