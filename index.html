@@ -3319,10 +3319,6 @@ function indicarNaLinha(gIdx, vagaId, linhaIdx) {
       toast(`🚫 ${col.nome} está BLOQUEADO pelo G.R. — ${motivoBloq}`, 'error');
       return;
     }
-    if (checkGRExpirado(col.cpf)) {
-      toast(`⏳ ${col.nome} está com a pesquisa EXPIRADA — ${GR_MSG_EXPIRADO}`, 'error');
-      return;
-    }
   }
 
   // Checar se já indicou este colaborador nesta linha
@@ -3338,7 +3334,11 @@ function indicarNaLinha(gIdx, vagaId, linhaIdx) {
     atribuidoEm: Date.now(),
     status: 'Em escolha'
   };
+  const _eraExpirado = !!(col && col.cpf && checkGRExpirado(col.cpf));
   db.ref(`vagas/${vagaId}/linhas/${linhaIdx}/atribuicoes`).push(data).then(() => {
+    if (_eraExpirado && grEnviarParaAnalise(col.cpf, colId, currentUser.empresaNome, `indicado p/ vaga de ${formatDate(vaga.data||'')}`)) {
+      toast(`⏳ ${col.nome} estava EXPIRADO — enviado para EM ANÁLISE do G.R. (nova pesquisa).`, 'success');
+    }
     db.ref('acompanhamento').push({
       vagaId,
       linhaIdx,
@@ -4433,8 +4433,8 @@ function aceitarAlteracaoIndicacao(nid, acompId, novoColId, novoColNome) {
   if (novoColId && novoColId !== 'undefined') {
     const _aRec0 = STATE.acompanhamento[acompId] || {};
     const _nc0 = (STATE.colaboradores[_aRec0.empresaId] || {})[novoColId];
-    if (_nc0 && checkGRExpirado(_nc0.cpf)) { toast(`⏳ ${novoColNome||_nc0.nome} está EXPIRADO — ${GR_MSG_EXPIRADO}`, 'error'); return; }
     if (_nc0 && checkGRBloqueio(_nc0.cpf)) { toast(`🚫 ${novoColNome||_nc0.nome} está BLOQUEADO pelo G.R. — alteração não aplicada.`, 'error'); return; }
+    if (_nc0) grEnviarParaAnalise(_nc0.cpf, novoColId, _aRec0.empresaNome, 'troca de indicação aceita');
   }
   updates['notificacoes/' + nid + '/status'] = 'aceito';
   if (novoColId && novoColId !== 'undefined') {
@@ -4695,7 +4695,6 @@ function solicitarEdicaoIndicacao() {
   if (!motivo.trim()) { toast('Informe o motivo da solicitação.', 'error'); return; }
   const empId = currentUser.empresaId;
   const novoCol = novoColId ? (STATE.colaboradores[empId]||{})[novoColId] : null;
-  if (novoCol && checkGRExpirado(novoCol.cpf)) { toast(`⏳ ${novoCol.nome} está EXPIRADO — ${GR_MSG_EXPIRADO}`, 'error'); return; }
   if (novoCol && checkGRBloqueio(novoCol.cpf)) { toast(`🚫 ${novoCol.nome} está BLOQUEADO pelo G.R. e não pode ser indicado.`, 'error'); return; }
   const notif = {
     tipo: 'edicao_indicacao',
@@ -5743,16 +5742,31 @@ function checkGRBloqueio(cpf) {
   return null;
 }
 
-// EXPIRADO: pesquisa/documentação vencida. Aparece para as empresas, mas não pode ser indicado.
+// EXPIRADO: pesquisa/documentação vencida. A empresa pode indicar; ao indicar, o status vira EM ANÁLISE.
 const GR_MSG_EXPIRADO = 'ENTRE EM CONTATO COM O G.R. PARA RENOVAÇÃO DE PESQUISA';
 function checkGRExpirado(cpf) {
   const gr = getGRStatus(cpf);
   return (gr && gr.status === 'EXPIRADO') ? GR_MSG_EXPIRADO : null;
 }
-// <option> de colaborador: EXPIRADO aparece desabilitado, com o aviso
+// Ao indicar um colaborador EXPIRADO: status => EM ANÁLISE, para o G.R. providenciar nova pesquisa.
+function grEnviarParaAnalise(cpf, colId, empresaNome, contexto) {
+  try {
+    if (!checkGRExpirado(cpf)) return false;
+    const clean = (cpf || '').replace(/\D/g, '');
+    let key = STATE.grStatus[clean] ? clean : null;
+    if (!key) key = Object.keys(STATE.grStatus || {}).find(k => ((STATE.grStatus[k] || {}).cpf || '').replace(/\D/g, '') === clean) || clean || colId;
+    const motivo = `Renovação de pesquisa solicitada por ${empresaNome || 'empresa'}${contexto ? ' — ' + contexto : ''}`;
+    db.ref('grStatus/' + key).update({ status: 'ANÁLISE', motivo, atualizadoEm: Date.now(), renovacaoSolicitadaEm: Date.now(), expiradoAuto: null })
+      .then(() => { try { registrarTransacao('GR_EXPIRADO_PARA_ANALISE', `Indicação de colaborador EXPIRADO — enviado p/ EM ANÁLISE: ${cpf} (${empresaNome || ''})`); } catch (e) {} })
+      .catch(() => {});
+    return true;
+  } catch (e) { return false; }
+}
+
+// <option> de colaborador: EXPIRADO pode ser indicado (vai para EM ANÁLISE no G.R.)
 function colOptHTML(id, c, sep) {
   const txt = sep === 'dash' ? `${c.nome} — ${c.cpf}` : `${c.nome} (${c.cpf})`;
-  if (checkGRExpirado(c.cpf)) return `<option value="${id}" disabled>⏳ ${txt} — EXPIRADO: entre em contato com o G.R.</option>`;
+  if (checkGRExpirado(c.cpf)) return `<option value="${id}">⏳ ${txt} — EXPIRADO (indicar envia p/ nova pesquisa do G.R.)</option>`;
   return `<option value="${id}">${txt}</option>`;
 }
 
