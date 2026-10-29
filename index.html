@@ -4707,7 +4707,11 @@ function solicitarEdicaoIndicacao() {
     empresaNome: currentUser.empresaNome,
     enviadoEm: Date.now()
   };
+  const _expNovo = !!(novoCol && novoCol.cpf && checkGRExpirado(novoCol.cpf));
   db.ref('notificacoes').push(notif).then(() => {
+    if (_expNovo && grEnviarParaAnalise(novoCol.cpf, novoColId, currentUser.empresaNome, 'troca de indicação solicitada')) {
+      toast(`⏳ ${novoCol.nome} estava EXPIRADO — enviado para EM ANÁLISE do G.R. (nova pesquisa).`, 'success');
+    }
     toast('Solicitação de alteração enviada ao administrador!', 'success');
     closeModal('modal-gerenciar-indicacao');
   });
@@ -5756,7 +5760,8 @@ function grEnviarParaAnalise(cpf, colId, empresaNome, contexto) {
     let key = STATE.grStatus[clean] ? clean : null;
     if (!key) key = Object.keys(STATE.grStatus || {}).find(k => ((STATE.grStatus[k] || {}).cpf || '').replace(/\D/g, '') === clean) || clean || colId;
     const motivo = `Renovação de pesquisa solicitada por ${empresaNome || 'empresa'}${contexto ? ' — ' + contexto : ''}`;
-    db.ref('grStatus/' + key).update({ status: 'ANÁLISE', motivo, atualizadoEm: Date.now(), renovacaoSolicitadaEm: Date.now(), expiradoAuto: null })
+    const venc = (STATE.grStatus[key] || {}).validadeDoc || null;
+    db.ref('grStatus/' + key).update({ status: 'ANÁLISE', motivo, atualizadoEm: Date.now(), renovacaoSolicitadaEm: Date.now(), expiradoAuto: null, validadeAnterior: venc, validadeDoc: null })
       .then(() => { try { registrarTransacao('GR_EXPIRADO_PARA_ANALISE', `Indicação de colaborador EXPIRADO — enviado p/ EM ANÁLISE: ${cpf} (${empresaNome || ''})`); } catch (e) {} })
       .catch(() => {});
     return true;
