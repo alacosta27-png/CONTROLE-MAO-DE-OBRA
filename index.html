@@ -2627,32 +2627,80 @@ function checkColaborador() {
   aviso.style.display = found ? 'block' : 'none';
 }
 
-// Procura o mesmo CPF ou Nome já cadastrado em OUTRA empresa.
-// Retorna array de { empresaId, empresaNome, nome, cpf, match } ou [] se não houver.
-function findDuplicidadeOutraEmpresa(cpf, nome, empresaAtualId) {
-  const cpfNorm = (cpf || '').replace(/\D/g, '');
-  const nomeNorm = (nome || '').trim().toUpperCase();
+// ===================== CONFERÊNCIA DE DUPLICIDADE (CPF / NOME) =====================
+// CPF: compara só os dígitos (com ou sem pontos/traço dá no mesmo).
+function cpfIgual(a, b) {
+  const x = (a || '').replace(/\D/g, ''), y = (b || '').replace(/\D/g, '');
+  return !!x && !!y && x === y;
+}
+// Nome: ignora maiúsc./minúsc., acentos, pontuação, espaços extras e "DA/DE/DO/DAS/DOS/E".
+const _NOME_LIGACAO = new Set(['DA', 'DE', 'DO', 'DAS', 'DOS', 'E', 'D']);
+function normNomeTokens(n) {
+  return (n || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase()
+    .replace(/[^A-Z\s]/g, ' ').split(/\s+/).filter(t => t && !_NOME_LIGACAO.has(t));
+}
+// Retorna 'exato' | 'abrev' | ''.
+// 'abrev': mesma quantidade de nomes, cada um igual ou abreviado pela inicial
+// (ex.: "J. CARLOS SILVA" = "JOSE C SILVA") e o último sobrenome idêntico.
+function nomeMatch(a, b) {
+  const A = normNomeTokens(a), B = normNomeTokens(b);
+  if (!A.length || !B.length) return '';
+  if (A.join(' ') === B.join(' ')) return 'exato';
+  if (A.length !== B.length || A.length < 2) return '';
+  for (let i = 0; i < A.length; i++) {
+    const ok = A[i] === B[i]
+      || (A[i].length === 1 && B[i][0] === A[i])
+      || (B[i].length === 1 && A[i][0] === B[i]);
+    if (!ok) return '';
+  }
+  return A[A.length - 1] === B[B.length - 1] ? 'abrev' : '';
+}
+// Rótulo do motivo da coincidência entre duas pessoas ('' se não coincidem).
+function matchPessoa(cpfA, nomeA, cpfB, nomeB) {
+  const mc = cpfIgual(cpfA, cpfB);
+  const nm = nomeMatch(nomeA, nomeB);
+  if (mc && nm) return 'CPF e Nome';
+  if (mc) return 'CPF';
+  if (nm === 'exato') return 'Nome';
+  if (nm === 'abrev') return 'Nome (abreviado)';
+  return '';
+}
+// Mesma pessoa já cadastrada em UMA empresa (ignora o colaborador excludeColId, se informado).
+function findDuplicidadeEmpresa(cpf, nome, empresaId, excludeColId) {
   const achados = [];
-  Object.entries(STATE.colaboradores || {}).forEach(([eid, cols]) => {
-    if (eid === empresaAtualId) return; // ignora a própria empresa
-    Object.values(cols || {}).forEach(c => {
-      const cCpf = (c.cpf || '').replace(/\D/g, '');
-      const cNome = (c.nome || '').trim().toUpperCase();
-      const matchCpf = cpfNorm && cCpf && cpfNorm === cCpf;
-      const matchNome = nomeNorm && cNome && nomeNorm === cNome;
-      if (matchCpf || matchNome) {
-        const emp = STATE.empresas[eid];
-        achados.push({
-          empresaId: eid,
-          empresaNome: emp ? emp.nome : '(empresa desconhecida)',
-          nome: c.nome || '—',
-          cpf: c.cpf || '—',
-          match: matchCpf && matchNome ? 'CPF e Nome' : matchCpf ? 'CPF' : 'Nome'
-        });
-      }
-    });
+  Object.entries((STATE.colaboradores || {})[empresaId] || {}).forEach(([cid, c]) => {
+    if (excludeColId && cid === excludeColId) return;
+    const m = matchPessoa(cpf, nome, c.cpf, c.nome);
+    if (m) {
+      const emp = STATE.empresas[empresaId];
+      achados.push({ empresaId, empresaNome: emp ? emp.nome : '(empresa desconhecida)', nome: c.nome || '—', cpf: c.cpf || '—', match: m });
+    }
   });
   return achados;
+}
+// Procura o mesmo CPF ou Nome (inclusive abreviado) já cadastrado em OUTRA empresa.
+// Retorna array de { empresaId, empresaNome, nome, cpf, match } ou [] se não houver.
+function findDuplicidadeOutraEmpresa(cpf, nome, empresaAtualId, excludeColId) {
+  const achados = [];
+  Object.keys(STATE.colaboradores || {}).forEach(eid => {
+    if (eid === empresaAtualId) return; // ignora a própria empresa
+    achados.push(...findDuplicidadeEmpresa(cpf, nome, eid, excludeColId));
+  });
+  return achados;
+}
+// Mesma pessoa já indicada NO MESMO DIA (qualquer empresa, vaga ou linha).
+function findDuplicidadeDia(data, cpf, nome, excludeAcompId) {
+  const out = [];
+  Object.entries(STATE.acompanhamento || {}).forEach(([id, a]) => {
+    if (id === excludeAcompId || !a || a.data !== data) return;
+    const m = matchPessoa(cpf, nome, a.colCPF, a.colNome);
+    if (m) out.push({ empresaNome: a.empresaNome || '—', nome: a.colNome || '—', opNome: a.opNome || '', match: m });
+  });
+  return out;
+}
+function msgDuplicidadeDia(col, data, dup) {
+  const d = dup[0];
+  return `🚫 ${col.nome} já está indicado em ${formatDate(data)} (${d.empresaNome}${d.opNome ? ' — ' + d.opNome : ''}) — coincide por ${d.match}. O mesmo nome/CPF não pode constar duas vezes no mesmo dia.`;
 }
 
 // Exibe um aviso bloqueando o cadastro duplicado em outra empresa.
@@ -2694,11 +2742,9 @@ function saveColaborador() {
   if (checkGRExpirado(cpf)) { toast(`⏳ Pesquisa EXPIRADA — ${GR_MSG_EXPIRADO}`, 'error'); return; }
 
   // Duplicidade na PRÓPRIA empresa (CPF ou Nome)
-  const cols = STATE.colaboradores[currentUser.empresaId] || {};
-  const dupMesma = Object.values(cols).find(c =>
-    (c.cpf||'').replace(/\D/g,'') === cpfDig || (c.nome||'').trim().toUpperCase() === nome);
-  if (dupMesma) {
-    toast('🚫 Já existe um colaborador com este CPF ou nome nesta empresa.', 'error');
+  const dupMesma = findDuplicidadeEmpresa(cpf, nome, currentUser.empresaId);
+  if (dupMesma.length) {
+    toast(`🚫 Já existe nesta empresa: ${dupMesma[0].nome} (${dupMesma[0].cpf}) — coincide por ${dupMesma[0].match}.`, 'error');
     return;
   }
 
@@ -2834,6 +2880,14 @@ function saveEditColab() {
   const empId = document.getElementById('ec-empid').value;
   const nome = document.getElementById('ec-nome').value.trim().toUpperCase();
   if (!nome) { toast('Informe o nome do colaborador.', 'error'); return; }
+  const _cpfAtual = ((STATE.colaboradores[empId] || {})[id] || {}).cpf || '';
+  const _dupMesma = findDuplicidadeEmpresa(_cpfAtual, nome, empId, id).filter(d => d.match !== 'CPF');
+  const _dupOutra = findDuplicidadeOutraEmpresa(_cpfAtual, nome, empId, id).filter(d => d.match !== 'CPF');
+  const _dupEd = _dupMesma.concat(_dupOutra);
+  if (_dupEd.length) {
+    toast(`🚫 Nome já cadastrado (${_dupEd[0].empresaNome}): ${_dupEd[0].nome} — coincide por ${_dupEd[0].match}.`, 'error');
+    return;
+  }
   db.ref(`colaboradores/${empId}/${id}/nome`).set(nome)
     .then(() => {
       toast('Nome atualizado com sucesso!', 'success');
@@ -2878,11 +2932,16 @@ function importCSVRows(rows) {
   const batch = {};
   const grBatch = {};
   const bloqueados = [];
+  const lote = [];
   const empDrive = ((STATE.empresas[currentUser.empresaId]||{}).driveDocs||'').trim();
   rows.forEach(r => {
     // Bloquear mesmo nome/CPF já cadastrado em outra empresa
     const dup = findDuplicidadeOutraEmpresa(r.cpf, r.nome, currentUser.empresaId);
     if (dup.length) { bloqueados.push(`${r.nome} (${dup[0].empresaNome})`); return; }
+    const dupProp = findDuplicidadeEmpresa(r.cpf, r.nome, currentUser.empresaId);
+    if (dupProp.length) { bloqueados.push(`${r.nome} (já existe nesta empresa: ${dupProp[0].nome})`); return; }
+    const dupLote = lote.find(x => matchPessoa(r.cpf, r.nome, x.cpf, x.nome));
+    if (dupLote) { bloqueados.push(`${r.nome} (repetido no arquivo: ${dupLote.nome})`); return; }
     if (checkGRBloqueio(r.cpf)) { bloqueados.push(`${r.nome} (BLOQUEADO G.R.)`); return; }
     if (checkGRExpirado(r.cpf)) { bloqueados.push(`${r.nome} (EXPIRADO — contatar o G.R.)`); return; }
     const opEntry = Object.entries(ops).find(([,op]) => op.nome.toUpperCase() === (r.operacao||'').toUpperCase());
@@ -2890,12 +2949,13 @@ function importCSVRows(rows) {
     const cpfDig = (r.cpf||'').replace(/\D/g,'');
     const cpfFmt = cpfDig.length === 11 ? formatCPF(cpfDig) : (r.cpf||'');
     batch[key] = { cpf: cpfFmt, nome: (r.nome||'').trim().toUpperCase(), operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', driveLink: empDrive, status: 'ativo', grStatus: 'ANÁLISE', criadoEm: Date.now() };
+    lote.push({ cpf: r.cpf, nome: r.nome });
     if (cpfDig) grBatch[cpfDig] = { colId: key, cpf: cpfFmt, status: 'ANÁLISE', motivo: 'Aguardando análise (importação CSV)', empresaId: currentUser.empresaId, empresaNome: currentUser.empresaNome||'', driveLink: empDrive, atualizadoEm: Date.now() };
     count++;
   });
   const finalizar = () => {
     if (bloqueados.length) {
-      toast(`⚠️ ${bloqueados.length} ignorado(s) por já existir em outra empresa: ${bloqueados.join('; ')}`, 'error');
+      toast(`⚠️ ${bloqueados.length} ignorado(s) por duplicidade (nome/CPF): ${bloqueados.join('; ')}`, 'error');
     }
   };
   if (!count) { finalizar(); return; }
@@ -3324,6 +3384,8 @@ function indicarNaLinha(gIdx, vagaId, linhaIdx) {
   // Checar se já indicou este colaborador nesta linha
   const atribs = Object.values(linha.atribuicoes || {});
   if (atribs.some(a => a.colId === colId)) { toast('Este colaborador já foi indicado para esta vaga.', 'error'); return; }
+  const _dupDia = findDuplicidadeDia(vaga.data, col.cpf, col.nome);
+  if (_dupDia.length) { toast(msgDuplicidadeDia(col, vaga.data, _dupDia), 'error'); return; }
   if (atribs.length >= (linha.qtd || 0)) { toast('Vagas desta linha já estão preenchidas.', 'error'); return; }
 
   const data = {
@@ -4434,6 +4496,10 @@ function aceitarAlteracaoIndicacao(nid, acompId, novoColId, novoColNome) {
     const _aRec0 = STATE.acompanhamento[acompId] || {};
     const _nc0 = (STATE.colaboradores[_aRec0.empresaId] || {})[novoColId];
     if (_nc0 && checkGRBloqueio(_nc0.cpf)) { toast(`🚫 ${novoColNome||_nc0.nome} está BLOQUEADO pelo G.R. — alteração não aplicada.`, 'error'); return; }
+    if (_nc0) {
+      const _dd0 = findDuplicidadeDia(_aRec0.data, _nc0.cpf, _nc0.nome, acompId);
+      if (_dd0.length) { toast(msgDuplicidadeDia(_nc0, _aRec0.data, _dd0), 'error'); return; }
+    }
     if (_nc0) grEnviarParaAnalise(_nc0.cpf, novoColId, _aRec0.empresaNome, 'troca de indicação aceita');
   }
   updates['notificacoes/' + nid + '/status'] = 'aceito';
@@ -4707,6 +4773,11 @@ function solicitarEdicaoIndicacao() {
     empresaNome: currentUser.empresaNome,
     enviadoEm: Date.now()
   };
+  if (novoCol) {
+    const _acRec = STATE.acompanhamento[currentIndicacaoId] || {};
+    const _dd = findDuplicidadeDia(_acRec.data, novoCol.cpf, novoCol.nome, currentIndicacaoId);
+    if (_dd.length) { toast(msgDuplicidadeDia(novoCol, _acRec.data, _dd), 'error'); return; }
+  }
   const _expNovo = !!(novoCol && novoCol.cpf && checkGRExpirado(novoCol.cpf));
   db.ref('notificacoes').push(notif).then(() => {
     if (_expNovo && grEnviarParaAnalise(novoCol.cpf, novoColId, currentUser.empresaNome, 'troca de indicação solicitada')) {
