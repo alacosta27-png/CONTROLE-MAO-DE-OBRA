@@ -3935,11 +3935,12 @@ function renderAcompRow(id, a, opCor) {
     })()}</td>
     <td style="font-size:11px">${(() => {
       let mn = a.motoristaNome || (a.motoristaId && STATE.motoristas[a.motoristaId] ? STATE.motoristas[a.motoristaId].nome : '') || '';
-      if (!mn && a.vagaId && STATE.vagas[a.vagaId]) {
+      if (!mn && !a.semMotorista && a.vagaId && STATE.vagas[a.vagaId]) {
         const vLinha = (STATE.vagas[a.vagaId].linhas || [])[a.linhaIdx];
         if (vLinha) mn = vLinha.motoristaNome || (vLinha.motoristaId && STATE.motoristas[vLinha.motoristaId] ? STATE.motoristas[vLinha.motoristaId].nome : '') || '';
       }
-      return mn ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${mn}</span>` : '<span style="color:var(--gray-400)">—</span>';
+      const _btnDesv = (mn && currentUser.role === 'admin') ? `<span title="Desvincular motorista" style="cursor:pointer;color:var(--danger);font-weight:700;margin-left:4px" onclick="desvincularMotorista('${id}')">✕</span>` : '';
+      return mn ? `<span style="font-size:10px;background:var(--yellow-soft);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:600">🚗 ${mn}</span>${_btnDesv}` : '<span style="color:var(--gray-400)">—</span>';
     })()}</td>
     <td style="font-family:'JetBrains Mono',monospace;color:var(--info);font-weight:600">${a.horaInicial||'—'}</td>
     <td style="font-family:'JetBrains Mono',monospace">${a.chegada||'—'}</td>
@@ -4044,6 +4045,19 @@ function epiBadge(a) {
     const bg = emp ? '#FFF7ED;color:#9A3412;border:1px solid #FED7AA' : '#ECFDF5;color:#065F46;border:1px solid #A7F3D0';
     return `<span title="${it.label.replace(/^\S+\s/, '')} — ${emp ? 'Empréstimo' : 'Fornecimento definitivo'}" style="font-size:9px;background:${bg};border-radius:3px;padding:1px 5px;margin-left:3px;font-weight:700;white-space:nowrap">${ico[it.key]}${e.tam ? ' ' + e.tam : ''} ${emp ? 'E' : 'D'}</span>`;
   }).join('');
+}
+
+// Desvincula o motorista de um registro do Acompanhamento (admin)
+function desvincularMotorista(id) {
+  const a = STATE.acompanhamento[id];
+  if (!a) return;
+  if (!confirm(`Desvincular o motorista de ${a.colNome}?`)) return;
+  db.ref('acompanhamento/' + id).update({ motoristaId: '', motoristaNome: '', md: '', semMotorista: true })
+    .then(() => {
+      registrarTransacao('acompanhamento', `Motorista desvinculado: ${a.colNome||'—'} (${formatDate(a.data||'')})`);
+      toast('🚗 Motorista desvinculado.', 'success');
+    })
+    .catch(e => toast('Erro: ' + e.message, 'error'));
 }
 
 // ===================== RATEIO DE OPERAÇÕES ====================================
@@ -4296,7 +4310,7 @@ function populateMotoristaSelect() {
   const sel = document.getElementById('ae-motorista');
   if (!sel) return;
   const ativos = Object.entries(STATE.motoristas || {}).filter(([,m]) => m.status === 'ativo');
-  sel.innerHTML = '<option value="">Selecione o motorista...</option>' +
+  sel.innerHTML = '<option value="">— Sem motorista —</option>' +
     ativos.map(([id,m]) => `<option value="${id}">${m.nome}${m.ident ? ' — '+m.ident : ''}</option>`).join('');
 }
 
@@ -4878,6 +4892,14 @@ function saveAcompEdit() {
     data.motoristaId = motId;
     data.motoristaNome = motId && STATE.motoristas[motId] ? STATE.motoristas[motId].nome : '';
     data.md = v('ae-md');
+    // sem motorista escolhido: marca para NÃO puxar o motorista da vaga na exibição
+    data.semMotorista = motId ? null : true;
+  } else {
+    // operação que não é ROTA: não leva o motorista junto
+    data.motoristaId = '';
+    data.motoristaNome = '';
+    data.md = '';
+    data.semMotorista = true;
   }
   const _rec = STATE.acompanhamento[currentAcompId] || {};
   db.ref('acompanhamento/' + currentAcompId).update(data).then(() => {
