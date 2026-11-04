@@ -198,6 +198,9 @@ body {
   display: none;
 }
 
+.sigilo-bar{position:fixed;left:0;right:0;bottom:0;z-index:900;background:#0D1B3E;color:#fff;font-size:11px;line-height:1.4;padding:7px 14px;text-align:center;border-top:2px solid #F5B800;box-shadow:0 -2px 8px rgba(0,0,0,.15)}
+.sigilo-bar strong{color:#F5B800}
+@media print{.sigilo-bar{display:none}}
 /* ===== LAYOUT ===== */
 #app-layout {
   display: none;
@@ -2273,6 +2276,7 @@ document.addEventListener('keydown', e => {
 });
 
 function doLogout() {
+  { const b = document.getElementById('sigilo-bar'); if (b) b.remove(); document.body.style.paddingBottom = ''; }
   currentUser = null;
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app-layout').style.display = 'none';
@@ -2363,7 +2367,28 @@ function buildNavTabs() {
   if (currentUser.role === 'empresa') {
     document.getElementById('empresa-nome-sub').textContent = currentUser.empresaNome;
   }
+  mostrarAvisoSigilo();
 }
+
+// Aviso permanente de sigilo (somente empresas)
+const SIGILO_TXT_CURTO = '🔒 <strong>Acesso restrito e sigiloso.</strong> Conforme as normas contratuais, é proibido repassar as informações deste sistema a terceiros, inclusive por prints, fotos ou cópias. O descumprimento sujeita a empresa à <strong>quebra de contrato</strong>.';
+function mostrarAvisoSigilo() {
+  let bar = document.getElementById('sigilo-bar');
+  if (currentUser.role !== 'empresa') {
+    if (bar) bar.remove();
+    document.body.style.paddingBottom = '';
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'sigilo-bar';
+    bar.className = 'sigilo-bar';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = SIGILO_TXT_CURTO;
+  document.body.style.paddingBottom = '44px';
+}
+
 
 // Botão Atualizar (empresas): recarrega o sistema forçando a versão mais nova (equivale a Ctrl+F5)
 async function atualizarApp() {
