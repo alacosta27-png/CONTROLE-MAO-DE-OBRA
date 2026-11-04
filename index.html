@@ -1129,6 +1129,95 @@ tbody tr:hover { background: var(--gray-50); }
       <div id="acerto-container"></div>
     </div>
 
+    <!-- ===================== PÁGINA: ADMIN – PAGAMENTOS (fechamento + e-mail + histórico) ===================== -->
+    <div id="page-pagamentos" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">💳 Pagamentos</div>
+          <div class="section-sub">Fechamento por empresa/período, envio por e-mail e histórico</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="form-grid" style="grid-template-columns:1.4fr 1fr 1fr auto;align-items:end;gap:12px">
+          <div class="form-group">
+            <label>Empresa *</label>
+            <select id="pag-emp" onchange="pagTrocouEmpresa()" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data Início *</label>
+            <input type="date" id="pag-inicio">
+          </div>
+          <div class="form-group">
+            <label>Data Fim *</label>
+            <input type="date" id="pag-fim">
+          </div>
+          <div><button class="btn btn-navy" onclick="pagConferir()">🔍 Conferir período</button></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+          <span style="font-size:12px;color:var(--gray-500)">Atalho:</span>
+          <input type="month" id="pag-mes" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px">
+          <button class="btn btn-ghost btn-sm" onclick="pagAtalho(1)">1ª Quinzena (1–15)</button>
+          <button class="btn btn-ghost btn-sm" onclick="pagAtalho(2)">2ª Quinzena (16–fim)</button>
+          <span style="font-size:11px;color:var(--gray-400)">Ou escolha qualquer intervalo nas datas acima.</span>
+        </div>
+      </div>
+
+      <div id="pag-resultado" style="display:none">
+        <!-- 1. Confirmações -->
+        <div class="card" style="margin-top:14px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:8px">✅ 1. Conferência de confirmações (aba Confirmações)</div>
+          <div id="pag-conf-box"></div>
+        </div>
+
+        <!-- 2. Resumo -->
+        <div class="card" style="margin-top:14px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:8px">🧾 2. Resumo do pagamento</div>
+          <div id="pag-print" style="background:#fff;padding:14px;border-radius:10px;display:inline-block;min-width:760px"></div>
+        </div>
+
+        <!-- 3. E-mails + envio -->
+        <div class="card" style="margin-top:14px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:8px">✉️ 3. E-mail</div>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+              <label>Para — e-mails da empresa (fornecedor)</label>
+              <input type="text" id="pag-emails-emp" placeholder="financeiro@empresa.com; contato@empresa.com">
+              <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="pagSalvarEmailsEmpresa()">💾 Salvar e-mails desta empresa</button>
+            </div>
+            <div class="form-group">
+              <label>Cc — controladoria</label>
+              <input type="text" id="pag-emails-ctrl" placeholder="controladoria@portoex.com.br">
+              <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="pagSalvarEmailsCtrl()">💾 Salvar e-mails da controladoria</button>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--gray-400);margin:6px 0 10px">Separe vários e-mails com ponto e vírgula (;). O resumo é copiado como imagem — no e-mail, basta colar (Ctrl+V) abaixo de "RESUMO:".</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-yellow" onclick="pagEnviar('app')">✉️ Enviar pelo Outlook (app)</button>
+            <button class="btn btn-ghost" style="border-color:var(--info);color:var(--info)" onclick="pagEnviar('web')">🌐 Outlook Web</button>
+            <button class="btn btn-ghost" onclick="pagCopiarImagemBtn()">🖼️ Só copiar o resumo (imagem)</button>
+            <button class="btn btn-ghost" onclick="pagCSV()">⬇ CSV do período</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Histórico -->
+      <div class="card" style="margin-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div style="font-weight:700;font-size:14px">🗂️ Histórico de pagamentos</div>
+          <select id="pag-hist-emp" onchange="renderPagHistorico()" style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px">
+            <option value="">Todas as empresas</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Enviado em</th><th>Empresa</th><th>Período</th><th>Colab.</th><th>Horas</th><th>H. Extra</th><th>Custo total</th><th>Para</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="pag-hist-body"></tbody>
+        </table></div>
+      </div>
+    </div>
+
     <!-- ===================== PÁGINA: ADMIN – MOTORISTAS ===================== -->
     <div id="page-motoristas" class="page">
       <div class="section-header">
@@ -2049,6 +2138,8 @@ let STATE = {
   adminLogins: {},
   transacoes: {},
   confirmacoesDia: {},
+  pagamentos: {},
+  pagamentosConfig: {},
   ocorrencias: {}
 };
 let editEmpresaId = null;
@@ -2213,6 +2304,7 @@ function buildNavTabs() {
     { id: 'page-dashboard', label: '📊 Dashboard' },
     { id: 'page-resumo-admin', label: '📋 Resumo Geral' },
     { id: 'page-resumo-terceirizados', label: '💰 Acerto' },
+    { id: 'page-pagamentos', label: '💳 Pagamentos' },
     { id: 'page-empresas', label: 'Empresas' },
     { id: 'page-operacoes', label: 'Operações' },
     { id: 'page-motoristas', label: 'Motoristas' },
@@ -2342,6 +2434,7 @@ function switchPage(pageId) {
     populateResumoSelects();
     renderResumoAdmin();
   }
+  if (pageId === 'page-pagamentos') initPagamentos();
   if (pageId === 'page-resumo-terceirizados') {
     // Set default: current quinzena
     const hoje = new Date();
@@ -2422,6 +2515,16 @@ function listenFirebase() {
     db.ref('transacoes').on('value', snap => {
       STATE.transacoes = snap.val() || {};
       if (document.getElementById('page-transacoes')?.classList.contains('active')) renderLog();
+    });
+  }
+  if (currentUser.role === 'admin') {
+    db.ref('pagamentos').on('value', snap => {
+      STATE.pagamentos = snap.val() || {};
+      if (document.getElementById('page-pagamentos')?.classList.contains('active')) renderPagHistorico();
+    });
+    db.ref('pagamentosConfig').on('value', snap => {
+      STATE.pagamentosConfig = snap.val() || {};
+      if (document.getElementById('page-pagamentos')?.classList.contains('active')) pagPreencherEmails();
     });
   }
   db.ref('confirmacoesDia').on('value', snap => {
@@ -5109,6 +5212,276 @@ function exportarResumoAdmin() {
   const a = document.createElement('a');
   a.href = url; a.download = `resumo-geral-${inicio||'tudo'}-${fim||''}.csv`;
   a.click();
+}
+
+// ===================== PAGAMENTOS (fechamento por empresa + e-mail + histórico) =====================
+let pagAtual = null;
+const pagEsc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pagISO = (y, m, d) => `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+function initPagamentos() {
+  const sel = document.getElementById('pag-emp');
+  const selH = document.getElementById('pag-hist-emp');
+  if (!sel) return;
+  const emps = Object.entries(STATE.empresas || {}).sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
+  const cur = sel.value, curH = selH ? selH.value : '';
+  sel.innerHTML = '<option value="">Selecione...</option>' + emps.map(([id,e]) => `<option value="${id}">${pagEsc(e.nome)}</option>`).join('');
+  if (cur) sel.value = cur;
+  if (selH) { selH.innerHTML = '<option value="">Todas as empresas</option>' + emps.map(([id,e]) => `<option value="${id}">${pagEsc(e.nome)}</option>`).join(''); if (curH) selH.value = curH; }
+  const mes = document.getElementById('pag-mes');
+  if (mes && !mes.value) { const h = new Date(); mes.value = `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}`; }
+  // pré-carrega o gerador de imagem (necessário para copiar o resumo com 1 clique)
+  if (!window.html2canvas && !document.getElementById('h2c-script')) {
+    const sc = document.createElement('script'); sc.id = 'h2c-script';
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    document.head.appendChild(sc);
+  }
+  pagPreencherEmails();
+  renderPagHistorico();
+}
+
+function pagAtalho(n) {
+  const mes = v('pag-mes');
+  if (!mes) { toast('Escolha o mês no atalho.', 'error'); return; }
+  const [y, m] = mes.split('-').map(Number);
+  const ult = new Date(y, m, 0).getDate();
+  sv('pag-inicio', n === 1 ? pagISO(y, m, 1) : pagISO(y, m, 16));
+  sv('pag-fim', n === 1 ? pagISO(y, m, 15) : pagISO(y, m, ult));
+}
+
+function pagTrocouEmpresa() { pagPreencherEmails(); }
+
+function pagPreencherEmails() {
+  const empId = v('pag-emp');
+  const e = document.getElementById('pag-emails-emp');
+  const c = document.getElementById('pag-emails-ctrl');
+  if (e && document.activeElement !== e) e.value = empId ? ((STATE.empresas[empId] || {}).emailsPagamento || '') : '';
+  if (c && document.activeElement !== c) c.value = (STATE.pagamentosConfig || {}).controladoria || '';
+}
+
+function pagParseEmails(txt) {
+  const lista = (txt || '').split(/[;,\s]+/).map(x => x.trim()).filter(Boolean);
+  const ok = lista.filter(x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  const ruins = lista.filter(x => !ok.includes(x));
+  return { ok, ruins };
+}
+function pagSalvarEmailsEmpresa() {
+  const empId = v('pag-emp');
+  if (!empId) { toast('Selecione a empresa.', 'error'); return; }
+  const r = pagParseEmails(v('pag-emails-emp'));
+  if (r.ruins.length) { toast('E-mail inválido: ' + r.ruins.join(', '), 'error'); return; }
+  db.ref('empresas/' + empId + '/emailsPagamento').set(r.ok.join('; '))
+    .then(() => toast('E-mails da empresa salvos.', 'success'))
+    .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+function pagSalvarEmailsCtrl() {
+  const r = pagParseEmails(v('pag-emails-ctrl'));
+  if (r.ruins.length) { toast('E-mail inválido: ' + r.ruins.join(', '), 'error'); return; }
+  db.ref('pagamentosConfig/controladoria').set(r.ok.join('; '))
+    .then(() => toast('E-mails da controladoria salvos.', 'success'))
+    .catch(e => toast('Erro: ' + e.message, 'error'));
+}
+
+function pagItens(inicio, fim, empId) {
+  const nome = (STATE.empresas[empId] || {}).nome || '';
+  return Object.entries(STATE.acompanhamento || {}).filter(([, a]) =>
+    a.data >= inicio && a.data <= fim &&
+    (a.empresaId === empId || (!a.empresaId && nome && a.empresaNome && a.empresaNome.trim().toUpperCase() === nome.trim().toUpperCase())));
+}
+// Mesmos cálculos do "Resumo Geral" (para o print bater com o que você já usa)
+function pagKpis(items) {
+  let horasMin = 0, he = 0, valor = 0;
+  items.forEach(([, a]) => {
+    if (a.chegada && a.saida) {
+      const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao || '01:00');
+      horasMin += t; he += Math.max(0, t - 8 * 60);
+      valor += parseFloat(calcHoras(a).valor.replace('R$ ', '').replace(',', '.')) || 0;
+    }
+  });
+  const dias = new Set(items.map(([, a]) => a.data).filter(Boolean)).size;
+  return { colaboradores: items.length, dias, horas: minToHM(horasMin), horasExtras: minToHM(he), custo: valor, custoStr: 'R$ ' + valor.toFixed(2).replace('.', ',') };
+}
+function pagQuinzenaLabel(ini, fim) {
+  const [y1, m1, d1] = ini.split('-').map(Number), [y2, m2, d2] = fim.split('-').map(Number);
+  const ult = new Date(y1, m1, 0).getDate();
+  const mes = String(m1).padStart(2, '0') + '/' + y1;
+  if (y1 === y2 && m1 === m2 && d1 === 1 && d2 === 15) return `1ª Quinzena de ${mes}`;
+  if (y1 === y2 && m1 === m2 && d1 === 16 && d2 === ult) return `2ª Quinzena de ${mes}`;
+  return '';
+}
+function pagConfKeys(empId) {
+  const e = STATE.empresas[empId] || {};
+  return [empId, e.login, e.nome].filter(Boolean);
+}
+
+function pagConferir() {
+  const empId = v('pag-emp'), inicio = v('pag-inicio'), fim = v('pag-fim');
+  if (!empId) { toast('Selecione a empresa.', 'error'); return; }
+  if (!inicio || !fim) { toast('Informe data início e fim.', 'error'); return; }
+  if (inicio > fim) { toast('Data início deve ser anterior ao fim.', 'error'); return; }
+  const emp = STATE.empresas[empId] || {};
+  const items = pagItens(inicio, fim, empId);
+  const box = document.getElementById('pag-resultado');
+  box.style.display = 'block';
+  if (!items.length) {
+    pagAtual = null;
+    document.getElementById('pag-conf-box').innerHTML = '<div style="color:var(--gray-500);font-size:13px">Nenhum registro de ponto para esta empresa no período.</div>';
+    document.getElementById('pag-print').innerHTML = '';
+    return;
+  }
+  const kpis = pagKpis(items);
+  const datas = [...new Set(items.map(([, a]) => a.data).filter(Boolean))].sort();
+  const keys = pagConfKeys(empId);
+  const status = datas.map(d => ({ data: d, ok: keys.some(k => (STATE.confirmacoesDia[d] || {})[k]) }));
+  const pendentes = status.filter(x => !x.ok).map(x => x.data);
+  const label = pagQuinzenaLabel(inicio, fim);
+  pagAtual = { empId, empNome: emp.nome || '', inicio, fim, items, kpis, pendentes, label };
+
+  // 1. confirmações
+  const chips = status.map(x => `<span style="display:inline-block;margin:2px;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700;background:${x.ok ? 'var(--success-bg)' : '#FEE2E2'};color:${x.ok ? 'var(--success)' : '#B91C1C'}">${x.ok ? '✅' : '❌'} ${formatDate(x.data)}</span>`).join('');
+  document.getElementById('pag-conf-box').innerHTML = (pendentes.length
+    ? `<div style="padding:10px 14px;background:#FEE2E2;border-radius:var(--radius);color:#B91C1C;font-size:13px;font-weight:700;margin-bottom:8px">⚠️ ${pendentes.length} dia(s) SEM "OK" da empresa: ${pendentes.map(formatDate).join(', ')}</div>
+       <button class="btn btn-ghost btn-sm" style="margin-bottom:8px" onclick="pagCopiarAviso()">📋 Copiar aviso para a empresa</button>`
+    : `<div style="padding:10px 14px;background:var(--success-bg);border-radius:var(--radius);color:var(--success);font-size:13px;font-weight:700;margin-bottom:8px">✅ Todos os ${datas.length} dia(s) com registro foram confirmados pela empresa.</div>`)
+    + `<div>${chips}</div>`;
+
+  // 2. resumo (é o que vira imagem)
+  const periodoTxt = `${formatDate(inicio)} a ${formatDate(fim)}`;
+  const cards = [
+    { l: 'Colaboradores', v: kpis.colaboradores, i: '👥' }, { l: 'Dias de Trabalho', v: kpis.dias, i: '📅' },
+    { l: 'Total Horas', v: kpis.horas, i: '⏱️' }, { l: 'Horas Extras', v: kpis.horasExtras, i: '⚡' }, { l: 'Custo Total', v: kpis.custoStr, i: '💰' }
+  ].map(k => `<div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:14px 8px;text-align:center;flex:1;min-width:130px">
+      <div style="font-size:22px;margin-bottom:4px">${k.i}</div>
+      <div style="font-size:20px;font-weight:700;color:#0D1B3E">${pagEsc(k.v)}</div>
+      <div style="font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">${k.l}</div></div>`).join('');
+  document.getElementById('pag-print').innerHTML =
+    `<div style="font-size:13px;font-weight:700;color:#0D1B3E;margin-bottom:8px">${pagEsc(emp.nome)} — ${pagEsc(label || 'Período')} · ${periodoTxt}</div>
+     <div style="display:flex;gap:10px">${cards}</div>`;
+  pagPreencherEmails();
+}
+
+function pagCopiarAviso() {
+  if (!pagAtual) return;
+  const txt = `Olá! Ao conferirmos o período de ${formatDate(pagAtual.inicio)} a ${formatDate(pagAtual.fim)}, identificamos que o(s) dia(s) ${pagAtual.pendentes.map(formatDate).join(', ')} ainda não receberam o "OK" na aba CONFIRMAÇÕES do sistema. Por favor, verifique e confirme para que possamos seguir com o fechamento do pagamento.`;
+  navigator.clipboard.writeText(txt).then(() => toast('Aviso copiado! Cole no WhatsApp/e-mail da empresa.', 'success'), () => toast('Não foi possível copiar.', 'error'));
+}
+
+async function pagCopiarImagem() {
+  if (!window.html2canvas) throw new Error('Gerador de imagem ainda carregando. Tente novamente em instantes.');
+  const el = document.getElementById('pag-print');
+  const blobP = window.html2canvas(el, { backgroundColor: '#ffffff', scale: 2 }).then(c => new Promise(res => c.toBlob(res, 'image/png')));
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobP })]);
+}
+function pagCopiarImagemBtn() {
+  if (!pagAtual) { toast('Confira um período primeiro.', 'error'); return; }
+  pagCopiarImagem().then(() => toast('🖼️ Resumo copiado! Cole (Ctrl+V) no e-mail.', 'success')).catch(e => toast(e.message || 'Erro ao copiar imagem.', 'error'));
+}
+
+function pagTextoEmail() {
+  const p = pagAtual;
+  const ref = p.label ? `${p.label} (${formatDate(p.inicio)} a ${formatDate(p.fim)})` : `de ${formatDate(p.inicio)} a ${formatDate(p.fim)}`;
+  return `Segue em anexo o relatório para agendamento de pagamento, referente ao período da ${ref}.\n\n` +
+    `Ao fornecedor:\nCaso esteja tudo conforme, favor dar seu OK para prosseguimento do processo de agendamento de pagamento!\n\n` +
+    `A controladoria:\nFavor, em caso de "OK" do fornecedor, prosseguir com o agendamento de pagamento.\n\n` +
+    `RESUMO:\n`;
+}
+
+async function pagEnviar(canal) {
+  const p = pagAtual;
+  if (!p) { toast('Confira um período primeiro.', 'error'); return; }
+  const para = pagParseEmails(v('pag-emails-emp')), cc = pagParseEmails(v('pag-emails-ctrl'));
+  if (para.ruins.length || cc.ruins.length) { toast('E-mail inválido: ' + [...para.ruins, ...cc.ruins].join(', '), 'error'); return; }
+  if (!para.ok.length) { toast('Informe ao menos um e-mail da empresa (Para).', 'error'); return; }
+  if (p.pendentes.length && !confirm(`Há ${p.pendentes.length} dia(s) sem OK da empresa (${p.pendentes.map(formatDate).join(', ')}).\n\nEnviar mesmo assim?`)) return;
+  const sobrepoe = Object.values(STATE.pagamentos || {}).find(h => h.empresaId === p.empId && h.inicio <= p.fim && h.fim >= p.inicio);
+  if (sobrepoe && !confirm(`Já existe envio para esta empresa em ${formatDate(sobrepoe.inicio)} a ${formatDate(sobrepoe.fim)} (sobrepõe este período).\n\nEnviar mesmo assim?`)) return;
+
+  let copiou = true;
+  try { await pagCopiarImagem(); } catch (e) { copiou = false; toast((e.message || 'Não foi possível copiar a imagem') + ' — use "Só copiar o resumo".', 'error'); }
+
+  const assunto = `Pagamento ${p.empNome} — ${p.label || formatDate(p.inicio) + ' a ' + formatDate(p.fim)}`;
+  const corpo = pagTextoEmail();
+  let url;
+  if (canal === 'web') {
+    url = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(para.ok.join(';'))}&cc=${encodeURIComponent(cc.ok.join(';'))}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+    window.open(url, '_blank');
+  } else {
+    url = `mailto:${para.ok.join(',')}?cc=${encodeURIComponent(cc.ok.join(','))}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+    const a = document.createElement('a'); a.href = url; a.click();
+  }
+  if (copiou) toast('🖼️ Resumo copiado — cole (Ctrl+V) no e-mail abaixo de "RESUMO:".', 'success');
+
+  setTimeout(() => {
+    if (!confirm('O e-mail foi enviado?\n\nOK = registrar no histórico de pagamentos.\nCancelar = não registrar (ainda).')) return;
+    const reg = {
+      empresaId: p.empId, empresaNome: p.empNome, inicio: p.inicio, fim: p.fim, label: p.label || '',
+      colaboradores: p.kpis.colaboradores, dias: p.kpis.dias, horas: p.kpis.horas, horasExtras: p.kpis.horasExtras,
+      custoTotal: Math.round(p.kpis.custo * 100) / 100,
+      para: para.ok.join('; '), cc: cc.ok.join('; '),
+      diasSemOk: p.pendentes, enviadoEm: Date.now(), enviadoPor: (currentUser.nome || currentUser.login || '')
+    };
+    db.ref('pagamentos').push(reg).then(() => {
+      toast('📌 Envio registrado no histórico.', 'success');
+      try { registrarTransacao('PAGAMENTO_ENVIADO', `Pagamento enviado: ${p.empNome} — ${p.label || formatDate(p.inicio) + ' a ' + formatDate(p.fim)} (${p.kpis.custoStr})`); } catch (e) {}
+    }).catch(e => toast('Erro ao registrar: ' + e.message, 'error'));
+  }, 2500);
+}
+
+function pagCSV() {
+  const p = pagAtual;
+  if (!p) { toast('Confira um período primeiro.', 'error'); return; }
+  acertoDados = p.items;
+  const header = ['Data','Colaborador','CPF','Empresa','Operação','C. Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','Total','MD','Motorista','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional'];
+  const data = _buildAcertoRows().map(r => [r.data, r.colaborador, r.cpf, r.empresa, r.operacao, r.cc, r.funcao, r.chegada, r.refeicao, r.saida, r.hTrab, r.total, r.md, r.motorista, r.hExtra, r.adicionalStr, r.valorDiaStr, r.valorHEStr, r.valorAdicStr]);
+  const csv = [header, ...data].map(r => r.map(c => `"${c}"`).join(';')).join('\n');
+  const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = `pagamento-${p.empNome.replace(/[^\w]+/g, '_')}-${p.inicio}-${p.fim}.csv`; a.click();
+}
+
+function pagStatusHist(h) {
+  if (h.agendadoEm) return { t: '📅 Agendado', c: '#065F46', bg: '#ECFDF5' };
+  if (h.fornecedorOkEm) return { t: '👍 OK do fornecedor', c: '#1D4ED8', bg: '#EFF6FF' };
+  return { t: '✉️ Enviado', c: '#9A3412', bg: '#FFF7ED' };
+}
+function renderPagHistorico() {
+  const body = document.getElementById('pag-hist-body');
+  if (!body) return;
+  const f = v('pag-hist-emp');
+  const rows = Object.entries(STATE.pagamentos || {}).filter(([, h]) => !f || h.empresaId === f).sort(([, a], [, b]) => (b.enviadoEm || 0) - (a.enviadoEm || 0));
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--gray-400)">Nenhum pagamento registrado.</td></tr>'; return; }
+  body.innerHTML = rows.map(([id, h]) => {
+    const st = pagStatusHist(h);
+    const per = `${h.label ? pagEsc(h.label) + '<br>' : ''}<span style="font-size:11px;color:var(--gray-500)">${formatDate(h.inicio)} a ${formatDate(h.fim)}</span>`;
+    const sem = (h.diasSemOk || []).length ? `<div style="font-size:10px;color:#B91C1C">⚠️ enviado sem OK em: ${h.diasSemOk.map(formatDate).join(', ')}</div>` : '';
+    return `<tr>
+      <td style="font-size:11px;white-space:nowrap">${h.enviadoEm ? new Date(h.enviadoEm).toLocaleString('pt-BR') : '—'}<div style="color:var(--gray-400)">${pagEsc(h.enviadoPor || '')}</div></td>
+      <td><strong>${pagEsc(h.empresaNome)}</strong></td>
+      <td>${per}</td>
+      <td style="text-align:center">${h.colaboradores ?? '—'}</td>
+      <td>${pagEsc(h.horas || '—')}</td>
+      <td>${pagEsc(h.horasExtras || '—')}</td>
+      <td style="font-weight:700;white-space:nowrap">R$ ${(h.custoTotal || 0).toFixed(2).replace('.', ',')}</td>
+      <td style="font-size:11px;max-width:180px;word-break:break-word">${pagEsc(h.para || '')}</td>
+      <td><span style="background:${st.bg};color:${st.c};border-radius:12px;padding:3px 9px;font-size:11px;font-weight:700;white-space:nowrap">${st.t}</span>${sem}
+        ${h.fornecedorOkEm ? `<div style="font-size:10px;color:var(--gray-400)">OK: ${new Date(h.fornecedorOkEm).toLocaleDateString('pt-BR')}</div>` : ''}
+        ${h.agendadoEm ? `<div style="font-size:10px;color:var(--gray-400)">Agend.: ${new Date(h.agendadoEm).toLocaleDateString('pt-BR')}</div>` : ''}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="pagMarcar('${id}','fornecedorOkEm')">${h.fornecedorOkEm ? '↩ OK' : '👍 OK forn.'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="pagMarcar('${id}','agendadoEm')">${h.agendadoEm ? '↩ Agend.' : '📅 Agendado'}</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="pagExcluir('${id}')">🗑</button>
+      </td></tr>`;
+  }).join('');
+}
+function pagMarcar(id, campo) {
+  const h = (STATE.pagamentos || {})[id];
+  if (!h) return;
+  db.ref('pagamentos/' + id + '/' + campo).set(h[campo] ? null : Date.now()).catch(e => toast('Erro: ' + e.message, 'error'));
+}
+function pagExcluir(id) {
+  const h = (STATE.pagamentos || {})[id];
+  if (!h || !confirm(`Excluir do histórico o envio de ${h.empresaNome} (${formatDate(h.inicio)} a ${formatDate(h.fim)})?`)) return;
+  db.ref('pagamentos/' + id).remove().then(() => { try { registrarTransacao('PAGAMENTO_EXCLUIDO', `Histórico de pagamento excluído: ${h.empresaNome} ${h.inicio} a ${h.fim}`); } catch (e) {} });
 }
 
 // ===================== ACERTO TERCEIRIZADOS =====================
