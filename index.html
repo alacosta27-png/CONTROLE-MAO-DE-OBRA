@@ -1705,7 +1705,8 @@ tbody tr:hover { background: var(--gray-50); }
     </div>
     <div class="modal-footer" id="avaliacao-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-avaliacao')">Cancelar</button>
-      <button class="btn btn-navy" onclick="salvarAvaliacao()">Salvar & Bloquear</button>
+      <button class="btn btn-ghost" onclick="salvarAvaliacao(false)" title="Salva a avaliação, mas permite alterá-la depois">💾 Salvar sem bloqueio</button>
+      <button class="btn btn-navy" onclick="salvarAvaliacao(true)" title="Salva e trava a avaliação — não poderá ser alterada">🔒 Salvar & Bloquear</button>
     </div>
   </div>
 </div>
@@ -4288,16 +4289,22 @@ function renderStars(val) {
   });
 }
 
-function salvarAvaliacao() {
+// bloquear = true  → finaliza COM bloqueio (não pode mais ser alterada)
+// bloquear = false → finaliza SEM bloqueio (pode ser editada depois)
+function salvarAvaliacao(bloquear) {
+  bloquear = bloquear !== false;
   if (!currentStarVal) { toast('Selecione ao menos 1 estrela.', 'error'); return; }
-  if (!confirm('Após salvar, a avaliação será bloqueada e não poderá ser alterada. Confirmar?')) return;
+  if (bloquear && !confirm('Após salvar, a avaliação será bloqueada e não poderá ser alterada. Confirmar?')) return;
   db.ref(`acompanhamento/${currentAvaliacaoId}/avaliacao`).set({
     nota: currentStarVal,
     obs: v('avaliacao-obs'),
-    bloqueada: true,
+    bloqueada: bloquear,
     avaliadoEm: Date.now(),
     avaliadoPor: currentUser.login
-  }).then(() => { toast('Avaliação salva e bloqueada!', 'success'); closeModal('modal-avaliacao'); });
+  }).then(() => {
+    toast(bloquear ? 'Avaliação salva e bloqueada!' : 'Avaliação salva sem bloqueio (pode ser alterada depois).', 'success');
+    closeModal('modal-avaliacao');
+  });
 }
 
 // Apelidos/variações de nome usados em registros antigos, que devem ser
